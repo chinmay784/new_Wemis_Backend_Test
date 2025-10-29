@@ -19,7 +19,7 @@ app.set("trust proxy", 1);
 app.use(helmet());
 // ✅ Serve React frontend (after build)
 const _dirname = path.dirname("");
-app.use(express.static(path.join(_dirname, "./Wemis_Frontend/dist")));
+app.use(express.static(path.join(_dirname, "./Frontend/dist")));
 
 app.use(cors({"origin":"*"}));
 app.use(express.json());
