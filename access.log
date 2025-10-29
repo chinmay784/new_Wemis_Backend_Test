@@ -120,3 +120,6 @@
 ::1 - - [29/Oct/2025:11:35:32 +0000] "POST /api/manufactur/fetchAllMapDevice HTTP/1.1" 200 4480 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
 ::1 - - [29/Oct/2025:11:35:32 +0000] "POST /api/manufactur/fetchSubScriptionPackages HTTP/1.1" 200 598 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
 ::1 - - [29/Oct/2025:11:35:48 +0000] "POST /api/manufactur/viewAMapDeviceInManufactur HTTP/1.1" 200 2424 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+::1 - - [29/Oct/2025:12:57:28 +0000] "POST /api/superadmin/login HTTP/1.1" 200 335 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+::1 - - [29/Oct/2025:12:57:28 +0000] "POST /api/superadmin/profile HTTP/1.1" 200 149 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+::1 - - [29/Oct/2025:12:59:00 +0000] "POST /api/superadmin/profile HTTP/1.1" 200 149 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
