@@ -21,7 +21,7 @@ app.use(helmet());
 const _dirname = path.dirname("");
 app.use(express.static(path.join(_dirname, "./Frontend/dist")));
 
-app.use(cors({"origin":"*"}));
+app.use(cors({ "origin": "*" }));
 app.use(express.json());
 
 const limiter = rateLimit({
@@ -57,6 +57,15 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
 });
 
+app.get("/", (req, res) => {
+  res.send("Hello")
+})
+
+
+// app.get("/*", (req, res) => {
+//   res.sendFile(path.resolve(_dirname, "Frontend", "dist", "index.html"));
+// });
+
 // ✅ Error handler
 app.use((err, req, res, next) => {
   console.error("❌ Error:", err.message);
@@ -65,7 +74,7 @@ app.use((err, req, res, next) => {
 
 // ✅ Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT,'0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
