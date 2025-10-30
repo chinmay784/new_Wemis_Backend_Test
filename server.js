@@ -15,15 +15,16 @@ const wlpRoutes = require("./routes/wlpRoute");
 const manufacturRoutes = require("./routes/manuFacturRoute");
 
 const app = express();
+const _dirname = path.resolve();
+
 app.set("trust proxy", 1);
 app.use(helmet());
-// ✅ Serve React frontend (after build)
-const _dirname = path.resolve()
-app.use(express.static(path.join(_dirname, "./Frontend/dist")));
 
-app.use(cors({ "origin": "*" }));
+// ✅ CORS
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+// ✅ Rate limiter
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -31,7 +32,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Logging
+// ✅ Logging
 const logStream = fs.createWriteStream(path.join(_dirname, "access.log"), {
   flags: "a",
 });
@@ -44,27 +45,23 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/wlp", wlpRoutes);
 app.use("/api/manufactur", manufacturRoutes);
 
-
-
-// // ✅ Fallback route for React Router (important!)
-// app.get("*", (req, res) => {
-//   res.sendFile(path.resolve(_dirname, "Wemis_Frontend", "dist", "index.html"));
-// });
-
-
 // ✅ Health check
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "UP", timestamp: new Date().toISOString() });
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello")
-})
 
 
-// app.get("/*", (req, res) => {
-//   res.sendFile(path.resolve(_dirname, "Frontend", "dist", "index.html"));
-// });
+// ✅ Serve React build only if exists
+const frontendPath = path.join(_dirname, "Frontend", "dist");
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+  app.get("/*", (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"));
+  });
+} else {
+  console.warn("⚠️ Frontend build folder not found:", frontendPath);
+}
 
 // ✅ Error handler
 app.use((err, req, res, next) => {
@@ -74,9 +71,8 @@ app.use((err, req, res, next) => {
 
 // ✅ Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
 connectToDatabase();
-
