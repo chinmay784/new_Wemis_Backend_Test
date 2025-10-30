@@ -18,7 +18,7 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
 // ✅ Serve React frontend (after build)
-const _dirname = path.dirname("");
+const _dirname = path.resolve()
 app.use(express.static(path.join(_dirname, "./Frontend/dist")));
 
 app.use(cors({ "origin": "*" }));
@@ -32,7 +32,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging
-const logStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
+const logStream = fs.createWriteStream(path.join(_dirname, "access.log"), {
   flags: "a",
 });
 app.use(morgan("combined", { stream: logStream }));
@@ -79,3 +79,4 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 connectToDatabase();
+
