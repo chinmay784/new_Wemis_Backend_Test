@@ -15,7 +15,7 @@ const wlpRoutes = require("./routes/wlpRoute");
 const manufacturRoutes = require("./routes/manuFacturRoute");
 
 const app = express();
-const _dirname = path.resolve();
+// const _dirname = path.resolve();
 
 app.set("trust proxy", 1);
 app.use(helmet());
@@ -33,10 +33,10 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // ✅ Logging
-const logStream = fs.createWriteStream(path.join(_dirname, "access.log"), {
-  flags: "a",
-});
-app.use(morgan("combined", { stream: logStream }));
+// const logStream = fs.createWriteStream(path.join(_dirname, "access.log"), {
+//   flags: "a",
+// });
+// app.use(morgan("combined", { stream: logStream }));
 app.use(morgan("dev"));
 
 // ✅ API routes
@@ -53,15 +53,15 @@ app.get("/health", (req, res) => {
 
 
 // ✅ Serve React build only if exists
-const frontendPath = path.join(_dirname, "Frontend", "dist");
-if (fs.existsSync(frontendPath)) {
-  app.use(express.static(frontendPath));
-  app.get("/*", (req, res) => {
-    res.sendFile(path.join(frontendPath, "index.html"));
-  });
-} else {
-  console.warn("⚠️ Frontend build folder not found:", frontendPath);
-}
+// const frontendPath = path.join(_dirname, "Frontend", "dist");
+// if (fs.existsSync(frontendPath)) {
+//   app.use(express.static(frontendPath));
+//   app.get("/*", (req, res) => {
+//     res.sendFile(path.join(frontendPath, "index.html"));
+//   });
+// } else {
+//   console.warn("⚠️ Frontend build folder not found:", frontendPath);
+// }
 
 // ✅ Error handler
 app.use((err, req, res, next) => {
