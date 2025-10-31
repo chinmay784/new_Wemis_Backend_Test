@@ -26,8 +26,10 @@ app.use(express.json());
 
 // ✅ Rate limiter
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 1 * 60 * 1000,  // 1 minute
+  max: 20000,               // allow 20,000 requests per IP per minute
+  standardHeaders: true,
+  legacyHeaders: false,
   message: "Too many requests from this IP, please try again later.",
 });
 app.use(limiter);
