@@ -9,10 +9,10 @@ const fs = require("fs");
 const path = require("path");
 
 // Import routes
-const superAdminRoutes = require("./routes/superAdminRoute");
-const adminRoutes = require("./routes/adminRoute");
-const wlpRoutes = require("./routes/wlpRoute");
-const manufacturRoutes = require("./routes/manuFacturRoute");
+// const superAdminRoutes = require("./routes/superAdminRoute");
+// const adminRoutes = require("./routes/adminRoute");
+// const wlpRoutes = require("./routes/wlpRoute");
+// const manufacturRoutes = require("./routes/manuFacturRoute");
 
 const app = express();
 // const _dirname = path.resolve();
@@ -20,7 +20,7 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
 
-// ✅ CORS
+// ✅ CORS   
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
@@ -39,11 +39,20 @@ app.use(limiter);
 // app.use(morgan("combined", { stream: logStream }));
 app.use(morgan("dev"));
 
+
+const expressProxy = require('express-http-proxy');
+
+// Proxy requests starting with /external-api to the target server
+app.use('/api/superadmin', expressProxy('http://localhost:4001') );
+app.use('/api/admin', expressProxy('http://localhost:4002') );
+app.use('/api/wlp', expressProxy('http://localhost:4003') );
+app.use('/api/manufactur', expressProxy('http://localhost:4004') );
+
 // ✅ API routes
-app.use("/api/superadmin", superAdminRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/wlp", wlpRoutes);
-app.use("/api/manufactur", manufacturRoutes);
+// app.use("/api/superadmin", superAdminRoutes);
+// app.use("/api/admin", adminRoutes);
+// app.use("/api/wlp", wlpRoutes);
+// app.use("/api/manufactur", manufacturRoutes);
 
 // ✅ Health check
 app.get("/health", (req, res) => {
