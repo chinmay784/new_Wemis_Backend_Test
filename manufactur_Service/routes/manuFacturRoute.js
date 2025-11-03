@@ -71,4 +71,10 @@ router.post("/fetchAllTechnicien",authMiddelWere,fetchAllTechnicien);
 
 
 
+
+// // for single Device LiveTracking Data 
+// router.post("/liveTrackingOnAnMapSingleMapDevice",authMiddelWere,liveTrackingOnAnMapSingleMapDevice);
+
+
+
 module.exports = router;

@@ -5,7 +5,9 @@ const app = express();
 const port =  4001;
 const superAdminRouter = require('./routes/superAdminRoute');
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
 app.use('/', superAdminRouter);
 
 app.listen(port, () => {

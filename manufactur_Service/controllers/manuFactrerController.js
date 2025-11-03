@@ -11,7 +11,9 @@ const RollBackAlloCatedBarCodeSchema = require("../models/RollBackAlloCatedBarCo
 const createSubscription = require("../models/CreateNewSubscriptions");
 const MapDevice = require("../models/mapADeviceModel");
 const Technicien = require("../models/CreateTechnicien");
-const { cloudinary } = require("../config/cloudinary")
+const { cloudinary } = require("../config/cloudinary");
+const { devices } = require("../server");
+
 
 
 
@@ -1499,7 +1501,7 @@ exports.fetchAllBarCodesNumber = async (req, res) => {
         }
 
         // find all barcodes for that manufacturId
-        const manuF = await createBarCode.find({ manufacturId: userId});
+        const manuF = await createBarCode.find({ manufacturId: userId });
 
         if (!manuF || manuF.length === 0) {
             return res.status(404).json({
@@ -2856,7 +2858,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         console.log("After SON.parse")
 
 
-       
+
 
         // ✅ Check if deviceNo already exists
         const existingDevice = await MapDevice.findOne({ deviceNo });
@@ -3139,7 +3141,57 @@ exports.viewDocumentsOnMapDevice = async (req, res) => {
 }
 
 
-exports
+
+// // for Live Data Tracking on 
+// exports.liveTrackingOnAnMapSingleMapDevice = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide UserId"
+//             });
+//         }
+
+//         const { deviceNo } = req.body;
+
+//         if (!deviceNo) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide DeviceNo"
+//             });
+//         }
+
+//         // ✅ Fetch live data from TCP Server
+//         const liveData = devices[deviceNo];
+
+//         if (!liveData) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "No live tracking data found for this device"
+//             });
+//         }
+
+//         // ✅ Success Response
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live Tracking Data Fetched Successfully",
+//             data: {
+//                 deviceNo,
+//                 liveData
+//             },
+//         });
+
+//     } catch (error) {
+//         console.log("❌ Controller Error:", error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in LiveTrackingOnAnMapSingleMapDevice"
+//         });
+//     }
+// };
+
 
 
 
