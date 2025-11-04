@@ -27,7 +27,23 @@ const expressProxy = require('express-http-proxy');
 const proxyOptions = {
   parseReqBody: false,
   limit: '100mb',
-  memoizeHost: false
+  memoizeHost: false,
+
+  // This is extra add in pdf and jpeg and png
+  proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+    // forward headers properly
+    proxyReqOpts.headers = srcReq.headers;
+
+    // required for file uploads
+    delete proxyReqOpts.headers["content-length"];
+    delete proxyReqOpts.headers["transfer-encoding"];
+
+    return proxyReqOpts;
+  },
+
+  proxyReqBodyDecorator: (bodyContent, srcReq) => {
+    return bodyContent;  // do NOT modify multipart/form-data
+  },
 }
 
 
@@ -106,4 +122,5 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 
 connectToDatabase();
+
 
