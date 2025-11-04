@@ -20,6 +20,22 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
 
+
+const expressProxy = require('express-http-proxy');
+
+
+const proxyOptions = {
+  parseReqBody: false,
+  limit: '100mb',
+  memoizeHost: false
+}
+
+
+app.use('/api/superadmin', expressProxy('http://127.0.0.1:4001', proxyOptions));
+app.use('/api/admin', expressProxy('http://127.0.0.1:4002', proxyOptions));
+app.use('/api/wlp', expressProxy('http://127.0.0.1:4003', proxyOptions));
+app.use('/api/manufactur', expressProxy('http://127.0.0.1:4004', proxyOptions));
+
 // ✅ CORS   
 app.use(cors({ origin: "*" }));
 // app.use(express.json());
@@ -45,19 +61,6 @@ app.use(limiter);
 app.use(morgan("dev"));
 
 
-const expressProxy = require('express-http-proxy');
-
-const proxyOptions = {
-  parseReqBody: false,   // ✅ REQUIRED for file uploads
-  limit: '100mb',
-  memoizeHost: false
-};
-
-// Proxy requests starting with /external-api to the target server
-app.use('/api/superadmin', expressProxy('http://localhost:4001'),proxyOptions);
-app.use('/api/admin', expressProxy('http://localhost:4002'),proxyOptions);
-app.use('/api/wlp', expressProxy('http://localhost:4003'),proxyOptions);
-app.use('/api/manufactur', expressProxy('http://localhost:4004'),proxyOptions);
 
 // ✅ API routes
 // app.use("/api/superadmin", superAdminRoutes);
@@ -96,3 +99,76 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 
 connectToDatabase();
+
+
+// // Backend/server.js (gateway)
+// const express = require("express");
+// const { connectToDatabase } = require("./database/Db");
+// require("dotenv").config();
+// const cors = require("cors");
+// const helmet = require("helmet");
+// const rateLimit = require("express-rate-limit");
+// const morgan = require("morgan");
+// const expressProxy = require("express-http-proxy");
+
+// const app = express();
+// app.set("trust proxy", 1);
+// app.use(helmet());
+// app.use(cors({ origin: "*" }));
+// app.use(morgan("dev"));
+
+// // Rate limiter (apply to /api only)
+// const apiLimiter = rateLimit({
+//   windowMs: 1 * 60 * 1000,
+//   max: 20000,
+//   standardHeaders: true,
+//   legacyHeaders: false
+// });
+// app.use("/api", apiLimiter);
+
+// // Proxy options
+// const proxyOptions = {
+//   parseReqBody: false,     // DO NOT parse body in proxy (prevents double-consume)
+//   memoizeHost: false,
+//   limit: "100mb",
+//   proxyErrorHandler: (err, res, next) => {
+//     console.error("Proxy error:", err && err.message);
+//     next(err);
+//   }
+// };
+
+// // Ensure Nginx/clients' real IP forwarded
+// const proxyWithHeaders = (target) =>
+//   expressProxy(target, {
+//     ...proxyOptions,
+//     proxyReqOptDecorator(proxyReqOpts, srcReq) {
+//       proxyReqOpts.headers['x-forwarded-for'] = srcReq.headers['x-forwarded-for'] || srcReq.ip;
+//       proxyReqOpts.headers['x-real-ip'] = srcReq.headers['x-real-ip'] || srcReq.ip;
+//       return proxyReqOpts;
+//     }
+//   });
+
+// // PROXIES MUST BE BEFORE body-parsers
+// app.use("/api/superadmin", proxyWithHeaders("http://127.0.0.1:4001"));
+// app.use("/api/admin", proxyWithHeaders("http://127.0.0.1:4002"));
+// app.use("/api/wlp", proxyWithHeaders("http://127.0.0.1:4003"));
+// app.use("/api/manufactur", proxyWithHeaders("http://127.0.0.1:4004"));
+
+// // Now body parsers for gateway's own routes (if any)
+// app.use(express.json({ limit: "50mb" }));
+// app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// app.get("/health", (req, res) => res.status(200).json({ status: "UP", ts: new Date().toISOString() }));
+
+// // error handler
+// app.use((err, req, res, next) => {
+//   console.error("Gateway Error:", err && err.message);
+//   res.status(500).json({ success: false, message: "Internal Server Error" });
+// });
+
+// // start
+// const PORT = process.env.PORT || 4000;
+// app.listen(PORT, "0.0.0.0", () => {
+//   console.log(`Gateway running on :${PORT}`);
+// });
+// connectToDatabase();
