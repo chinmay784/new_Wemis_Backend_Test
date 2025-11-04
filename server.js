@@ -47,11 +47,17 @@ app.use(morgan("dev"));
 
 const expressProxy = require('express-http-proxy');
 
+const proxyOptions = {
+  parseReqBody: false,   // ✅ REQUIRED for file uploads
+  limit: '100mb',
+  memoizeHost: false
+};
+
 // Proxy requests starting with /external-api to the target server
-app.use('/api/superadmin', expressProxy('http://localhost:4001'));
-app.use('/api/admin', expressProxy('http://localhost:4002'));
-app.use('/api/wlp', expressProxy('http://localhost:4003'));
-app.use('/api/manufactur', expressProxy('http://localhost:4004'));
+app.use('/api/superadmin', expressProxy('http://localhost:4001'),proxyOptions);
+app.use('/api/admin', expressProxy('http://localhost:4002'),proxyOptions);
+app.use('/api/wlp', expressProxy('http://localhost:4003'),proxyOptions);
+app.use('/api/manufactur', expressProxy('http://localhost:4004'),proxyOptions);
 
 // ✅ API routes
 // app.use("/api/superadmin", superAdminRoutes);
