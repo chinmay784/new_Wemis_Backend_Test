@@ -37,7 +37,14 @@ app.use('/api/wlp', expressProxy('http://127.0.0.1:4003', proxyOptions));
 app.use('/api/manufactur', expressProxy('http://127.0.0.1:4004', proxyOptions));
 
 // ✅ CORS   
-app.use(cors({ origin: "https://websave.in" }));
+app.use(
+  cors({
+    origin: ["https://websave.in", "http://localhost:3000"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 // app.use(express.json());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -99,3 +106,4 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 
 connectToDatabase();
+
