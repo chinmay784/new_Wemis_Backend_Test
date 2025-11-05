@@ -2989,72 +2989,72 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // ✅ Check if customer already exists
         console.log("Checking for existing customer with mobile:", mobileNo);
         
-        let customer = null;
+        // let customer = null;
         
-        try {
-            customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
-            console.log("Customer search completed:", customer ? "Found" : "Not found");
-        } catch (findError) {
-            console.error("❌ Error searching for customer:", findError);
-            throw findError;
-        }
+        // try {
+        //     customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
+        //     console.log("Customer search completed:", customer ? "Found" : "Not found");
+        // } catch (findError) {
+        //     console.error("❌ Error searching for customer:", findError);
+        //     throw findError;
+        // }
 
-        // ✅ If customer doesn't exist → create new customer
-        if (!customer) {
-            console.log("Creating new customer...");
+        // // ✅ If customer doesn't exist → create new customer
+        // if (!customer) {
+        //     console.log("Creating new customer...");
 
-            try {
-                customer = new CoustmerDevice({
-                    manufacturId: userId,
-                    delerId: null,
-                    fullName,
-                    email,
-                    mobileNo,
-                    GstinNo,
-                    Customercountry,
-                    Customerstate,
-                    Customerdistrict,
-                    Rto,
-                    PinCode,
-                    CompliteAddress,
-                    AdharNo,
-                    PanNo,
-                    devicesOwened: [newDeviceObject],
-                });
+        //     try {
+        //         customer = new CoustmerDevice({
+        //             manufacturId: userId,
+        //             delerId: null,
+        //             fullName,
+        //             email,
+        //             mobileNo,
+        //             GstinNo,
+        //             Customercountry,
+        //             Customerstate,
+        //             Customerdistrict,
+        //             Rto,
+        //             PinCode,
+        //             CompliteAddress,
+        //             AdharNo,
+        //             PanNo,
+        //             devicesOwened: [newDeviceObject],
+        //         });
 
-                console.log("Customer object created, attempting to save...");
-                await customer.save();
-                console.log("✅ CUSTOMER CREATED with ID:", customer._id);
+        //         console.log("Customer object created, attempting to save...");
+        //         await customer.save();
+        //         console.log("✅ CUSTOMER CREATED with ID:", customer._id);
                 
-            } catch (customerCreateError) {
-                console.error("❌ Error creating customer:");
-                console.error("Error name:", customerCreateError.name);
-                console.error("Error message:", customerCreateError.message);
+        //     } catch (customerCreateError) {
+        //         console.error("❌ Error creating customer:");
+        //         console.error("Error name:", customerCreateError.name);
+        //         console.error("Error message:", customerCreateError.message);
                 
-                if (customerCreateError.name === 'ValidationError') {
-                    console.error("Validation errors:");
-                    Object.keys(customerCreateError.errors).forEach(key => {
-                        console.error(`  - ${key}: ${customerCreateError.errors[key].message}`);
-                    });
-                }
+        //         if (customerCreateError.name === 'ValidationError') {
+        //             console.error("Validation errors:");
+        //             Object.keys(customerCreateError.errors).forEach(key => {
+        //                 console.error(`  - ${key}: ${customerCreateError.errors[key].message}`);
+        //             });
+        //         }
                 
-                throw customerCreateError;
-            }
-        }
-        // ✅ If customer exists → push device to devicesOwened array
-        else {
-            console.log("Updating existing customer:", customer._id);
+        //         throw customerCreateError;
+        //     }
+        // }
+        // // ✅ If customer exists → push device to devicesOwened array
+        // else {
+        //     console.log("Updating existing customer:", customer._id);
             
-            try {
-                await CoustmerDevice.findByIdAndUpdate(customer._id, {
-                    $push: { devicesOwened: newDeviceObject }
-                });
-                console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER");
-            } catch (updateError) {
-                console.error("❌ Error updating customer:", updateError);
-                throw updateError;
-            }
-        }
+        //     try {
+        //         await CoustmerDevice.findByIdAndUpdate(customer._id, {
+        //             $push: { devicesOwened: newDeviceObject }
+        //         });
+        //         console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER");
+        //     } catch (updateError) {
+        //         console.error("❌ Error updating customer:", updateError);
+        //         throw updateError;
+        //     }
+        // }
 
         console.log("Customer operations completed");
 
@@ -3067,7 +3067,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     email: email,
                     password: mobileNo,
                     role: "coustmer",
-                    coustmerId: customer._id,
+                    // coustmerId: customer._id,
                 });
                 console.log("✅ User account created with ID:", newUser._id);
             } catch (userCreateError) {
