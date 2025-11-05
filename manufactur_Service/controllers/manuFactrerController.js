@@ -2988,9 +2988,9 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // ✅ Check if customer already exists
         console.log("Checking for existing customer with mobile:", mobileNo);
-        
+
         // let customer = null;
-        
+
         // try {
         //     customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
         //     console.log("Customer search completed:", customer ? "Found" : "Not found");
@@ -3025,26 +3025,26 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         //         console.log("Customer object created, attempting to save...");
         //         await customer.save();
         //         console.log("✅ CUSTOMER CREATED with ID:", customer._id);
-                
+
         //     } catch (customerCreateError) {
         //         console.error("❌ Error creating customer:");
         //         console.error("Error name:", customerCreateError.name);
         //         console.error("Error message:", customerCreateError.message);
-                
+
         //         if (customerCreateError.name === 'ValidationError') {
         //             console.error("Validation errors:");
         //             Object.keys(customerCreateError.errors).forEach(key => {
         //                 console.error(`  - ${key}: ${customerCreateError.errors[key].message}`);
         //             });
         //         }
-                
+
         //         throw customerCreateError;
         //     }
         // }
         // // ✅ If customer exists → push device to devicesOwened array
         // else {
         //     console.log("Updating existing customer:", customer._id);
-            
+
         //     try {
         //         await CoustmerDevice.findByIdAndUpdate(customer._id, {
         //             $push: { devicesOwened: newDeviceObject }
@@ -3059,29 +3059,23 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         console.log("Customer operations completed");
 
         // ✅ Create user account for customer (only if email exists)
-        if (email && mobileNo) {
-            console.log("Creating user account...");
-            
-            try {
-                const newUser = await User.create({
-                    email: email,
-                    password: mobileNo,
-                    role: "coustmer",
-                    // coustmerId: customer._id,
-                });
-                console.log("✅ User account created with ID:", newUser._id);
-            } catch (userCreateError) {
-                console.error("❌ Error creating user:");
-                console.error("Error:", userCreateError.message);
-            }
-        } else {
-            console.log("⚠️ Skipping user creation - email or mobile missing");
-        }
+
+
+        const newUser = await User.create({
+            email: email,
+            password: mobileNo,
+            role: "coustmer",
+            // coustmerId: customer._id,
+        });
+        console.log("✅ User account created with ID:", newUser._id);
+
+
 
         return res.status(200).json({
             success: true,
             message: "Device mapped successfully and customer account created",
-            data: newMapDevice
+            data: newMapDevice,
+            newUser
         });
 
     } catch (error) {
@@ -3089,7 +3083,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         console.error("Error name:", error.name);
         console.error("Error message:", error.message);
         console.error("Error stack:", error.stack);
-        
+
         return res.status(500).json({
             success: false,
             message: "Server error while mapping device",
