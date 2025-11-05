@@ -2989,85 +2989,48 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // ✅ Check if customer already exists
         console.log("Checking for existing customer with mobile:", mobileNo);
 
-        // let customer = null;
+        // ✅ Check if customer exists
+        let customer = await CoustmerDevice.findOne({ mobileNo });
 
-        // try {
-        //     customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
-        //     console.log("Customer search completed:", customer ? "Found" : "Not found");
-        // } catch (findError) {
-        //     console.error("❌ Error searching for customer:", findError);
-        //     throw findError;
-        // }
+        if (!customer) {
+            // ✅ Create new customer
+            customer = new CoustmerDevice({
+                manufacturId: userId,
+                delerId: null,
+                fullName,
+                email,
+                mobileNo,
+                GstinNo,
+                Customercountry,
+                Customerstate,
+                Customerdistrict,
+                Rto,
+                PinCode,
+                CompliteAddress,
+                AdharNo,
+                PanNo,
+                devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE ADDED
+            });
 
-        // // ✅ If customer doesn't exist → create new customer
-        // if (!customer) {
-        //     console.log("Creating new customer...");
+            await customer.save();
+        } else {
+            // ✅ If customer exists → push new device
+            await CoustmerDevice.findByIdAndUpdate(customer._id, {
+                $push: {
+                    devicesOwened: newDeviceObject
+                }
+            });
+        }
 
-        //     try {
-        //         customer = new CoustmerDevice({
-        //             manufacturId: userId,
-        //             delerId: null,
-        //             fullName,
-        //             email,
-        //             mobileNo,
-        //             GstinNo,
-        //             Customercountry,
-        //             Customerstate,
-        //             Customerdistrict,
-        //             Rto,
-        //             PinCode,
-        //             CompliteAddress,
-        //             AdharNo,
-        //             PanNo,
-        //             devicesOwened: [newDeviceObject],
-        //         });
-
-        //         console.log("Customer object created, attempting to save...");
-        //         await customer.save();
-        //         console.log("✅ CUSTOMER CREATED with ID:", customer._id);
-
-        //     } catch (customerCreateError) {
-        //         console.error("❌ Error creating customer:");
-        //         console.error("Error name:", customerCreateError.name);
-        //         console.error("Error message:", customerCreateError.message);
-
-        //         if (customerCreateError.name === 'ValidationError') {
-        //             console.error("Validation errors:");
-        //             Object.keys(customerCreateError.errors).forEach(key => {
-        //                 console.error(`  - ${key}: ${customerCreateError.errors[key].message}`);
-        //             });
-        //         }
-
-        //         throw customerCreateError;
-        //     }
-        // }
-        // // ✅ If customer exists → push device to devicesOwened array
-        // else {
-        //     console.log("Updating existing customer:", customer._id);
-
-        //     try {
-        //         await CoustmerDevice.findByIdAndUpdate(customer._id, {
-        //             $push: { devicesOwened: newDeviceObject }
-        //         });
-        //         console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER");
-        //     } catch (updateError) {
-        //         console.error("❌ Error updating customer:", updateError);
-        //         throw updateError;
-        //     }
-        // }
-
-        console.log("Customer operations completed");
-
-        // ✅ Create user account for customer (only if email exists)
-
-
+        // ✅ Create customer user login
         const newUser = await User.create({
             email: email,
             password: mobileNo,
             role: "coustmer",
-            // coustmerId: customer._id,
+            coustmerId: customer._id,
+            customer,
+            user: newUser
         });
-        console.log("✅ User account created with ID:", newUser._id);
 
 
 
