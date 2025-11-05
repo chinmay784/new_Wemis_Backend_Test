@@ -2893,13 +2893,20 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // ✅ Upload all files to Cloudinary
         const uploadToCloudinary = async (fieldName) => {
+            if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+                return null; // ✅ No file uploaded
+            }
+
             const file = req.files[fieldName][0];
             const uploaded = await cloudinary.uploader.upload(file.path, {
                 folder: "profile_pics",
-                resource_type: "raw", // to support PDFs or other formats
+                resource_type: "raw"
             });
+
             return uploaded.secure_url;
         };
+
+
 
         const [
             vc,
