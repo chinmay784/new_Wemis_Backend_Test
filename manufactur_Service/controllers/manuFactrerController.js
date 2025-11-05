@@ -2892,20 +2892,57 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // }
 
         // ✅ Upload all files to Cloudinary
-        const uploadToCloudinary = async (fieldName) => {
-            if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-                return null; // ✅ No file uploaded
-            }
+        // const uploadToCloudinary = async (fieldName) => {
+        //     if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+        //         return null; // ✅ No file uploaded
+        //     }
 
-            const file = req.files[fieldName][0];
+        //     const file = req.files[fieldName][0];
+        //     const uploaded = await cloudinary.uploader.upload(file.path, {
+        //         folder: "profile_pics",
+        //         resource_type: "raw"
+        //     });
+
+        //     return uploaded.secure_url;
+        // };
+
+        // ✅ Clean & smart Cloudinary upload helper
+        const uploadFile = async (req, fieldName) => {
+            if (!req.files) return null;
+
+            // find file inside req.files array (upload.any())
+            const file = req.files.find(f => f.fieldname === fieldName);
+            if (!file) return null;
+
             const uploaded = await cloudinary.uploader.upload(file.path, {
                 folder: "profile_pics",
-                resource_type: "raw"
+                resource_type: file.mimetype === "application/pdf" ? "raw" : "image"
             });
 
             return uploaded.secure_url;
         };
 
+
+
+        // const [
+        //     vc,
+        //     Rc,
+        //     Pc,
+        //     Dc,
+        //     Ac,
+        //     Ic,
+        //     Sc,
+        //     Ps
+        // ] = await Promise.all([
+        //     uploadToCloudinary("Vechile_Doc"),
+        //     uploadToCloudinary("Rc_Doc"),
+        //     uploadToCloudinary("Pan_Card"),
+        //     uploadToCloudinary("Device_Doc"),
+        //     uploadToCloudinary("Adhar_Card"),
+        //     uploadToCloudinary("Invious_Doc"),
+        //     uploadToCloudinary("Signature_Doc"),
+        //     uploadToCloudinary("Panic_Sticker"),
+        // ]);
 
 
         const [
@@ -2918,15 +2955,16 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Sc,
             Ps
         ] = await Promise.all([
-            uploadToCloudinary("Vechile_Doc"),
-            uploadToCloudinary("Rc_Doc"),
-            uploadToCloudinary("Pan_Card"),
-            uploadToCloudinary("Device_Doc"),
-            uploadToCloudinary("Adhar_Card"),
-            uploadToCloudinary("Invious_Doc"),
-            uploadToCloudinary("Signature_Doc"),
-            uploadToCloudinary("Panic_Sticker"),
+            uploadFile(req, "Vechile_Doc"),
+            uploadFile(req, "Rc_Doc"),
+            uploadFile(req, "Pan_Card"),
+            uploadFile(req, "Device_Doc"),
+            uploadFile(req, "Adhar_Card"),
+            uploadFile(req, "Invious_Doc"),
+            uploadFile(req, "Signature_Doc"),
+            uploadFile(req, "Panic_Sticker"),
         ]);
+
 
         // let pack = {
         //     packageId: Packages._id,
