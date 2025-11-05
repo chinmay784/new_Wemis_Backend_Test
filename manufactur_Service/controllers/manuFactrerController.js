@@ -2861,16 +2861,6 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
 
 
-        // ✅ Check if deviceNo already exists
-        // const existingDevice = await MapDevice.findOne({ deviceNo });
-        // if (existingDevice) {
-        //     return res.status(409).json({
-        //         success: false,
-        //         message: `Device with deviceNo "${deviceNo}" already exists.`,
-        //     });
-        // }
-
-        // ✅ Ensure required files are uploaded
         const requiredFiles = [
             "Vechile_Doc",
             "Rc_Doc",
@@ -2892,57 +2882,20 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // }
 
         // ✅ Upload all files to Cloudinary
-        // const uploadToCloudinary = async (fieldName) => {
-        //     if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-        //         return null; // ✅ No file uploaded
-        //     }
+        const uploadToCloudinary = async (fieldName) => {
+            if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+                return null; // ✅ No file uploaded
+            }
 
-        //     const file = req.files[fieldName][0];
-        //     const uploaded = await cloudinary.uploader.upload(file.path, {
-        //         folder: "profile_pics",
-        //         resource_type: "raw"
-        //     });
-
-        //     return uploaded.secure_url;
-        // };
-
-        // ✅ Clean & smart Cloudinary upload helper
-        const uploadFile = async (req, fieldName) => {
-            if (!req.files) return null;
-
-            // find file inside req.files array (upload.any())
-            const file = req.files.find(f => f.fieldname === fieldName);
-            if (!file) return null;
-
+            const file = req.files[fieldName][0];
             const uploaded = await cloudinary.uploader.upload(file.path, {
                 folder: "profile_pics",
-                resource_type: file.mimetype === "application/pdf" ? "raw" : "image"
+                resource_type: "raw"
             });
 
             return uploaded.secure_url;
         };
 
-
-
-        // const [
-        //     vc,
-        //     Rc,
-        //     Pc,
-        //     Dc,
-        //     Ac,
-        //     Ic,
-        //     Sc,
-        //     Ps
-        // ] = await Promise.all([
-        //     uploadToCloudinary("Vechile_Doc"),
-        //     uploadToCloudinary("Rc_Doc"),
-        //     uploadToCloudinary("Pan_Card"),
-        //     uploadToCloudinary("Device_Doc"),
-        //     uploadToCloudinary("Adhar_Card"),
-        //     uploadToCloudinary("Invious_Doc"),
-        //     uploadToCloudinary("Signature_Doc"),
-        //     uploadToCloudinary("Panic_Sticker"),
-        // ]);
 
 
         const [
@@ -2955,24 +2908,15 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Sc,
             Ps
         ] = await Promise.all([
-            uploadFile(req, "Vechile_Doc"),
-            uploadFile(req, "Rc_Doc"),
-            uploadFile(req, "Pan_Card"),
-            uploadFile(req, "Device_Doc"),
-            uploadFile(req, "Adhar_Card"),
-            uploadFile(req, "Invious_Doc"),
-            uploadFile(req, "Signature_Doc"),
-            uploadFile(req, "Panic_Sticker"),
+            uploadToCloudinary("Vechile_Doc"),
+            uploadToCloudinary("Rc_Doc"),
+            uploadToCloudinary("Pan_Card"),
+            uploadToCloudinary("Device_Doc"),
+            uploadToCloudinary("Adhar_Card"),
+            uploadToCloudinary("Invious_Doc"),
+            uploadToCloudinary("Signature_Doc"),
+            uploadToCloudinary("Panic_Sticker"),
         ]);
-
-
-        // let pack = {
-        //     packageId: Packages._id,
-        //     packageName: Packages.packageName,
-        //     packageType: Packages.packageType,
-        //     billingCycle: Packages.billingCycle,
-        //     price: Packages.price
-        // };
 
         // ✅ Create a new MapDevice document
         const newMapDevice = new MapDevice({
@@ -3027,10 +2971,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         await newMapDevice.save();
 
-
-        // Here I have to save in coustermerDevice Data in coustmer collections
-
-
+console.log("Device Mapped")
         const newDeviceObject = {
             deviceType,
             deviceNo,
@@ -3058,6 +2999,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // ✅ If customer not exist → create
         if (!customer) {
+            console.log("Before coustmer")
             customer = new  CoustmerDevice({
                 manufacturId: userId,
                 delerId: null,
@@ -3089,6 +3031,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER:", customer._id);
         }
 
+        console.log('coustmer done')
         // and here save in user collections also
         const user = await User.findOne({ email });
 
@@ -3106,6 +3049,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             coustmerId: customer._id,
         });
 
+        console.log("userDone")
 
         return res.status(200).json({
             success: true,
