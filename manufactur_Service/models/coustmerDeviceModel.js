@@ -8,6 +8,7 @@ const coustmerDeviceSchema = new mongoose.Schema({
     delerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'CreateDelerUnderDistributor',
+        default: null
     },
     fullName: {
         type: String,

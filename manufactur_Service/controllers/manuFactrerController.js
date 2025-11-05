@@ -3060,6 +3060,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         if (!customer) {
             customer = await CoustmerDevice.create({
                 manufacturId: userId,
+                delerId: null,
                 fullName,
                 email,
                 mobileNo,
@@ -3074,6 +3075,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 PanNo,
                 devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE
             });
+            console.log("✅ CUSTOMER CREATED:", customer);
         }
         // ✅ If exists → push device to devicesOwened array
         else {
@@ -3082,6 +3084,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     devicesOwened: newDeviceObject
                 }
             });
+            console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER:", customer._id);
         }
 
         // and here save in user collections also
