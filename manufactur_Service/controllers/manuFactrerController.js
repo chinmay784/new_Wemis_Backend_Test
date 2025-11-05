@@ -3058,7 +3058,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // ✅ If customer not exist → create
         if (!customer) {
-            customer = await CoustmerDevice.create({
+            customer = new  CoustmerDevice({
                 manufacturId: userId,
                 delerId: null,
                 fullName,
@@ -3075,6 +3075,8 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 PanNo,
                 devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE
             });
+
+            await customer.save();
             console.log("✅ CUSTOMER CREATED:", customer);
         }
         // ✅ If exists → push device to devicesOwened array
