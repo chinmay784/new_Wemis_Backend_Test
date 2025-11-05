@@ -40,19 +40,26 @@ router.post("/fetchAllSubscriptionPlans", authMiddelWere, fetchAllSubscriptionPl
 router.post("/findSubScriptionById", authMiddelWere, findSubScriptionById);
 router.post("/editSubscriptionById", authMiddelWere, editSubscriptionById);
 // Map a Device Routes
+// router.post(
+//     "/manuFacturMAPaDevice",
+//     authMiddelWere,
+//     upload.fields([
+//         { name: "Vechile_Doc", maxCount: 1, optional: true },
+//         { name: "Rc_Doc", maxCount: 1, optional: true },
+//         { name: "Pan_Card", maxCount: 1, optional: true },
+//         { name: "Device_Doc", maxCount: 1, optional: true },
+//         { name: "Adhar_Card", maxCount: 1, optional: true },
+//         { name: "Invious_Doc", maxCount: 1, optional: true },
+//         { name: "Signature_Doc", maxCount: 1, optional: true },
+//         { name: "Panic_Sticker", maxCount: 1, optional: true }
+//     ]),
+//     manuFacturMAPaDevice
+// );
+
 router.post(
     "/manuFacturMAPaDevice",
     authMiddelWere,
-    upload.fields([
-        { name: "Vechile_Doc", maxCount: 1, optional: true },
-        { name: "Rc_Doc", maxCount: 1, optional: true },
-        { name: "Pan_Card", maxCount: 1, optional: true },
-        { name: "Device_Doc", maxCount: 1, optional: true },
-        { name: "Adhar_Card", maxCount: 1, optional: true },
-        { name: "Invious_Doc", maxCount: 1, optional: true },
-        { name: "Signature_Doc", maxCount: 1, optional: true },
-        { name: "Panic_Sticker", maxCount: 1, optional: true }
-    ]),
+    upload.any(),
     manuFacturMAPaDevice
 );
 

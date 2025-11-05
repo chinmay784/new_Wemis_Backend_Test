@@ -5,7 +5,7 @@ const { upload } = require('../config/cloudinary');
 const router = express.Router();
 
 router.post("/createManuFactur", upload.fields([
-    { name: 'logo', maxCount: 1 },
+    { name: 'logo', maxCount: 1 ,optional: true},
 ]), authMiddelWere, createManuFactur);
 
 router.post("/fetchWlpName", authMiddelWere, fetchWlpName);

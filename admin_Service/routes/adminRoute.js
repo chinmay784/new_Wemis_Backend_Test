@@ -5,7 +5,7 @@ const { createWlp, getAllWlp, deleteWlp, fetchAdminElementsList, adminDashBoard,
 const { upload } = require('../config/cloudinary');
 
 router.post("/createWlp", upload.fields([
-    { name: 'logo', maxCount: 1 },
+    { name: 'logo', maxCount: 1,optional: true },
 ]), authMiddelWere, createWlp);
 router.post("/getAllWlp", authMiddelWere, getAllWlp);
 router.post("/deleteWlp", authMiddelWere, deleteWlp);

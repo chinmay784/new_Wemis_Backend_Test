@@ -11,10 +11,10 @@ router.post(
     '/createAdmin',
     authMiddelWere,
     upload.fields([
-        { name: 'Company_Logo', maxCount: 1 },
-        { name: 'Incorporation_Certificate', maxCount: 1 },
-        { name: 'Pan_Card', maxCount: 1 },
-        { name: 'GST_Certificate', maxCount: 1 }
+        { name: 'Company_Logo', maxCount: 1 ,optional: true},
+        { name: 'Incorporation_Certificate', maxCount: 1 ,optional: true},
+        { name: 'Pan_Card', maxCount: 1 ,optional: true},
+        { name: 'GST_Certificate', maxCount: 1,optional: true }
     ]),
     createAdmin
 );
