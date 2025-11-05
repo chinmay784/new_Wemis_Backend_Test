@@ -357,7 +357,7 @@ exports.createDelerUnderDistributor = async (req, res) => {
             distributorId: distributorId,
             email: email,
             password: mobile,
-            role: "deler",
+            role: "dealer-distributor",
             distributorDelerId: newDel._id
         });
         await delerDistributor.save();
@@ -808,7 +808,7 @@ exports.createDelerUnderOems = async (req, res) => {
             oemId: oemsId,
             email: email,
             password: mobile,
-            role: "deler",
+            role: "dealer-oem",
             oemsDelerId: newOem._id
         });
         await delerOem.save();

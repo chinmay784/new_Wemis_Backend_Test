@@ -14,7 +14,7 @@ const UserSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['superadmin', 'admin', 'wlp', 'manufacturer', 'distibutor', 'oem', 'deler','technicien'],
+        enum: ['superadmin', 'admin', 'wlp', 'manufacturer', 'distibutor', 'oem', 'dealer-distributor', 'technicien', 'coustmer', 'dealer-oem'],
     },
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -47,6 +47,10 @@ const UserSchema = new mongoose.Schema({
     technicienId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Technicien',
+    },
+    coustmerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CoustmerDevice',
     },
     createdAt: {
         type: Date,
