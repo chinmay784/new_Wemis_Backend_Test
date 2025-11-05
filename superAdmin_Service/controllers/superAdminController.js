@@ -182,14 +182,14 @@ exports.createAdmin = async (req, res) => {
 
         // Ensure all files are uploaded
         const requiredFiles = ['Company_Logo', 'Incorporation_Certificate', 'Pan_Card', 'GST_Certificate'];
-        for (let field of requiredFiles) {
-            if (!req.files[field] || req.files[field].length === 0) {
-                return res.status(400).json({
-                    message: `${field} file is required`,
-                    success: false
-                });
-            }
-        }
+        // for (let field of requiredFiles) {
+        //     if (!req.files[field] || req.files[field].length === 0) {
+        //         return res.status(400).json({
+        //             message: `${field} file is required`,
+        //             success: false
+        //         });
+        //     }
+        // }
 
         // ✅ Upload files separately
         let companyLogoUrl = null;

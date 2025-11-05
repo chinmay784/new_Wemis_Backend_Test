@@ -13,6 +13,7 @@ const MapDevice = require("../models/mapADeviceModel");
 const Technicien = require("../models/CreateTechnicien");
 const { cloudinary } = require("../config/cloudinary");
 const { devices } = require("../server");
+const CoustmerDevice = require("../models/coustmerDeviceModel");
 
 
 
@@ -2881,20 +2882,20 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             "Panic_Sticker",
         ];
 
-        for (let field of requiredFiles) {
-            if (!req.files?.[field] || req.files[field].length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: `${field} file is required`,
-                });
-            }
-        }
+        // for (let field of requiredFiles) {
+        //     if (!req.files?.[field] || req.files[field].length === 0) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: `${field} file is required`,
+        //         });
+        //     }
+        // }
 
         // ✅ Upload all files to Cloudinary
         const uploadToCloudinary = async (fieldName) => {
             const file = req.files[fieldName][0];
             const uploaded = await cloudinary.uploader.upload(file.path, {
-                folder: "map_device_docs",
+                folder: "profile_pics",
                 resource_type: "raw", // to support PDFs or other formats
             });
             return uploaded.secure_url;
@@ -2980,6 +2981,81 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
 
         await newMapDevice.save();
+
+
+        // Here I have to save in coustermerDevice Data in coustmer collections
+
+
+        const newDeviceObject = {
+            deviceType,
+            deviceNo,
+            voltage,
+            elementType,
+            batchNo,
+            simDetails,
+            Packages,
+            VechileBirth,
+            RegistrationNo,
+            date,
+            ChassisNumber,
+            EngineNumber,
+            VehicleType,
+            MakeModel,
+            ModelYear,
+            InsuranceRenewDate,
+            PollutionRenewdate,
+        };
+
+        // ✅ Check if customer already exists
+        let customer = await CoustmerDevice.findOne({
+            mobileNo: mobileNo
+        });
+
+        // ✅ If customer not exist → create
+        if (!customer) {
+            customer = await CoustmerDevice.create({
+                manufacturId: userId,
+                fullName,
+                email,
+                mobileNo,
+                GstinNo,
+                Customercountry,
+                Customerstate,
+                Customerdistrict,
+                Rto,
+                PinCode,
+                CompliteAddress,
+                AdharNo,
+                PanNo,
+                devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE
+            });
+        }
+        // ✅ If exists → push device to devicesOwened array
+        else {
+            await CoustmerDevice.findByIdAndUpdate(customer._id, {
+                $push: {
+                    devicesOwened: newDeviceObject
+                }
+            });
+        }
+
+        // and here save in user collections also
+        const user = await User.findOne({ email });
+
+        if (user) {
+            return res.status(200).json({
+                success: false,
+                message: "user already exists with this email",
+            });
+        }
+
+        const newUser = await User.create({
+            email: email,
+            password: mobileNo,
+            role: "coustmer",
+            coustmerId: customer._id,
+        });
+
 
         return res.status(200).json({
             success: true,

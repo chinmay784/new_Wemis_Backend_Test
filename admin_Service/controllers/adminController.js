@@ -27,14 +27,14 @@ exports.createWlp = async (req, res) => {
 
         // Ensure all files are uploaded
         const requiredFiles = ['logo'];
-        for (let field of requiredFiles) {
-            if (!req.files[field] || req.files[field].length === 0) {
-                return res.status(400).json({
-                    message: `${field} file is required`,
-                    success: false
-                });
-            }
-        };
+        // for (let field of requiredFiles) {
+        //     if (!req.files[field] || req.files[field].length === 0) {
+        //         return res.status(400).json({
+        //             message: `${field} file is required`,
+        //             success: false
+        //         });
+        //     }
+        // };
 
         let gstCertUrl = null;
 
