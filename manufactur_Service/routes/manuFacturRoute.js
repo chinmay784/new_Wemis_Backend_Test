@@ -40,34 +40,40 @@ router.post("/fetchAllSubscriptionPlans", authMiddelWere, fetchAllSubscriptionPl
 router.post("/findSubScriptionById", authMiddelWere, findSubScriptionById);
 router.post("/editSubscriptionById", authMiddelWere, editSubscriptionById);
 // Map a Device Routes
-router.post("/manuFacturMAPaDevice", authMiddelWere, upload.fields([
-    { name: 'Vechile_Doc', maxCount: 1 },
-    { name: 'Rc_Doc', maxCount: 1 },
-    { name: 'Pan_Card', maxCount: 1 },
-    { name: 'Device_Doc', maxCount: 1 },
-    { name: 'Adhar_Card', maxCount: 1 },
-    { name: 'Invious_Doc', maxCount: 1 },
-    { name: 'Signature_Doc', maxCount: 1 },
-    { name: 'Panic_Sticker', maxCount: 1 },
-]), manuFacturMAPaDevice);
-router.post("/fetchAllMapDevice",authMiddelWere,fetchAllMapDevice);
-router.post("/viewAMapDeviceInManufactur",authMiddelWere,viewAMapDeviceInManufactur);
-router.post("/viewDocumentsOnMapDevice",authMiddelWere,viewDocumentsOnMapDevice)
+router.post(
+    "/manuFacturMAPaDevice",
+    authMiddelWere,
+    upload.fields([
+        { name: "Vechile_Doc", maxCount: 1, optional: true },
+        { name: "Rc_Doc", maxCount: 1, optional: true },
+        { name: "Pan_Card", maxCount: 1, optional: true },
+        { name: "Device_Doc", maxCount: 1, optional: true },
+        { name: "Adhar_Card", maxCount: 1, optional: true },
+        { name: "Invious_Doc", maxCount: 1, optional: true },
+        { name: "Signature_Doc", maxCount: 1, optional: true },
+        { name: "Panic_Sticker", maxCount: 1, optional: true }
+    ]),
+    manuFacturMAPaDevice
+);
+
+router.post("/fetchAllMapDevice", authMiddelWere, fetchAllMapDevice);
+router.post("/viewAMapDeviceInManufactur", authMiddelWere, viewAMapDeviceInManufactur);
+router.post("/viewDocumentsOnMapDevice", authMiddelWere, viewDocumentsOnMapDevice)
 
 
-router.post("/fetchDistributorOnBasisOfState",authMiddelWere,fetchDistributorOnBasisOfState);
-router.post("/fetchdelerOnBasisOfDistributor",authMiddelWere,fetchdelerOnBasisOfDistributor);
-router.post("/fetchDeviceNoOnBasisOfDeler",authMiddelWere,fetchDeviceNoOnBasisOfDeler);
-router.post("/fetchSubScriptionPackages",authMiddelWere,fetchSubScriptionPackages);
-router.post("/fetchTechnicienAllRelatedData",authMiddelWere,fetchTechnicienAllRelatedData)
+router.post("/fetchDistributorOnBasisOfState", authMiddelWere, fetchDistributorOnBasisOfState);
+router.post("/fetchdelerOnBasisOfDistributor", authMiddelWere, fetchdelerOnBasisOfDistributor);
+router.post("/fetchDeviceNoOnBasisOfDeler", authMiddelWere, fetchDeviceNoOnBasisOfDeler);
+router.post("/fetchSubScriptionPackages", authMiddelWere, fetchSubScriptionPackages);
+router.post("/fetchTechnicienAllRelatedData", authMiddelWere, fetchTechnicienAllRelatedData)
 
 
 
 // some more Apis for create Technicien
-router.post("/createTechnician",authMiddelWere,createTechnician);
-router.post("/fetchAllDistributors",authMiddelWere, fetchAllDistributors);
-router.post("/fetchAlldelersUnderDistributor",authMiddelWere,fetchAlldelersUnderDistributor);
-router.post("/fetchAllTechnicien",authMiddelWere,fetchAllTechnicien);
+router.post("/createTechnician", authMiddelWere, createTechnician);
+router.post("/fetchAllDistributors", authMiddelWere, fetchAllDistributors);
+router.post("/fetchAlldelersUnderDistributor", authMiddelWere, fetchAlldelersUnderDistributor);
+router.post("/fetchAllTechnicien", authMiddelWere, fetchAllTechnicien);
 
 
 
