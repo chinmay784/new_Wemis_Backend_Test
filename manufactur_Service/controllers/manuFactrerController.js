@@ -2862,13 +2862,13 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
 
         // ✅ Check if deviceNo already exists
-        const existingDevice = await MapDevice.findOne({ deviceNo });
-        if (existingDevice) {
-            return res.status(409).json({
-                success: false,
-                message: `Device with deviceNo "${deviceNo}" already exists.`,
-            });
-        }
+        // const existingDevice = await MapDevice.findOne({ deviceNo });
+        // if (existingDevice) {
+        //     return res.status(409).json({
+        //         success: false,
+        //         message: `Device with deviceNo "${deviceNo}" already exists.`,
+        //     });
+        // }
 
         // ✅ Ensure required files are uploaded
         const requiredFiles = [
