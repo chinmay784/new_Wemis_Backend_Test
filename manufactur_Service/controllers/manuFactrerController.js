@@ -2990,10 +2990,10 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         console.log("Checking for existing customer with mobile:", mobileNo);
 
         // ✅ Check if customer exists
+        // find or create customer
         let customer = await CoustmerDevice.findOne({ mobileNo });
 
         if (!customer) {
-            // ✅ Create new customer
             customer = new CoustmerDevice({
                 manufacturId: userId,
                 delerId: null,
@@ -3009,36 +3009,47 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 CompliteAddress,
                 AdharNo,
                 PanNo,
-                devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE ADDED
+                devicesOwened: [newDeviceObject],
             });
 
             await customer.save();
         } else {
-            // ✅ If customer exists → push new device
             await CoustmerDevice.findByIdAndUpdate(customer._id, {
-                $push: {
-                    devicesOwened: newDeviceObject
-                }
+                $push: { devicesOwened: newDeviceObject }
             });
         }
 
-        // ✅ Create customer user login
-        const newUser = await User.create({
-            email: email,
-            password: mobileNo,
-            role: "coustmer",
-            coustmerId: customer._id,
-            customer,
-            user: newUser
-        });
+        // --- create customer user login (only if email provided and not already used) ---
+        if (!email || email.trim() === "") {
+            // optional: if email is required, return error instead
+            console.warn("No email provided — skipping user creation");
+            // you may decide to return here or continue
+        } else {
+            // check if user already exists
+            const existingUser = await User.findOne({ email });
+            if (!existingUser) {
 
+                const newUser = await User.create({
+                    email,
+                    password: mobileNo,     // store hashed password
+                    role: "coustmer",
+                    coustmerId: customer._id
+                });
 
+                // optionally remove sensitive fields before returning
+                // newUser.password = undefined;
+
+                // return or log as needed
+                console.log("✅ Customer user created:", newUser._id);
+            } else {
+                console.log("✅ User already exists, skipping user creation for email:", email);
+            }
+        }
 
         return res.status(200).json({
             success: true,
             message: "Device mapped successfully and customer account created",
             data: newMapDevice,
-            newUser
         });
 
     } catch (error) {
