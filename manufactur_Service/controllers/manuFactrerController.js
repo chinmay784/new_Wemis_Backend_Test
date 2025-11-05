@@ -2837,61 +2837,27 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // ✅ Extract fields
         let {
-            country,
-            state,
-            distributorName,
-            delerName,
-            deviceType,
-            deviceNo,
-            voltage,
-            elementType,
-            batchNo,
-            simDetails,
-            VechileBirth,
-            RegistrationNo,
-            date,
-            ChassisNumber,
-            EngineNumber,
-            VehicleType,
-            MakeModel,
-            ModelYear,
-            InsuranceRenewDate,
-            PollutionRenewdate,
-            fullName,
-            email,
-            mobileNo,
-            GstinNo,
-            Customercountry,
-            Customerstate,
-            Customerdistrict,
-            Rto,
-            PinCode,
-            CompliteAddress,
-            AdharNo,
-            PanNo,
-            Packages,
-            InvoiceNo,
-            VehicleKMReading,
-            DriverLicenseNo,
-            MappedDate,
-            NoOfPanicButtons,
+            country, state, distributorName, delerName, deviceType,
+            deviceNo, voltage, elementType, batchNo, simDetails,
+            VechileBirth, RegistrationNo, date, ChassisNumber,
+            EngineNumber, VehicleType, MakeModel, ModelYear,
+            InsuranceRenewDate, PollutionRenewdate, fullName,
+            email, mobileNo, GstinNo, Customercountry,
+            Customerstate, Customerdistrict, Rto, PinCode,
+            CompliteAddress, AdharNo, PanNo, Packages,
+            InvoiceNo, VehicleKMReading, DriverLicenseNo,
+            MappedDate, NoOfPanicButtons,
         } = req.body;
 
-        // ✅ Validate required fields
-        // if (!email || !mobileNo) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: "Email and mobile number are required",
-        //     });
-        // }
-
         // ✅ Check if user already exists BEFORE creating anything
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: "User already exists with this email",
-            });
+        if (email) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: "User already exists with this email",
+                });
+            }
         }
 
         console.log("Before JSON.parse");
@@ -2911,31 +2877,10 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         console.log("After JSON.parse");
 
-        const requiredFiles = [
-            "Vechile_Doc",
-            "Rc_Doc",
-            "Pan_Card",
-            "Device_Doc",
-            "Adhar_Card",
-            "Invious_Doc",
-            "Signature_Doc",
-            "Panic_Sticker",
-        ];
-
-        // Optional: Uncomment to enforce file requirements
-        // for (let field of requiredFiles) {
-        //     if (!req.files?.[field] || req.files[field].length === 0) {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: `${field} file is required`,
-        //         });
-        //     }
-        // }
-
         // ✅ Upload all files to Cloudinary
         const uploadToCloudinary = async (fieldName) => {
             if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-                return null; // ✅ No file uploaded
+                return null;
             }
 
             try {
@@ -2953,16 +2898,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         console.log("Uploading files to Cloudinary...");
 
-        const [
-            vc,
-            Rc,
-            Pc,
-            Dc,
-            Ac,
-            Ic,
-            Sc,
-            Ps
-        ] = await Promise.all([
+        const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
             uploadToCloudinary("Vechile_Doc"),
             uploadToCloudinary("Rc_Doc"),
             uploadToCloudinary("Pan_Card"),
@@ -2978,58 +2914,39 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // ✅ Create a new MapDevice document
         const newMapDevice = new MapDevice({
             manufacturId: userId,
-            country,
-            state,
-            distributorName,
-            delerName,
-            deviceType,
-            deviceNo,
-            voltage,
-            elementType,
-            batchNo,
-            simDetails,
-            VechileBirth,
-            RegistrationNo,
-            date,
-            ChassisNumber,
-            EngineNumber,
-            VehicleType,
-            MakeModel,
-            ModelYear,
-            InsuranceRenewDate,
-            PollutionRenewdate,
-            fullName,
-            email,
-            mobileNo,
-            GstinNo,
-            Customercountry,
-            Customerstate,
-            Customerdistrict,
-            Rto,
-            PinCode,
-            CompliteAddress,
-            AdharNo,
-            PanNo,
-            Packages,
-            InvoiceNo,
-            VehicleKMReading,
-            DriverLicenseNo,
-            MappedDate,
-            NoOfPanicButtons,
-            VechileIDocument: vc,
-            RcDocument: Rc,
-            DeviceDocument: Dc,
-            PanCardDocument: Pc,
-            AdharCardDocument: Ac,
-            InvoiceDocument: Ic,
-            SignatureDocument: Sc,
+            country, state, distributorName, delerName,
+            deviceType, deviceNo, voltage, elementType,
+            batchNo, simDetails, VechileBirth, RegistrationNo,
+            date, ChassisNumber, EngineNumber, VehicleType,
+            MakeModel, ModelYear, InsuranceRenewDate,
+            PollutionRenewdate, fullName, email, mobileNo,
+            GstinNo, Customercountry, Customerstate,
+            Customerdistrict, Rto, PinCode, CompliteAddress,
+            AdharNo, PanNo, Packages, InvoiceNo,
+            VehicleKMReading, DriverLicenseNo, MappedDate,
+            NoOfPanicButtons, VechileIDocument: vc,
+            RcDocument: Rc, DeviceDocument: Dc,
+            PanCardDocument: Pc, AdharCardDocument: Ac,
+            InvoiceDocument: Ic, SignatureDocument: Sc,
             PanicButtonWithSticker: Ps,
         });
 
         await newMapDevice.save();
         console.log("✅ Device Mapped successfully");
 
-        // ✅ Create device object
+        // ✅ Convert Packages to ObjectId if it's a string
+        let packageId = null;
+        if (Packages) {
+            try {
+                packageId = mongoose.Types.ObjectId(Packages);
+                console.log("Package ID converted:", packageId);
+            } catch (err) {
+                console.log("⚠️ Invalid Package ID, setting to null");
+                packageId = null;
+            }
+        }
+
+        // ✅ Create device object with proper ObjectId for Packages
         const newDeviceObject = {
             deviceType,
             deviceNo,
@@ -3037,7 +2954,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             elementType,
             batchNo,
             simDetails,
-            Packages,
+            Packages: packageId, // ✅ Now it's ObjectId or null
             VechileBirth,
             RegistrationNo,
             date,
@@ -3052,55 +2969,95 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // ✅ Check if customer already exists
         console.log("Checking for existing customer with mobile:", mobileNo);
-        let customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
+        
+        let customer = null;
+        
+        try {
+            customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
+            console.log("Customer search completed:", customer ? "Found" : "Not found");
+        } catch (findError) {
+            console.error("❌ Error searching for customer:", findError);
+            throw findError;
+        }
 
         // ✅ If customer doesn't exist → create new customer
         if (!customer) {
             console.log("Creating new customer...");
-            customer = new CoustmerDevice({
-                manufacturId: userId,
-                delerId: null,
-                fullName,
-                email,
-                mobileNo,
-                GstinNo,
-                Customercountry,
-                Customerstate,
-                Customerdistrict,
-                Rto,
-                PinCode,
-                CompliteAddress,
-                AdharNo,
-                PanNo,
-                devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE
-            });
 
-            await customer.save();
-            console.log("✅ CUSTOMER CREATED with ID:", customer._id);
+            try {
+                customer = new CoustmerDevice({
+                    manufacturId: userId,
+                    delerId: null,
+                    fullName,
+                    email,
+                    mobileNo,
+                    GstinNo,
+                    Customercountry,
+                    Customerstate,
+                    Customerdistrict,
+                    Rto,
+                    PinCode,
+                    CompliteAddress,
+                    AdharNo,
+                    PanNo,
+                    devicesOwened: [newDeviceObject],
+                });
+
+                console.log("Customer object created, attempting to save...");
+                await customer.save();
+                console.log("✅ CUSTOMER CREATED with ID:", customer._id);
+                
+            } catch (customerCreateError) {
+                console.error("❌ Error creating customer:");
+                console.error("Error name:", customerCreateError.name);
+                console.error("Error message:", customerCreateError.message);
+                
+                if (customerCreateError.name === 'ValidationError') {
+                    console.error("Validation errors:");
+                    Object.keys(customerCreateError.errors).forEach(key => {
+                        console.error(`  - ${key}: ${customerCreateError.errors[key].message}`);
+                    });
+                }
+                
+                throw customerCreateError;
+            }
         }
         // ✅ If customer exists → push device to devicesOwened array
         else {
             console.log("Updating existing customer:", customer._id);
-            await CoustmerDevice.findByIdAndUpdate(customer._id, {
-                $push: {
-                    devicesOwened: newDeviceObject
-                }
-            });
-            console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER");
+            
+            try {
+                await CoustmerDevice.findByIdAndUpdate(customer._id, {
+                    $push: { devicesOwened: newDeviceObject }
+                });
+                console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER");
+            } catch (updateError) {
+                console.error("❌ Error updating customer:", updateError);
+                throw updateError;
+            }
         }
 
         console.log("Customer operations completed");
 
-        // ✅ Create user account for customer
-        console.log("Creating user account...");
-        const newUser = await User.create({
-            email: email,
-            password: mobileNo, // ⚠️ Consider hashing the password
-            role: "coustmer",
-            coustmerId: customer._id,
-        });
-
-        console.log("✅ User account created with ID:", newUser._id);
+        // ✅ Create user account for customer (only if email exists)
+        if (email && mobileNo) {
+            console.log("Creating user account...");
+            
+            try {
+                const newUser = await User.create({
+                    email: email,
+                    password: mobileNo,
+                    role: "coustmer",
+                    coustmerId: customer._id,
+                });
+                console.log("✅ User account created with ID:", newUser._id);
+            } catch (userCreateError) {
+                console.error("❌ Error creating user:");
+                console.error("Error:", userCreateError.message);
+            }
+        } else {
+            console.log("⚠️ Skipping user creation - email or mobile missing");
+        }
 
         return res.status(200).json({
             success: true,
@@ -3109,11 +3066,16 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error in manuFacturMAPaDevice:", error);
+        console.error("❌ Error in manuFacturMAPaDevice:");
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        
         return res.status(500).json({
             success: false,
             message: "Server error while mapping device",
             error: error.message,
+            errorType: error.name,
         });
     }
 };
