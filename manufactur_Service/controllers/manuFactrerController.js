@@ -2878,12 +2878,12 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         } = req.body;
 
         // ✅ Validate required fields
-        if (!email || !mobileNo) {
-            return res.status(400).json({
-                success: false,
-                message: "Email and mobile number are required",
-            });
-        }
+        // if (!email || !mobileNo) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Email and mobile number are required",
+        //     });
+        // }
 
         // ✅ Check if user already exists BEFORE creating anything
         const existingUser = await User.findOne({ email });
