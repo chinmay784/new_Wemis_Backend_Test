@@ -2554,20 +2554,21 @@ exports.editSubscriptionById = async (req, res) => {
 
 
 
-// Here Implement manufactur Map A device
+
 // exports.manuFacturMAPaDevice = async (req, res) => {
+
 //     try {
 //         const userId = req.user.userId;
 
 //         if (!userId) {
-//             return res.status(200).json({
-//                 sucess: false,
-//                 message: "Please Provide UserId"
-//             })
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Please provide userId",
+//             });
 //         }
 
-//         // ✅ Extract all fields from req.body
-//         const {
+//         // ✅ Extract fields
+//         let {
 //             country,
 //             state,
 //             distributorName,
@@ -2606,129 +2607,77 @@ exports.editSubscriptionById = async (req, res) => {
 //             DriverLicenseNo,
 //             MappedDate,
 //             NoOfPanicButtons,
-//             VechileIDocument,
-//             RcDocument,
-//             DeviceDocument,
-//             PanCardDocument,
-//             AdharCardDocument,
-//             InvoiceDocument,
-//             SignatureDocument,
-//             PanicButtonWithSticker
 //         } = req.body;
 
+//         console.log("Before SON.parse")
 
-//         // ✅ Check if deviceNo already exists
-//         const existingDevice = await MapDevice.findOne({ deviceNo });
-//         if (existingDevice) {
-//             return res.status(409).json({
-//                 success: false,
-//                 message: `Device with deviceNo "${deviceNo}" already exists.`,
+//         if (typeof simDetails === "string") {
+//             simDetails = JSON.parse(simDetails);
+//         }
+
+//         console.log("After SON.parse")
+
+
+
+
+//         const requiredFiles = [
+//             "Vechile_Doc",
+//             "Rc_Doc",
+//             "Pan_Card",
+//             "Device_Doc",
+//             "Adhar_Card",
+//             "Invious_Doc",
+//             "Signature_Doc",
+//             "Panic_Sticker",
+//         ];
+
+//         // for (let field of requiredFiles) {
+//         //     if (!req.files?.[field] || req.files[field].length === 0) {
+//         //         return res.status(400).json({
+//         //             success: false,
+//         //             message: `${field} file is required`,
+//         //         });
+//         //     }
+//         // }
+
+//         // ✅ Upload all files to Cloudinary
+//         const uploadToCloudinary = async (fieldName) => {
+//             if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+//                 return null; // ✅ No file uploaded
+//             }
+
+//             const file = req.files[fieldName][0];
+//             const uploaded = await cloudinary.uploader.upload(file.path, {
+//                 folder: "profile_pics",
+//                 resource_type: "raw"
 //             });
+
+//             return uploaded.secure_url;
 //         };
 
 
 
-//         // Ensure all files are uploaded
-//         const requiredFiles = ['Vechile_Doc', 'Rc_Doc', 'Pan_Card', 'Device_Doc', 'Adhar_Card', 'Invious_Doc', 'Signature_Doc', 'Panic_Sticker'];
-//         for (let field of requiredFiles) {
-//             if (!req.files[field] || req.files[field].length === 0) {
-//                 return res.status(400).json({
-//                     message: `${field} file is required`,
-//                     success: false
-//                 });
-//             }
-//         }
+//         const [
+//             vc,
+//             Rc,
+//             Pc,
+//             Dc,
+//             Ac,
+//             Ic,
+//             Sc,
+//             Ps
+//         ] = await Promise.all([
+//             uploadToCloudinary("Vechile_Doc"),
+//             uploadToCloudinary("Rc_Doc"),
+//             uploadToCloudinary("Pan_Card"),
+//             uploadToCloudinary("Device_Doc"),
+//             uploadToCloudinary("Adhar_Card"),
+//             uploadToCloudinary("Invious_Doc"),
+//             uploadToCloudinary("Signature_Doc"),
+//             uploadToCloudinary("Panic_Sticker"),
+//         ]);
 
-
-
-//         // ✅ Upload files separately
-//         let vc = null;
-//         let Rc = null;
-//         let Pc = null;
-//         let Dc = null;
-//         let Ac = null;
-//         let Ic = null;
-//         let Sc = null;
-//         let Ps = null;
-
-
-
-
-//         if (req.files['Vechile_Doc']) {
-//             const file = req.files['Vechile_Doc'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw" // keeps PDF as raw
-//             });
-//             vc = result.secure_url;
-//         }
-
-//         if (req.files['Rc_Doc']) {
-//             const file = req.files['Rc_Doc'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Rc = result.secure_url;
-//         }
-
-//         if (req.files['Pan_Card']) {
-//             const file = req.files['Pan_Card'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Pc = result.secure_url;
-//         }
-
-//         if (req.files['Device_Doc']) {
-//             const file = req.files['Device_Doc'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Dc = result.secure_url;
-//         }
-
-//         if (req.files['Adhar_Card']) {
-//             const file = req.files['Adhar_Card'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Ac = result.secure_url;
-//         }
-
-//         if (req.files['Invious_Doc']) {
-//             const file = req.files['Invious_Doc'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Ic = result.secure_url;
-//         }
-
-//         if (req.files['Signature_Doc']) {
-//             const file = req.files['Signature_Doc'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Sc = result.secure_url;
-//         }
-
-//         if (req.files['Panic_Sticker']) {
-//             const file = req.files['Panic_Sticker'][0];
-//             const result = await cloudinary.uploader.upload(file.path, {
-//                 folder: "profile_pics",
-//                 resource_type: "raw"
-//             });
-//             Ps = result.secure_url;
-//         }
-
-
-
-//         // Then save in dataBase
+//         // ✅ Create a new MapDevice document
 //         const newMapDevice = new MapDevice({
 //             manufacturId: userId,
 //             country,
@@ -2776,27 +2725,105 @@ exports.editSubscriptionById = async (req, res) => {
 //             AdharCardDocument: Ac,
 //             InvoiceDocument: Ic,
 //             SignatureDocument: Sc,
-//             PanicButtonWithSticker: Ps
-//         })
-
+//             PanicButtonWithSticker: Ps,
+//         });
 
 //         await newMapDevice.save();
 
-//         return res.status(200).json({
-//             success: true,
-//             message: "New Device Mapped Successfully",
+// console.log("Device Mapped")
+//         const newDeviceObject = {
+//             deviceType,
+//             deviceNo,
+//             voltage,
+//             elementType,
+//             batchNo,
+//             simDetails,
+//             Packages,
+//             VechileBirth,
+//             RegistrationNo,
+//             date,
+//             ChassisNumber,
+//             EngineNumber,
+//             VehicleType,
+//             MakeModel,
+//             ModelYear,
+//             InsuranceRenewDate,
+//             PollutionRenewdate,
+//         };
+
+//         // ✅ Check if customer already exists
+//         let customer = await CoustmerDevice.findOne({
+//             mobileNo: mobileNo
 //         });
 
-//     } catch (error) {
-//         console.log(error, error.message);
-//         return res.status(500).json({
-//             sucess: false,
-//             message: "Server Error in manuFactur_Map_A_device"
-//         })
-//     }
-// }
+//         // ✅ If customer not exist → create
+//         if (!customer) {
+//             console.log("Before coustmer")
+//             customer = new  CoustmerDevice({
+//                 manufacturId: userId,
+//                 delerId: null,
+//                 fullName,
+//                 email,
+//                 mobileNo,
+//                 GstinNo,
+//                 Customercountry,
+//                 Customerstate,
+//                 Customerdistrict,
+//                 Rto,
+//                 PinCode,
+//                 CompliteAddress,
+//                 AdharNo,
+//                 PanNo,
+//                 devicesOwened: [newDeviceObject], // ✅ FIRST DEVICE
+//             });
 
-// No Implement Packages in this Controller
+//             await customer.save();
+//             console.log("✅ CUSTOMER CREATED:", customer);
+//         }
+//         // ✅ If exists → push device to devicesOwened array
+//         else {
+//             await CoustmerDevice.findByIdAndUpdate(customer._id, {
+//                 $push: {
+//                     devicesOwened: newDeviceObject
+//                 }
+//             });
+//             console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER:", customer._id);
+//         }
+
+//         console.log('coustmer done')
+//         // and here save in user collections also
+//         const user = await User.findOne({ email });
+
+//         if (user) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "user already exists with this email",
+//             });
+//         }
+
+//         const newUser = await User.create({
+//             email: email,
+//             password: mobileNo,
+//             role: "coustmer",
+//             coustmerId: customer._id,
+//         });
+
+//         console.log("userDone")
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Device mapped successfully",
+//             data: newMapDevice,
+//         });
+//     } catch (error) {
+//         console.error("Error in manuFacturMAPaDevice:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while mapping device",
+//             error: error.message,
+//         });
+//     }
+// };
 exports.manuFacturMAPaDevice = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -2850,16 +2877,39 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             NoOfPanicButtons,
         } = req.body;
 
-        console.log("Before SON.parse")
-
-        if (typeof simDetails === "string") {
-            simDetails = JSON.parse(simDetails);
+        // ✅ Validate required fields
+        if (!email || !mobileNo) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and mobile number are required",
+            });
         }
 
-        console.log("After SON.parse")
+        // ✅ Check if user already exists BEFORE creating anything
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User already exists with this email",
+            });
+        }
 
+        console.log("Before JSON.parse");
 
+        // ✅ Parse simDetails safely
+        try {
+            if (typeof simDetails === "string") {
+                simDetails = JSON.parse(simDetails);
+            }
+        } catch (parseError) {
+            console.error("Error parsing simDetails:", parseError);
+            return res.status(400).json({
+                success: false,
+                message: "Invalid simDetails format",
+            });
+        }
 
+        console.log("After JSON.parse");
 
         const requiredFiles = [
             "Vechile_Doc",
@@ -2872,6 +2922,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             "Panic_Sticker",
         ];
 
+        // Optional: Uncomment to enforce file requirements
         // for (let field of requiredFiles) {
         //     if (!req.files?.[field] || req.files[field].length === 0) {
         //         return res.status(400).json({
@@ -2887,16 +2938,20 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 return null; // ✅ No file uploaded
             }
 
-            const file = req.files[fieldName][0];
-            const uploaded = await cloudinary.uploader.upload(file.path, {
-                folder: "profile_pics",
-                resource_type: "raw"
-            });
-
-            return uploaded.secure_url;
+            try {
+                const file = req.files[fieldName][0];
+                const uploaded = await cloudinary.uploader.upload(file.path, {
+                    folder: "profile_pics",
+                    resource_type: "raw"
+                });
+                return uploaded.secure_url;
+            } catch (uploadError) {
+                console.error(`Error uploading ${fieldName}:`, uploadError);
+                return null;
+            }
         };
 
-
+        console.log("Uploading files to Cloudinary...");
 
         const [
             vc,
@@ -2917,6 +2972,8 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             uploadToCloudinary("Signature_Doc"),
             uploadToCloudinary("Panic_Sticker"),
         ]);
+
+        console.log("Files uploaded successfully");
 
         // ✅ Create a new MapDevice document
         const newMapDevice = new MapDevice({
@@ -2970,8 +3027,9 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
 
         await newMapDevice.save();
+        console.log("✅ Device Mapped successfully");
 
-console.log("Device Mapped")
+        // ✅ Create device object
         const newDeviceObject = {
             deviceType,
             deviceNo,
@@ -2993,14 +3051,13 @@ console.log("Device Mapped")
         };
 
         // ✅ Check if customer already exists
-        let customer = await CoustmerDevice.findOne({
-            mobileNo: mobileNo
-        });
+        console.log("Checking for existing customer with mobile:", mobileNo);
+        let customer = await CoustmerDevice.findOne({ mobileNo: mobileNo });
 
-        // ✅ If customer not exist → create
+        // ✅ If customer doesn't exist → create new customer
         if (!customer) {
-            console.log("Before coustmer")
-            customer = new  CoustmerDevice({
+            console.log("Creating new customer...");
+            customer = new CoustmerDevice({
                 manufacturId: userId,
                 delerId: null,
                 fullName,
@@ -3019,45 +3076,40 @@ console.log("Device Mapped")
             });
 
             await customer.save();
-            console.log("✅ CUSTOMER CREATED:", customer);
+            console.log("✅ CUSTOMER CREATED with ID:", customer._id);
         }
-        // ✅ If exists → push device to devicesOwened array
+        // ✅ If customer exists → push device to devicesOwened array
         else {
+            console.log("Updating existing customer:", customer._id);
             await CoustmerDevice.findByIdAndUpdate(customer._id, {
                 $push: {
                     devicesOwened: newDeviceObject
                 }
             });
-            console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER:", customer._id);
+            console.log("✅ DEVICE ADDED TO EXISTING CUSTOMER");
         }
 
-        console.log('coustmer done')
-        // and here save in user collections also
-        const user = await User.findOne({ email });
+        console.log("Customer operations completed");
 
-        if (user) {
-            return res.status(200).json({
-                success: false,
-                message: "user already exists with this email",
-            });
-        }
-
+        // ✅ Create user account for customer
+        console.log("Creating user account...");
         const newUser = await User.create({
             email: email,
-            password: mobileNo,
+            password: mobileNo, // ⚠️ Consider hashing the password
             role: "coustmer",
             coustmerId: customer._id,
         });
 
-        console.log("userDone")
+        console.log("✅ User account created with ID:", newUser._id);
 
         return res.status(200).json({
             success: true,
-            message: "Device mapped successfully",
-            data: newMapDevice,
+            message: "Device mapped successfully and customer account created",
+            data: newMapDevice
         });
+
     } catch (error) {
-        console.error("Error in manuFacturMAPaDevice:", error);
+        console.error("❌ Error in manuFacturMAPaDevice:", error);
         return res.status(500).json({
             success: false,
             message: "Server error while mapping device",
