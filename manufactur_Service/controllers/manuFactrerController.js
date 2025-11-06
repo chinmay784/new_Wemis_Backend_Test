@@ -13,7 +13,7 @@ const MapDevice = require("../models/mapADeviceModel");
 const Technicien = require("../models/CreateTechnicien");
 const { cloudinary } = require("../config/cloudinary");
 const { devices } = require("../server");
-const CoustmerDevice = require("../models/coustmerDeviceModel");
+const Coustmer = require("../models/coustmerDeviceModel");
 
 
 
@@ -3073,10 +3073,13 @@ exports.editSubscriptionById = async (req, res) => {
 const mongoose = require('mongoose');
 
 
+const mongoose = require("mongoose");
+const MapDevice = require("../models/mapDeviceModel");
+const Coustmer = require("../models/coustmerDeviceModel");
+const cloudinary = require("cloudinary").v2;
 
 exports.manuFacturMAPaDevice = async (req, res) => {
     try {
-        // NOTE: req.user is assumed to be populated by middleware
         const userId = req.user.userId;
 
         if (!userId) {
@@ -3100,57 +3103,39 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             MappedDate, NoOfPanicButtons,
         } = req.body;
 
-        // The previous check against the 'User' model is correctly commented out
-        /*
-        if (email) {
-            const existingUser = await User.findOne({ email });
-            if (existingUser) {
-                return res.status(400).json({
-                    success: false,
-                    message: "User already exists with this email",
-                });
-            }
-        }
-        */
-
-        console.log("Before JSON.parse");
-
         // ✅ Parse simDetails safely
         try {
             if (typeof simDetails === "string") {
                 simDetails = JSON.parse(simDetails);
             }
-        } catch (parseError) {
-            console.error("Error parsing simDetails:", parseError);
+        } catch (err) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid simDetails format",
             });
         }
 
-        console.log("After JSON.parse");
-
-        // ✅ Upload all files to Cloudinary (logic remains the same)
+        // ✅ Cloudinary upload helper
         const uploadToCloudinary = async (fieldName) => {
             if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
                 return null;
             }
 
+            const file = req.files[fieldName][0];
+
             try {
-                const file = req.files[fieldName][0];
                 const uploaded = await cloudinary.uploader.upload(file.path, {
                     folder: "profile_pics",
-                    resource_type: "raw"
+                    resource_type: "raw",
                 });
                 return uploaded.secure_url;
-            } catch (uploadError) {
-                console.error(`Error uploading ${fieldName}:`, uploadError);
+            } catch (error) {
+                console.error(`Error uploading ${fieldName}:`, error);
                 return null;
             }
         };
 
-        console.log("Uploading files to Cloudinary...");
-
+        // ✅ Upload documents
         const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
             uploadToCloudinary("Vechile_Doc"),
             uploadToCloudinary("Rc_Doc"),
@@ -3162,9 +3147,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             uploadToCloudinary("Panic_Sticker"),
         ]);
 
-        console.log("Files uploaded successfully");
-
-        // ✅ Create a new MapDevice document
+        // ✅ Create MapDevice entry
         const newMapDevice = new MapDevice({
             manufacturId: userId,
             country, state, distributorName, delerName,
@@ -3185,135 +3168,32 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
 
         await newMapDevice.save();
-        console.log("✅ Device Mapped successfully (MapDevice saved)");
 
-        // ✅ Convert Packages to ObjectId if it's a string
-        let packageId = null;
-        if (Packages) {
-            try {
-                // Ensure mongoose is available for this to work
-                packageId = new mongoose.Types.ObjectId(Packages);
-                console.log("Package ID converted:", packageId);
-            } catch (err) {
-                console.log("⚠️ Invalid Package ID provided for Packages field:", err.message);
-                packageId = null;
-            }
-        }
-
-        // -----------------------------------------------------
-        // ✅ START CUSTOMER CREATION/UPDATE LOGIC
-        // -----------------------------------------------------
-
-        // ✅ Check if customer already exists by mobileNo
-        // let customer = await CoustmerDevice.findOne({ mobileNo });
-
-        // if (!customer) {
-        //     // ✅ Create new customer
-        //     customer = new CoustmerDevice({
-        //         // manufacturId: userId,
-        //         // delerId: null,
-        //         fullName,
-        //         email,
-        //         mobileNo,
-        //         // GstinNo,
-        //         // Customercountry,
-        //         // Customerstate,
-        //         // Customerdistrict,
-        //         // Rto,
-        //         // PinCode,
-        //         // CompliteAddress,
-        //         // AdharNo,
-        //         // PanNo,
-        //         // devicesOwened: []
-        //     });
-
-        //     console.log("✅ New customer instantiated");
-        // }
-
-        // ✅ Build device object as per schema
-        // const deviceObject = {
-        //     deviceType,
-        //     deviceNo,
-        //     voltage,
-        //     elementType,
-        //     batchNo,
-        //     simDetails,
-        //     Packages: packageId, // ✅ Now it's ObjectId or null
-        //     VechileBirth,
-        //     RegistrationNo,
-        //     date,
-        //     ChassisNumber,
-        //     EngineNumber,
-        //     VehicleType,
-        //     MakeModel,
-        //     ModelYear,
-        //     InsuranceRenewDate,
-        //     PollutionRenewdate
-        // };
-
-        // // Debug log for the device object before pushing
-        // console.log("Device object ready to push:", JSON.stringify(deviceObject, null, 2));
-
-
-        // await customer.save();
-        const coustmer = await CoustmerDevice.create({
-            email,
+        // ✅ Create customer (as per your simplified schema)
+        const coustmer = await Coustmer.create({
             fullName,
+            email,
             mobileNo,
-        })
-
-        // ✅ Push device into customer's devicesOwened array
-        // customer.devicesOwened.push(deviceObject);
-
-        // // ✅ Final save for both new customers or existing ones
-        // try {
-        //     await customer.save();
-        //     console.log("✅ Device added to customer's devicesOwened successfully");
-        // } catch (validationError) {
-        //     console.error("❌ Mongoose Validation Error during customer.save():");
-        //     // Log the detailed error from Mongoose
-        //     if (validationError.errors) {
-        //         Object.keys(validationError.errors).forEach(key => {
-        //             console.error(`Field Error (${key}):`, validationError.errors[key].message);
-        //         });
-        //     } else {
-        //         console.error("Generic Save Error:", validationError.message);
-        //     }
-        //     // Propagate the server error response
-        //     return res.status(500).json({
-        //         success: false,
-        //         message: "Validation Error when saving customer device data.",
-        //         error: validationError.message,
-        //         detailedErrors: validationError.errors ? Object.keys(validationError.errors).map(k => ({ field: k, message: validationError.errors[k].message })) : null
-        //     });
-        // }
-
+        });
 
         return res.status(200).json({
             success: true,
-            message: "Device mapped successfully and customer account created/updated",
-            data: newMapDevice,
+            message: "Device mapped successfully",
+            mapDevice: newMapDevice,
             coustmer,
         });
 
     } catch (error) {
-        console.error("❌ Error in manuFacturMAPaDevice (General Catch):");
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
+        console.error("❌ Error in manuFacturMAPaDevice:", error);
 
         return res.status(500).json({
             success: false,
             message: "Server error while mapping device",
             error: error.message,
-            errorType: error.name,
         });
     }
 };
 
-// NOTE: This file is only included to demonstrate the necessary model structure
-// for the corrected controller to run successfully.
-// In your actual setup, this should be your CoustmerDevice model file.
 
 
 // Fetch Map Device On Basis of manufacturId 
