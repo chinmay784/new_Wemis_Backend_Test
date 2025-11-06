@@ -3210,76 +3210,78 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         if (!customer) {
             // ✅ Create new customer
             customer = new CoustmerDevice({
-                manufacturId: userId,
-                delerId: null,
+                // manufacturId: userId,
+                // delerId: null,
                 fullName,
                 email,
                 mobileNo,
-                GstinNo,
-                Customercountry,
-                Customerstate,
-                Customerdistrict,
-                Rto,
-                PinCode,
-                CompliteAddress,
-                AdharNo,
-                PanNo,
-                devicesOwened: []
+                // GstinNo,
+                // Customercountry,
+                // Customerstate,
+                // Customerdistrict,
+                // Rto,
+                // PinCode,
+                // CompliteAddress,
+                // AdharNo,
+                // PanNo,
+                // devicesOwened: []
             });
 
             console.log("✅ New customer instantiated");
         }
 
         // ✅ Build device object as per schema
-        const deviceObject = {
-            deviceType,
-            deviceNo,
-            voltage,
-            elementType,
-            batchNo,
-            simDetails,
-            Packages: packageId, // ✅ Now it's ObjectId or null
-            VechileBirth,
-            RegistrationNo,
-            date,
-            ChassisNumber,
-            EngineNumber,
-            VehicleType,
-            MakeModel,
-            ModelYear,
-            InsuranceRenewDate,
-            PollutionRenewdate
-        };
+        // const deviceObject = {
+        //     deviceType,
+        //     deviceNo,
+        //     voltage,
+        //     elementType,
+        //     batchNo,
+        //     simDetails,
+        //     Packages: packageId, // ✅ Now it's ObjectId or null
+        //     VechileBirth,
+        //     RegistrationNo,
+        //     date,
+        //     ChassisNumber,
+        //     EngineNumber,
+        //     VehicleType,
+        //     MakeModel,
+        //     ModelYear,
+        //     InsuranceRenewDate,
+        //     PollutionRenewdate
+        // };
 
-        // Debug log for the device object before pushing
-        console.log("Device object ready to push:", JSON.stringify(deviceObject, null, 2));
+        // // Debug log for the device object before pushing
+        // console.log("Device object ready to push:", JSON.stringify(deviceObject, null, 2));
 
+
+        await customer.save();
 
         // ✅ Push device into customer's devicesOwened array
-        customer.devicesOwened.push(deviceObject);
+        // customer.devicesOwened.push(deviceObject);
 
-        // ✅ Final save for both new customers or existing ones
-        try {
-            await customer.save();
-            console.log("✅ Device added to customer's devicesOwened successfully");
-        } catch (validationError) {
-            console.error("❌ Mongoose Validation Error during customer.save():");
-            // Log the detailed error from Mongoose
-            if (validationError.errors) {
-                Object.keys(validationError.errors).forEach(key => {
-                    console.error(`Field Error (${key}):`, validationError.errors[key].message);
-                });
-            } else {
-                console.error("Generic Save Error:", validationError.message);
-            }
-            // Propagate the server error response
-            return res.status(500).json({
-                success: false,
-                message: "Validation Error when saving customer device data.",
-                error: validationError.message,
-                detailedErrors: validationError.errors ? Object.keys(validationError.errors).map(k => ({ field: k, message: validationError.errors[k].message })) : null
-            });
-        }
+        // // ✅ Final save for both new customers or existing ones
+        // try {
+        //     await customer.save();
+        //     console.log("✅ Device added to customer's devicesOwened successfully");
+        // } catch (validationError) {
+        //     console.error("❌ Mongoose Validation Error during customer.save():");
+        //     // Log the detailed error from Mongoose
+        //     if (validationError.errors) {
+        //         Object.keys(validationError.errors).forEach(key => {
+        //             console.error(`Field Error (${key}):`, validationError.errors[key].message);
+        //         });
+        //     } else {
+        //         console.error("Generic Save Error:", validationError.message);
+        //     }
+        //     // Propagate the server error response
+        //     return res.status(500).json({
+        //         success: false,
+        //         message: "Validation Error when saving customer device data.",
+        //         error: validationError.message,
+        //         detailedErrors: validationError.errors ? Object.keys(validationError.errors).map(k => ({ field: k, message: validationError.errors[k].message })) : null
+        //     });
+        // }
 
 
         return res.status(200).json({
