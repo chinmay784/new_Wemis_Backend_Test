@@ -13,7 +13,7 @@ const MapDevice = require("../models/mapADeviceModel");
 const Technicien = require("../models/CreateTechnicien");
 const { cloudinary } = require("../config/cloudinary");
 const { devices } = require("../server");
-const Coustmer = require("../models/coustmerDeviceModel");
+const CoustmerDevice = require("../models/coustmerDeviceModel");
 
 
 
@@ -3109,14 +3109,13 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             });
         }
 
-        // ✅ Cloudinary upload helper
+        // ✅ File upload helper
         const uploadToCloudinary = async (fieldName) => {
             if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
                 return null;
             }
 
             const file = req.files[fieldName][0];
-
             try {
                 const uploaded = await cloudinary.uploader.upload(file.path, {
                     folder: "profile_pics",
@@ -3124,12 +3123,11 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 });
                 return uploaded.secure_url;
             } catch (error) {
-                console.error(`Error uploading ${fieldName}:`, error);
                 return null;
             }
         };
 
-        // ✅ Upload documents
+        // ✅ Upload all files
         const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
             uploadToCloudinary("Vechile_Doc"),
             uploadToCloudinary("Rc_Doc"),
@@ -3141,7 +3139,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             uploadToCloudinary("Panic_Sticker"),
         ]);
 
-        // ✅ Create MapDevice entry
+        // ✅ Step 1: Create MapDevice
         const newMapDevice = new MapDevice({
             manufacturId: userId,
             country, state, distributorName, delerName,
@@ -3163,23 +3161,77 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         await newMapDevice.save();
 
-        // ✅ Create customer (as per your simplified schema)
-        const coustmer = await Coustmer.create({
-            fullName,
-            email,
-            mobileNo,
-        });
+        // ✅ Step 2: Check if customer already exists
+        let customer = await CoustmerDevice.findOne({ mobileNo });
+
+        if (!customer) {
+            // ✅ New customer
+            customer = new CoustmerDevice({
+                manufacturId: userId,
+                fullName,
+                email,
+                mobileNo,
+                GstinNo,
+                Customercountry,
+                Customerstate,
+                Customerdistrict,
+                Rto,
+                PinCode,
+                CompliteAddress,
+                AdharNo,
+                PanNo,
+                devicesOwened: [],
+            });
+        }
+
+        // ✅ Step 3: Prepare device object for customer schema
+        const deviceObject = {
+            deviceType,
+            deviceNo,
+            voltage,
+            elementType,
+            batchNo,
+            simDetails,
+            Packages,
+            VechileBirth,
+            RegistrationNo,
+            date,
+            ChassisNumber,
+            EngineNumber,
+            VehicleType,
+            MakeModel,
+            ModelYear,
+            InsuranceRenewDate,
+            PollutionRenewdate,
+        };
+
+        // ✅ Step 4: Push device into customer's devicesOwened[]
+        customer.devicesOwened.push(deviceObject);
+
+        // ✅ Step 5: Save customer
+        await customer.save();
+
+        // also save in user collections
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            const newUser = await User.create({
+                email: email,
+                password: mobileNo,
+                role: "coustmer",
+                coustmerId: customer._id,
+            });
+        }
+
 
         return res.status(200).json({
             success: true,
-            message: "Device mapped successfully",
+            message: "Device mapped & customer updated successfully",
             mapDevice: newMapDevice,
-            coustmer,
+            customer,
         });
 
     } catch (error) {
-        console.error("❌ Error in manuFacturMAPaDevice:", error);
-
         return res.status(500).json({
             success: false,
             message: "Server error while mapping device",
@@ -3187,6 +3239,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
     }
 };
+
 
 exports.createCoustmer = async (req, res) =>{
     try {
@@ -3203,7 +3256,7 @@ exports.createCoustmer = async (req, res) =>{
 
         // ✅ Create customer
 
-        const coustmer = await Coustmer.create({
+        const coustmer = await CoustmerDevice.create({
             fullName,
             email,
             mobileNo,
@@ -3214,7 +3267,7 @@ exports.createCoustmer = async (req, res) =>{
             message: "Coustmer created successfully",
             coustmer,
         });
-        
+
     } catch (error) {
         console.error("❌ Error in createCoustmer:", error);
 
