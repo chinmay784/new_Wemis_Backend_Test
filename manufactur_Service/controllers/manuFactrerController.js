@@ -3070,13 +3070,7 @@ exports.editSubscriptionById = async (req, res) => {
 // NOTE: Assuming models (User, MapDevice, CoustmerDevice) and
 // utilities (cloudinary, mongoose) are correctly imported in your environment.
 
-const mongoose = require('mongoose');
 
-
-const mongoose = require("mongoose");
-const MapDevice = require("../models/mapDeviceModel");
-const Coustmer = require("../models/coustmerDeviceModel");
-const cloudinary = require("cloudinary").v2;
 
 exports.manuFacturMAPaDevice = async (req, res) => {
     try {
@@ -3193,6 +3187,44 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
     }
 };
+
+exports.createCoustmer = async (req, res) =>{
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide userId",
+            });
+        }
+
+        const { fullName, email, mobileNo } = req.body;
+
+        // ✅ Create customer
+
+        const coustmer = await Coustmer.create({
+            fullName,
+            email,
+            mobileNo,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Coustmer created successfully",
+            coustmer,
+        });
+        
+    } catch (error) {
+        console.error("❌ Error in createCoustmer:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while creating coustmer",
+            error: error.message,
+        });
+    }
+}
 
 
 
