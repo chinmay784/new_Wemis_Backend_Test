@@ -55,7 +55,7 @@ app.use('/api/manufactur', expressProxy('http://127.0.0.1:4004', proxyOptions));
 // ✅ CORS   
 app.use(
   cors({
-    origin: ["https://websave.in", "http://localhost:3000"],
+    origin: ["https://websave.in", "http://localhost:3000","http://localhost:5173",],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
