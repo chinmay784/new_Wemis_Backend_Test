@@ -2877,60 +2877,41 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         console.log("After JSON.parse");
 
-        // // ✅ Upload all files to Cloudinary
-        // const uploadToCloudinary = async (fieldName) => {
-        //     if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-        //         return null;
-        //     }
+        // ✅ Upload all files to Cloudinary
+        const uploadToCloudinary = async (fieldName) => {
+            if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+                return null;
+            }
 
-        //     try {
-        //         const file = req.files[fieldName][0];
-        //         const uploaded = await cloudinary.uploader.upload(file.path, {
-        //             folder: "profile_pics",
-        //             resource_type: "raw"
-        //         });
-        //         return uploaded.secure_url;
-        //     } catch (uploadError) {
-        //         console.error(`Error uploading ${fieldName}:`, uploadError);
-        //         return null;
-        //     }
-        // };
+            try {
+                const file = req.files[fieldName][0];
+                const uploaded = await cloudinary.uploader.upload(file.path, {
+                    folder: "profile_pics",
+                    resource_type: "raw"
+                });
+                return uploaded.secure_url;
+            } catch (uploadError) {
+                console.error(`Error uploading ${fieldName}:`, uploadError);
+                return null;
+            }
+        };
 
-        // console.log("Uploading files to Cloudinary...");
+        console.log("Uploading files to Cloudinary...");
 
-        // const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
-        //     uploadToCloudinary("Vechile_Doc"),
-        //     uploadToCloudinary("Rc_Doc"),
-        //     uploadToCloudinary("Pan_Card"),
-        //     uploadToCloudinary("Device_Doc"),
-        //     uploadToCloudinary("Adhar_Card"),
-        //     uploadToCloudinary("Invious_Doc"),
-        //     uploadToCloudinary("Signature_Doc"),
-        //     uploadToCloudinary("Panic_Sticker"),
-        // ]);
+        const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
+            uploadToCloudinary("Vechile_Doc"),
+            uploadToCloudinary("Rc_Doc"),
+            uploadToCloudinary("Pan_Card"),
+            uploadToCloudinary("Device_Doc"),
+            uploadToCloudinary("Adhar_Card"),
+            uploadToCloudinary("Invious_Doc"),
+            uploadToCloudinary("Signature_Doc"),
+            uploadToCloudinary("Panic_Sticker"),
+        ]);
 
         console.log("Files uploaded successfully");
 
         // ✅ Create a new MapDevice document
-        // const newMapDevice = new MapDevice({
-        //     manufacturId: userId,
-        //     country, state, distributorName, delerName,
-        //     deviceType, deviceNo, voltage, elementType,
-        //     batchNo, simDetails, VechileBirth, RegistrationNo,
-        //     date, ChassisNumber, EngineNumber, VehicleType,
-        //     MakeModel, ModelYear, InsuranceRenewDate,
-        //     PollutionRenewdate, fullName, email, mobileNo,
-        //     GstinNo, Customercountry, Customerstate,
-        //     Customerdistrict, Rto, PinCode, CompliteAddress,
-        //     AdharNo, PanNo, Packages, InvoiceNo,
-        //     VehicleKMReading, DriverLicenseNo, MappedDate,
-        //     NoOfPanicButtons, VechileIDocument: vc,
-        //     RcDocument: Rc, DeviceDocument: Dc,
-        //     PanCardDocument: Pc, AdharCardDocument: Ac,
-        //     InvoiceDocument: Ic, SignatureDocument: Sc,
-        //     PanicButtonWithSticker: Ps,
-        // });
-
         const newMapDevice = new MapDevice({
             manufacturId: userId,
             country, state, distributorName, delerName,
@@ -2943,12 +2924,31 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerdistrict, Rto, PinCode, CompliteAddress,
             AdharNo, PanNo, Packages, InvoiceNo,
             VehicleKMReading, DriverLicenseNo, MappedDate,
-            NoOfPanicButtons, VechileIDocument: null,
-            RcDocument: null, DeviceDocument: null,
-            PanCardDocument: null, AdharCardDocument: null,
-            InvoiceDocument: null, SignatureDocument: null,
-            PanicButtonWithSticker: null,
+            NoOfPanicButtons, VechileIDocument: vc,
+            RcDocument: Rc, DeviceDocument: Dc,
+            PanCardDocument: Pc, AdharCardDocument: Ac,
+            InvoiceDocument: Ic, SignatureDocument: Sc,
+            PanicButtonWithSticker: Ps,
         });
+
+        // const newMapDevice = new MapDevice({
+        //     manufacturId: userId,
+        //     country, state, distributorName, delerName,
+        //     deviceType, deviceNo, voltage, elementType,
+        //     batchNo, simDetails, VechileBirth, RegistrationNo,
+        //     date, ChassisNumber, EngineNumber, VehicleType,
+        //     MakeModel, ModelYear, InsuranceRenewDate,
+        //     PollutionRenewdate, fullName, email, mobileNo,
+        //     GstinNo, Customercountry, Customerstate,
+        //     Customerdistrict, Rto, PinCode, CompliteAddress,
+        //     AdharNo, PanNo, Packages, InvoiceNo,
+        //     VehicleKMReading, DriverLicenseNo, MappedDate,
+        //     NoOfPanicButtons, VechileIDocument: null,
+        //     RcDocument: null, DeviceDocument: null,
+        //     PanCardDocument: null, AdharCardDocument: null,
+        //     InvoiceDocument: null, SignatureDocument: null,
+        //     PanicButtonWithSticker: null,
+        // });
 
         await newMapDevice.save();
         console.log("✅ Device Mapped successfully");
@@ -2965,35 +2965,34 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             }
         }
 
-        // ✅ Create device object with proper ObjectId for Packages
-        const newDeviceObject = {
-            deviceType,
-            deviceNo,
-            voltage,
-            elementType,
-            batchNo,
-            simDetails,
-            Packages: packageId, // ✅ Now it's ObjectId or null
-            VechileBirth,
-            RegistrationNo,
-            date,
-            ChassisNumber,
-            EngineNumber,
-            VehicleType,
-            MakeModel,
-            ModelYear,
-            InsuranceRenewDate,
-            PollutionRenewdate,
-        };
+        // // ✅ Create device object with proper ObjectId for Packages
+        // const newDeviceObject = {
+        //     deviceType,
+        //     deviceNo,
+        //     voltage,
+        //     elementType,
+        //     batchNo,
+        //     simDetails,
+        //     Packages: packageId, // ✅ Now it's ObjectId or null
+        //     VechileBirth,
+        //     RegistrationNo,
+        //     date,
+        //     ChassisNumber,
+        //     EngineNumber,
+        //     VehicleType,
+        //     MakeModel,
+        //     ModelYear,
+        //     InsuranceRenewDate,
+        //     PollutionRenewdate,
+        // };
 
-        // ✅ Check if customer already exists
-        console.log("Checking for existing customer with mobile:", mobileNo);
+        //    Here I have  to create coustmer
 
-        // ✅ Check if customer exists
-        // find or create customer
+        // ✅ Check if customer already exists by mobileNo
         let customer = await CoustmerDevice.findOne({ mobileNo });
 
         if (!customer) {
+            // ✅ Create new customer
             customer = new CoustmerDevice({
                 manufacturId: userId,
                 delerId: null,
@@ -3009,47 +3008,47 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 CompliteAddress,
                 AdharNo,
                 PanNo,
-                devicesOwened: [newDeviceObject],
+                devicesOwened: []  // initially empty
             });
 
             await customer.save();
-        } else {
-            await CoustmerDevice.findByIdAndUpdate(customer._id, {
-                $push: { devicesOwened: newDeviceObject }
-            });
+            console.log("✅ New customer created");
         }
 
-        // --- create customer user login (only if email provided and not already used) ---
-        if (!email || email.trim() === "") {
-            // optional: if email is required, return error instead
-            console.warn("No email provided — skipping user creation");
-            // you may decide to return here or continue
-        } else {
-            // check if user already exists
-            const existingUser = await User.findOne({ email });
-            if (!existingUser) {
+        // ✅ Build device object as per schema
+        const deviceObject = {
+            deviceType,
+            deviceNo,
+            voltage,
+            elementType,
+            batchNo,
+            simDetails,       // ← this is already parsed earlier
+            Packages: packageId,
+            VechileBirth,
+            RegistrationNo,
+            date,
+            ChassisNumber,
+            EngineNumber,
+            VehicleType,
+            MakeModel,
+            ModelYear,
+            InsuranceRenewDate,
+            PollutionRenewdate
+        };
 
-                const newUser = await User.create({
-                    email,
-                    password: mobileNo,     // store hashed password
-                    role: "coustmer",
-                    coustmerId: customer._id
-                });
+        // ✅ Push device into customer's devicesOwened array
+        customer.devicesOwened.push(deviceObject);
+        await customer.save();
 
-                // optionally remove sensitive fields before returning
-                // newUser.password = undefined;
+        console.log("✅ Device added to customer's devicesOwened");
 
-                // return or log as needed
-                console.log("✅ Customer user created:", newUser._id);
-            } else {
-                console.log("✅ User already exists, skipping user creation for email:", email);
-            }
-        }
+
 
         return res.status(200).json({
             success: true,
             message: "Device mapped successfully and customer account created",
             data: newMapDevice,
+            customer,
         });
 
     } catch (error) {

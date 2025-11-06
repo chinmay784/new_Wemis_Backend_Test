@@ -43,16 +43,16 @@ router.post("/editSubscriptionById", authMiddelWere, editSubscriptionById);
 router.post(
     "/manuFacturMAPaDevice",
     authMiddelWere,
-    // upload.fields([
-    //     { name: "Vechile_Doc", maxCount: 1, optional: true },
-    //     { name: "Rc_Doc", maxCount: 1, optional: true },
-    //     { name: "Pan_Card", maxCount: 1, optional: true },
-    //     { name: "Device_Doc", maxCount: 1, optional: true },
-    //     { name: "Adhar_Card", maxCount: 1, optional: true },
-    //     { name: "Invious_Doc", maxCount: 1, optional: true },
-    //     { name: "Signature_Doc", maxCount: 1, optional: true },
-    //     { name: "Panic_Sticker", maxCount: 1, optional: true }
-    // ]),
+    upload.fields([
+        { name: "Vechile_Doc", maxCount: 1, optional: true },
+        { name: "Rc_Doc", maxCount: 1, optional: true },
+        { name: "Pan_Card", maxCount: 1, optional: true },
+        { name: "Device_Doc", maxCount: 1, optional: true },
+        { name: "Adhar_Card", maxCount: 1, optional: true },
+        { name: "Invious_Doc", maxCount: 1, optional: true },
+        { name: "Signature_Doc", maxCount: 1, optional: true },
+        { name: "Panic_Sticker", maxCount: 1, optional: true }
+    ]),
     manuFacturMAPaDevice
 );
 
