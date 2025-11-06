@@ -3274,7 +3274,7 @@ exports.fetchCoustmerallDevices = async (req, res) => {
         }
 
 
-       
+
         return res.status(200).json({
             success: true,
             message: "Coustmer Fetched Successfully",
@@ -3290,7 +3290,54 @@ exports.fetchCoustmerallDevices = async (req, res) => {
             error: error.message,
         });
     }
-}
+};
+
+exports.fetchCoustmerSingleDevice = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide userId",
+            });
+        }
+
+        const { deviceNo } = req.body;
+
+        if (!deviceNo) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide deviceNo",
+            });
+        }
+
+        // fetch coustmer on the basis of userId
+        const device = await CoustmerDevice.findOne({ "devicesOwened.deviceNo": deviceNo }, { "devicesOwened.$": 1 });
+
+        if (!device) {
+            return res.status(200).json({
+                success: false,
+                message: "No Device Found with this deviceNo",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Device Fetched Successfully",
+            device: device.devicesOwened[0],
+        });
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            sucess: false,
+            message: "Server Error in fetchCoustmerSingleDevice"
+        })
+    }
+};
+
+
 
 
 
