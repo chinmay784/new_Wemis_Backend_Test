@@ -3241,7 +3241,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 };
 
 
-exports.createCoustmer = async (req, res) =>{
+exports.fetchCoustmerallDevices = async (req, res) => {
     try {
         const userId = req.user.userId;
 
@@ -3252,20 +3252,33 @@ exports.createCoustmer = async (req, res) =>{
             });
         }
 
-        const { fullName, email, mobileNo } = req.body;
+        // fetch coustmer on the basis of userId
+        const user = await User.findById(userId);
 
-        // ✅ Create customer
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "No Coustmer Found",
+            });
+        }
 
-        const coustmer = await CoustmerDevice.create({
-            fullName,
-            email,
-            mobileNo,
-        });
 
+        // find in coustmer device collections
+        const coustmer = await CoustmerDevice.findById(user.coustmerId);
+
+        if (!coustmer) {
+            return res.status(200).json({
+                success: false,
+                message: "No Coustmer Device Found",
+            });
+        }
+
+
+       
         return res.status(200).json({
             success: true,
-            message: "Coustmer created successfully",
-            coustmer,
+            message: "Coustmer Fetched Successfully",
+            devicesOwened: coustmer.devicesOwened,
         });
 
     } catch (error) {
