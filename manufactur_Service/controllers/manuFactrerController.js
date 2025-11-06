@@ -3065,6 +3065,8 @@ exports.editSubscriptionById = async (req, res) => {
 //         });
 //     }
 // };
+
+
 // NOTE: Assuming models (User, MapDevice, CoustmerDevice) and
 // utilities (cloudinary, mongoose) are correctly imported in your environment.
 
@@ -3098,9 +3100,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             MappedDate, NoOfPanicButtons,
         } = req.body;
 
-        // ❌ FIX: The original code returned an error here if the email existed in the 'User' model.
-        // This prevented the customer creation/update logic from running.
-        // I am commenting this out to allow the device mapping to proceed, as per the issue description.
+        // The previous check against the 'User' model is correctly commented out
         /*
         if (email) {
             const existingUser = await User.findOne({ email });
@@ -3133,16 +3133,20 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // ✅ Upload all files to Cloudinary (logic remains the same)
         const uploadToCloudinary = async (fieldName) => {
             if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-                return null; // ✅ No file uploaded
+                return null;
             }
 
-            const file = req.files[fieldName][0];
-            const uploaded = await cloudinary.uploader.upload(file.path, {
-                folder: "profile_pics",
-                resource_type: "raw"
-            });
-
-            return uploaded.secure_url;
+            try {
+                const file = req.files[fieldName][0];
+                const uploaded = await cloudinary.uploader.upload(file.path, {
+                    folder: "profile_pics",
+                    resource_type: "raw"
+                });
+                return uploaded.secure_url;
+            } catch (uploadError) {
+                console.error(`Error uploading ${fieldName}:`, uploadError);
+                return null;
+            }
         };
 
         console.log("Uploading files to Cloudinary...");
@@ -3191,7 +3195,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 packageId = new mongoose.Types.ObjectId(Packages);
                 console.log("Package ID converted:", packageId);
             } catch (err) {
-                console.log("⚠️ Invalid Package ID, setting to null");
+                console.log("⚠️ Invalid Package ID provided for Packages field:", err.message);
                 packageId = null;
             }
         }
@@ -3201,7 +3205,6 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // -----------------------------------------------------
 
         // ✅ Check if customer already exists by mobileNo
-        // IMPORTANT: Ensure CoustmerDevice is the correct model name
         let customer = await CoustmerDevice.findOne({ mobileNo });
 
         if (!customer) {
@@ -3221,11 +3224,9 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 CompliteAddress,
                 AdharNo,
                 PanNo,
-                devicesOwened: []  // initially empty
+                devicesOwened: []
             });
 
-            // No need to save here, as we save immediately after pushing the device.
-            // await customer.save(); 
             console.log("✅ New customer instantiated");
         }
 
@@ -3250,13 +3251,35 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             PollutionRenewdate
         };
 
+        // Debug log for the device object before pushing
+        console.log("Device object ready to push:", JSON.stringify(deviceObject, null, 2));
+
+
         // ✅ Push device into customer's devicesOwened array
         customer.devicesOwened.push(deviceObject);
 
         // ✅ Final save for both new customers or existing ones
-        await customer.save();
-
-        console.log("✅ Device added to customer's devicesOwened successfully");
+        try {
+            await customer.save();
+            console.log("✅ Device added to customer's devicesOwened successfully");
+        } catch (validationError) {
+            console.error("❌ Mongoose Validation Error during customer.save():");
+            // Log the detailed error from Mongoose
+            if (validationError.errors) {
+                Object.keys(validationError.errors).forEach(key => {
+                    console.error(`Field Error (${key}):`, validationError.errors[key].message);
+                });
+            } else {
+                console.error("Generic Save Error:", validationError.message);
+            }
+            // Propagate the server error response
+            return res.status(500).json({
+                success: false,
+                message: "Validation Error when saving customer device data.",
+                error: validationError.message,
+                detailedErrors: validationError.errors ? Object.keys(validationError.errors).map(k => ({ field: k, message: validationError.errors[k].message })) : null
+            });
+        }
 
 
         return res.status(200).json({
@@ -3267,7 +3290,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error in manuFacturMAPaDevice:");
+        console.error("❌ Error in manuFacturMAPaDevice (General Catch):");
         console.error("Error name:", error.name);
         console.error("Error message:", error.message);
         console.error("Error stack:", error.stack);
