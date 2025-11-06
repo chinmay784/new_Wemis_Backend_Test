@@ -3205,30 +3205,30 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // -----------------------------------------------------
 
         // ✅ Check if customer already exists by mobileNo
-        let customer = await CoustmerDevice.findOne({ mobileNo });
+        // let customer = await CoustmerDevice.findOne({ mobileNo });
 
-        if (!customer) {
-            // ✅ Create new customer
-            customer = new CoustmerDevice({
-                // manufacturId: userId,
-                // delerId: null,
-                fullName,
-                email,
-                mobileNo,
-                // GstinNo,
-                // Customercountry,
-                // Customerstate,
-                // Customerdistrict,
-                // Rto,
-                // PinCode,
-                // CompliteAddress,
-                // AdharNo,
-                // PanNo,
-                // devicesOwened: []
-            });
+        // if (!customer) {
+        //     // ✅ Create new customer
+        //     customer = new CoustmerDevice({
+        //         // manufacturId: userId,
+        //         // delerId: null,
+        //         fullName,
+        //         email,
+        //         mobileNo,
+        //         // GstinNo,
+        //         // Customercountry,
+        //         // Customerstate,
+        //         // Customerdistrict,
+        //         // Rto,
+        //         // PinCode,
+        //         // CompliteAddress,
+        //         // AdharNo,
+        //         // PanNo,
+        //         // devicesOwened: []
+        //     });
 
-            console.log("✅ New customer instantiated");
-        }
+        //     console.log("✅ New customer instantiated");
+        // }
 
         // ✅ Build device object as per schema
         // const deviceObject = {
@@ -3255,7 +3255,12 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // console.log("Device object ready to push:", JSON.stringify(deviceObject, null, 2));
 
 
-        await customer.save();
+        // await customer.save();
+        const coustmer = await CoustmerDevice.create({
+            email,
+            fullName,
+            mobileNo,
+        })
 
         // ✅ Push device into customer's devicesOwened array
         // customer.devicesOwened.push(deviceObject);
@@ -3288,7 +3293,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             success: true,
             message: "Device mapped successfully and customer account created/updated",
             data: newMapDevice,
-            customer,
+            coustmer,
         });
 
     } catch (error) {
