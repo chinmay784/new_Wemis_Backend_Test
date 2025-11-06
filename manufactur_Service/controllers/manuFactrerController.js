@@ -3110,36 +3110,55 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         }
 
         // ✅ File upload helper
-        const uploadToCloudinary = async (fieldName) => {
-            if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-                return null;
-            }
+        // const uploadToCloudinary = async (fieldName) => {
+        //     if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+        //         return null;
+        //     }
 
-            const file = req.files[fieldName][0];
-            try {
-                const uploaded = await cloudinary.uploader.upload(file.path, {
-                    folder: "profile_pics",
-                    resource_type: "raw",
-                });
-                return uploaded.secure_url;
-            } catch (error) {
-                return null;
-            }
-        };
+        //     const file = req.files[fieldName][0];
+        //     try {
+        //         const uploaded = await cloudinary.uploader.upload(file.path, {
+        //             folder: "profile_pics",
+        //             resource_type: "raw",
+        //         });
+        //         return uploaded.secure_url;
+        //     } catch (error) {
+        //         return null;
+        //     }
+        // };
 
-        // ✅ Upload all files
-        const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
-            uploadToCloudinary("Vechile_Doc"),
-            uploadToCloudinary("Rc_Doc"),
-            uploadToCloudinary("Pan_Card"),
-            uploadToCloudinary("Device_Doc"),
-            uploadToCloudinary("Adhar_Card"),
-            uploadToCloudinary("Invious_Doc"),
-            uploadToCloudinary("Signature_Doc"),
-            uploadToCloudinary("Panic_Sticker"),
-        ]);
+        // // ✅ Upload all files
+        // const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
+        //     uploadToCloudinary("Vechile_Doc"),
+        //     uploadToCloudinary("Rc_Doc"),
+        //     uploadToCloudinary("Pan_Card"),
+        //     uploadToCloudinary("Device_Doc"),
+        //     uploadToCloudinary("Adhar_Card"),
+        //     uploadToCloudinary("Invious_Doc"),
+        //     uploadToCloudinary("Signature_Doc"),
+        //     uploadToCloudinary("Panic_Sticker"),
+        // ]);
 
         // ✅ Step 1: Create MapDevice
+        // const newMapDevice = new MapDevice({
+        //     manufacturId: userId,
+        //     country, state, distributorName, delerName,
+        //     deviceType, deviceNo, voltage, elementType,
+        //     batchNo, simDetails, VechileBirth, RegistrationNo,
+        //     date, ChassisNumber, EngineNumber, VehicleType,
+        //     MakeModel, ModelYear, InsuranceRenewDate,
+        //     PollutionRenewdate, fullName, email, mobileNo,
+        //     GstinNo, Customercountry, Customerstate,
+        //     Customerdistrict, Rto, PinCode, CompliteAddress,
+        //     AdharNo, PanNo, Packages, InvoiceNo,
+        //     VehicleKMReading, DriverLicenseNo, MappedDate,
+        //     NoOfPanicButtons, VechileIDocument: vc,
+        //     RcDocument: Rc, DeviceDocument: Dc,
+        //     PanCardDocument: Pc, AdharCardDocument: Ac,
+        //     InvoiceDocument: Ic, SignatureDocument: Sc,
+        //     PanicButtonWithSticker: Ps,
+        // });
+
         const newMapDevice = new MapDevice({
             manufacturId: userId,
             country, state, distributorName, delerName,
@@ -3152,10 +3171,10 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerdistrict, Rto, PinCode, CompliteAddress,
             AdharNo, PanNo, Packages, InvoiceNo,
             VehicleKMReading, DriverLicenseNo, MappedDate,
-            NoOfPanicButtons, VechileIDocument: vc,
-            RcDocument: Rc, DeviceDocument: Dc,
-            PanCardDocument: Pc, AdharCardDocument: Ac,
-            InvoiceDocument: Ic, SignatureDocument: Sc,
+            NoOfPanicButtons, VechileIDocument: null,
+            RcDocument: null, DeviceDocument: null,
+            PanCardDocument: null, AdharCardDocument: null,
+            InvoiceDocument: null, SignatureDocument: null,
             PanicButtonWithSticker: Ps,
         });
 
@@ -3575,6 +3594,7 @@ exports.fetchDeviceNoOnBasisOfDeler = async (req, res) => {
         const deviceDetails = dealers.flatMap((dealer) =>
             dealer.allocateBarcodes.map((barcode) => ({
                 deviceSerialNo: barcode.deviceSerialNo,
+                barCodeNo:barcode.barCodeNo,
                 status: barcode.status || "unknown",
                 simDetails: Array.isArray(barcode.simDetails) ? barcode.simDetails : [],
             }))
