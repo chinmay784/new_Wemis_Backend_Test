@@ -3291,7 +3291,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         }
 
         // Convert Packages to ObjectId if possible (keep as string/null otherwise)
-    
+
 
         // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
@@ -3329,6 +3329,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // Background processing (non-blocking)
         setImmediate(async () => {
             console.time(`manuFacturMAPaDevice:${savedMapDevice._id}`);
+
             try {
                 const deviceObject = {
                     deviceType,
@@ -3350,8 +3351,8 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     PollutionRenewdate
                 };
 
-                // ✅ FAST customer creation + push device
-                await CoustmerDevice.updateOne(
+                // ✅ Create or update customer AND return customer document
+                const savedCustomer = await CoustmerDevice.findOneAndUpdate(
                     { mobileNo },
                     {
                         $setOnInsert: {
@@ -3371,12 +3372,15 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                         },
                         $push: { devicesOwened: deviceObject }
                     },
-                    { upsert: true }
+                    {
+                        upsert: true,
+                        new: true // ✅ returns the document
+                    }
                 );
 
                 console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "customer saved");
 
-                // ✅ FAST user create
+                // ✅ Now insert coustmerId = savedCustomer._id
                 await User.updateOne(
                     { email },
                     {
@@ -3384,15 +3388,15 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                             email,
                             password: mobileNo,
                             role: "coustmer",
-                            coustmerId: savedMapDevice._id
+                            coustmerId: savedCustomer._id  // ✅ correct ID
                         }
                     },
                     { upsert: true }
                 );
 
                 console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user processed");
-
                 console.timeEnd(`manuFacturMAPaDevice:${savedMapDevice._id}`);
+
             } catch (err) {
                 console.error("Background processing error:", err);
             }
