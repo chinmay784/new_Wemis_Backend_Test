@@ -20,9 +20,9 @@ app.use((req, res, next) => {
 });
 
 
-
+connectToDatabase(); 
 app.listen(port, () => {
   console.log(`Super Admin Service is running on port ${port} and url http://localhost:${port}`);
 });
-connectToDatabase(); 
+
  

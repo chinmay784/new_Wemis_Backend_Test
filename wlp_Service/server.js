@@ -23,9 +23,9 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use('/', WlpRouter, SuperAdminRouter);
 
 
-
+connectToDatabase();
 app.listen(port, () => {
   console.log(`✅ WLP Service is running on port ${port}`);
 });
 
-connectToDatabase();
+

@@ -115,12 +115,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Internal Server Error" });
 });
 
+
+
+
+connectToDatabase();
 // ✅ Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
-connectToDatabase();
+
 
 
