@@ -3291,14 +3291,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         }
 
         // Convert Packages to ObjectId if possible (keep as string/null otherwise)
-        
-        if (Packages) {
-            try {
-                Packages = mongoose.Types.ObjectId(Packages);
-            } catch (e) {
-                Packages = null;
-            }
-        }
+    
 
         // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
