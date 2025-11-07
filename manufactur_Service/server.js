@@ -2,18 +2,19 @@ const express = require('express');
 const { connectToDatabase } = require('./dataBase/db');
 
 const app = express();
-const port =  4004;
+const port = 4004;
 const manufacturerRouter = require('./routes/manuFacturRoute');
 const SuperAdminRouter = require('./routes/superAdminRoute');
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use('/', manufacturerRouter , SuperAdminRouter);
+// ✅ Increase request body size limit (VERY IMPORTANT FOR AWS)
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));;
+app.use('/', manufacturerRouter, SuperAdminRouter);
 
-app.listen(port, () => {
+app.listen(port, "0.0.0.0",() => {
   console.log(`Manufacturer Service is running on port ${port} and url http://localhost:${port}`);
 });
-connectToDatabase(); 
+connectToDatabase();
 
 
 
