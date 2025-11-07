@@ -3337,29 +3337,6 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         setImmediate(async () => {
             console.time(`manuFacturMAPaDevice:${savedMapDevice._id}`);
             try {
-                // Step A: find or create customer
-                let customer = await CoustmerDevice.findOne({ mobileNo }).exec();
-
-                if (!customer) {
-                    customer = new CoustmerDevice({
-                        manufacturId: userId,
-                        fullName,
-                        email,
-                        mobileNo,
-                        GstinNo,
-                        Customercountry,
-                        Customerstate,
-                        Customerdistrict,
-                        Rto,
-                        PinCode,
-                        CompliteAddress,
-                        AdharNo,
-                        PanNo,
-                        devicesOwened: []
-                    });
-                }
-
-                // Prepare device object (ensure Packages is ObjectId or null)
                 const deviceObject = {
                     deviceType,
                     deviceNo,
@@ -3380,45 +3357,54 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     PollutionRenewdate
                 };
 
-                // Push device into array
-                customer.devicesOwened.push(deviceObject);
+                // ✅ FAST customer creation + push device
+                await CoustmerDevice.updateOne(
+                    { mobileNo },
+                    {
+                        $setOnInsert: {
+                            manufacturId: userId,
+                            fullName,
+                            email,
+                            mobileNo,
+                            GstinNo,
+                            Customercountry,
+                            Customerstate,
+                            Customerdistrict,
+                            Rto,
+                            PinCode,
+                            CompliteAddress,
+                            AdharNo,
+                            PanNo
+                        },
+                        $push: { devicesOwened: deviceObject }
+                    },
+                    { upsert: true }
+                );
 
-                // Save customer (this write may take time)
-                await customer.save();
                 console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "customer saved");
 
-                // Step B: ensure a User record exists (parallel safe)
-                try {
-                    const existingUser = await User.findOne({ email }).exec();
-                    if (!existingUser) {
-                        await User.create({
+                // ✅ FAST user create
+                await User.updateOne(
+                    { email },
+                    {
+                        $setOnInsert: {
                             email,
-                            password: mobileNo,    // consider hashing in future
+                            password: mobileNo,
                             role: "coustmer",
-                            coustmerId: customer._id
-                        });
-                        console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user created");
-                    } else {
-                        // if existing user needs coustmerId link, update it (optional)
-                        if (!existingUser.coustmerId) {
-                            existingUser.coustmerId = customer._id;
-                            await existingUser.save();
-                            console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "existing user updated");
+                            coustmerId: savedMapDevice._id
                         }
-                    }
-                } catch (uErr) {
-                    console.error("Background user create error:", uErr);
-                }
+                    },
+                    { upsert: true }
+                );
 
-                // Optionally, if you need to attach the MapDevice id to the customer document:
-                // customer.latestMapDevice = savedMapDevice._id;
-                // await customer.save();
+                console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user processed");
 
-                console.timeEnd(`manuFacturMAPaDevice:${savedMapDevice._1d}`);
-            } catch (bgErr) {
-                console.error("Background processing error for manuFacturMAPaDevice:", bgErr);
+                console.timeEnd(`manuFacturMAPaDevice:${savedMapDevice._id}`);
+            } catch (err) {
+                console.error("Background processing error:", err);
             }
         });
+
 
         // done – immediate response was already sent above
 
