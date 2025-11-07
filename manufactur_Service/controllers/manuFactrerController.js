@@ -3291,12 +3291,12 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         }
 
         // Convert Packages to ObjectId if possible (keep as string/null otherwise)
-        let packageId = null;
+        
         if (Packages) {
             try {
-                packageId = mongoose.Types.ObjectId(Packages);
+                Packages = mongoose.Types.ObjectId(Packages);
             } catch (e) {
-                packageId = null;
+                Packages = null;
             }
         }
 
@@ -3311,7 +3311,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             PollutionRenewdate, fullName, email, mobileNo,
             GstinNo, Customercountry, Customerstate,
             Customerdistrict, Rto, PinCode, CompliteAddress,
-            AdharNo, PanNo, Packages: packageId, InvoiceNo,
+            AdharNo, PanNo, Packages, InvoiceNo,
             VehicleKMReading, DriverLicenseNo, MappedDate,
             NoOfPanicButtons,
             // documents left null for now (upload separately if needed)
@@ -3344,7 +3344,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     elementType,
                     batchNo,
                     simDetails,
-                    Packages: packageId,
+                    Packages,
                     VechileBirth,
                     RegistrationNo,
                     date,
