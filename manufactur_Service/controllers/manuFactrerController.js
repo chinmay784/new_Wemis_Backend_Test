@@ -3175,7 +3175,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             RcDocument: null, DeviceDocument: null,
             PanCardDocument: null, AdharCardDocument: null,
             InvoiceDocument: null, SignatureDocument: null,
-            PanicButtonWithSticker: Ps,
+            PanicButtonWithSticker: null,
         });
 
         await newMapDevice.save();
