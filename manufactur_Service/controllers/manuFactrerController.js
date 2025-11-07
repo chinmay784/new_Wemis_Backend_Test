@@ -3072,18 +3072,202 @@ exports.editSubscriptionById = async (req, res) => {
 
 
 
+// exports.manuFacturMAPaDevice = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Please provide userId",
+//             });
+//         }
+
+//         // ✅ Extract fields
+//         let {
+//             country, state, distributorName, delerName, deviceType,
+//             deviceNo, voltage, elementType, batchNo, simDetails,
+//             VechileBirth, RegistrationNo, date, ChassisNumber,
+//             EngineNumber, VehicleType, MakeModel, ModelYear,
+//             InsuranceRenewDate, PollutionRenewdate, fullName,
+//             email, mobileNo, GstinNo, Customercountry,
+//             Customerstate, Customerdistrict, Rto, PinCode,
+//             CompliteAddress, AdharNo, PanNo, Packages,
+//             InvoiceNo, VehicleKMReading, DriverLicenseNo,
+//             MappedDate, NoOfPanicButtons,
+//         } = req.body;
+
+//         // ✅ Parse simDetails safely
+//         try {
+//             if (typeof simDetails === "string") {
+//                 simDetails = JSON.parse(simDetails);
+//             }
+//         } catch (err) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid simDetails format",
+//             });
+//         }
+
+//         // ✅ File upload helper
+//         // const uploadToCloudinary = async (fieldName) => {
+//         //     if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
+//         //         return null;
+//         //     }
+
+//         //     const file = req.files[fieldName][0];
+//         //     try {
+//         //         const uploaded = await cloudinary.uploader.upload(file.path, {
+//         //             folder: "profile_pics",
+//         //             resource_type: "raw",
+//         //         });
+//         //         return uploaded.secure_url;
+//         //     } catch (error) {
+//         //         return null;
+//         //     }
+//         // };
+
+//         // // ✅ Upload all files
+//         // const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
+//         //     uploadToCloudinary("Vechile_Doc"),
+//         //     uploadToCloudinary("Rc_Doc"),
+//         //     uploadToCloudinary("Pan_Card"),
+//         //     uploadToCloudinary("Device_Doc"),
+//         //     uploadToCloudinary("Adhar_Card"),
+//         //     uploadToCloudinary("Invious_Doc"),
+//         //     uploadToCloudinary("Signature_Doc"),
+//         //     uploadToCloudinary("Panic_Sticker"),
+//         // ]);
+
+//         // ✅ Step 1: Create MapDevice
+//         // const newMapDevice = new MapDevice({
+//         //     manufacturId: userId,
+//         //     country, state, distributorName, delerName,
+//         //     deviceType, deviceNo, voltage, elementType,
+//         //     batchNo, simDetails, VechileBirth, RegistrationNo,
+//         //     date, ChassisNumber, EngineNumber, VehicleType,
+//         //     MakeModel, ModelYear, InsuranceRenewDate,
+//         //     PollutionRenewdate, fullName, email, mobileNo,
+//         //     GstinNo, Customercountry, Customerstate,
+//         //     Customerdistrict, Rto, PinCode, CompliteAddress,
+//         //     AdharNo, PanNo, Packages, InvoiceNo,
+//         //     VehicleKMReading, DriverLicenseNo, MappedDate,
+//         //     NoOfPanicButtons, VechileIDocument: vc,
+//         //     RcDocument: Rc, DeviceDocument: Dc,
+//         //     PanCardDocument: Pc, AdharCardDocument: Ac,
+//         //     InvoiceDocument: Ic, SignatureDocument: Sc,
+//         //     PanicButtonWithSticker: Ps,
+//         // });
+
+//         const newMapDevice = new MapDevice({
+//             manufacturId: userId,
+//             country, state, distributorName, delerName,
+//             deviceType, deviceNo, voltage, elementType,
+//             batchNo, simDetails, VechileBirth, RegistrationNo,
+//             date, ChassisNumber, EngineNumber, VehicleType,
+//             MakeModel, ModelYear, InsuranceRenewDate,
+//             PollutionRenewdate, fullName, email, mobileNo,
+//             GstinNo, Customercountry, Customerstate,
+//             Customerdistrict, Rto, PinCode, CompliteAddress,
+//             AdharNo, PanNo, Packages, InvoiceNo,
+//             VehicleKMReading, DriverLicenseNo, MappedDate,
+//             NoOfPanicButtons, VechileIDocument: null,
+//             RcDocument: null, DeviceDocument: null,
+//             PanCardDocument: null, AdharCardDocument: null,
+//             InvoiceDocument: null, SignatureDocument: null,
+//             PanicButtonWithSticker: null,
+//         });
+
+//         await newMapDevice.save();
+
+//         // ✅ Step 2: Check if customer already exists
+//         let customer = await CoustmerDevice.findOne({ mobileNo });
+
+//         if (!customer) {
+//             // ✅ New customer
+//             customer = new CoustmerDevice({
+//                 manufacturId: userId,
+//                 fullName,
+//                 email,
+//                 mobileNo,
+//                 GstinNo,
+//                 Customercountry,
+//                 Customerstate,
+//                 Customerdistrict,
+//                 Rto,
+//                 PinCode,
+//                 CompliteAddress,
+//                 AdharNo,
+//                 PanNo,
+//                 devicesOwened: [],
+//             });
+//         }
+
+//         // ✅ Step 3: Prepare device object for customer schema
+//         const deviceObject = {
+//             deviceType,
+//             deviceNo,
+//             voltage,
+//             elementType,
+//             batchNo,
+//             simDetails,
+//             Packages,
+//             VechileBirth,
+//             RegistrationNo,
+//             date,
+//             ChassisNumber,
+//             EngineNumber,
+//             VehicleType,
+//             MakeModel,
+//             ModelYear,
+//             InsuranceRenewDate,
+//             PollutionRenewdate,
+//         };
+
+//         // ✅ Step 4: Push device into customer's devicesOwened[]
+//         customer.devicesOwened.push(deviceObject);
+
+//         // ✅ Step 5: Save customer
+//         await customer.save();
+
+//         // also save in user collections
+//         const user = await User.findOne({ email });
+
+//         if (!user) {
+//             const newUser = await User.create({
+//                 email: email,
+//                 password: mobileNo,
+//                 role: "coustmer",
+//                 coustmerId: customer._id,
+//             });
+//         }
+
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Device mapped & customer updated successfully",
+//             mapDevice: newMapDevice,
+//             customer,
+//         });
+
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while mapping device",
+//             error: error.message,
+//         });
+//     }
+// };
+
+
 exports.manuFacturMAPaDevice = async (req, res) => {
     try {
-        const userId = req.user.userId;
-
+        const userId = req.user && req.user.userId;
         if (!userId) {
-            return res.status(400).json({
-                success: false,
-                message: "Please provide userId",
-            });
+            return res.status(400).json({ success: false, message: "Please provide userId" });
         }
 
-        // ✅ Extract fields
+        // Extract fields
         let {
             country, state, distributorName, delerName, deviceType,
             deviceNo, voltage, elementType, batchNo, simDetails,
@@ -3097,68 +3281,26 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             MappedDate, NoOfPanicButtons,
         } = req.body;
 
-        // ✅ Parse simDetails safely
+        // Parse simDetails if string
         try {
-            if (typeof simDetails === "string") {
+            if (typeof simDetails === "string" && simDetails.trim() !== "") {
                 simDetails = JSON.parse(simDetails);
             }
         } catch (err) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid simDetails format",
-            });
+            return res.status(400).json({ success: false, message: "Invalid simDetails format" });
         }
 
-        // ✅ File upload helper
-        // const uploadToCloudinary = async (fieldName) => {
-        //     if (!req.files || !req.files[fieldName] || req.files[fieldName].length === 0) {
-        //         return null;
-        //     }
+        // Convert Packages to ObjectId if possible (keep as string/null otherwise)
+        let packageId = null;
+        if (Packages) {
+            try {
+                packageId = mongoose.Types.ObjectId(Packages);
+            } catch (e) {
+                packageId = null;
+            }
+        }
 
-        //     const file = req.files[fieldName][0];
-        //     try {
-        //         const uploaded = await cloudinary.uploader.upload(file.path, {
-        //             folder: "profile_pics",
-        //             resource_type: "raw",
-        //         });
-        //         return uploaded.secure_url;
-        //     } catch (error) {
-        //         return null;
-        //     }
-        // };
-
-        // // ✅ Upload all files
-        // const [vc, Rc, Pc, Dc, Ac, Ic, Sc, Ps] = await Promise.all([
-        //     uploadToCloudinary("Vechile_Doc"),
-        //     uploadToCloudinary("Rc_Doc"),
-        //     uploadToCloudinary("Pan_Card"),
-        //     uploadToCloudinary("Device_Doc"),
-        //     uploadToCloudinary("Adhar_Card"),
-        //     uploadToCloudinary("Invious_Doc"),
-        //     uploadToCloudinary("Signature_Doc"),
-        //     uploadToCloudinary("Panic_Sticker"),
-        // ]);
-
-        // ✅ Step 1: Create MapDevice
-        // const newMapDevice = new MapDevice({
-        //     manufacturId: userId,
-        //     country, state, distributorName, delerName,
-        //     deviceType, deviceNo, voltage, elementType,
-        //     batchNo, simDetails, VechileBirth, RegistrationNo,
-        //     date, ChassisNumber, EngineNumber, VehicleType,
-        //     MakeModel, ModelYear, InsuranceRenewDate,
-        //     PollutionRenewdate, fullName, email, mobileNo,
-        //     GstinNo, Customercountry, Customerstate,
-        //     Customerdistrict, Rto, PinCode, CompliteAddress,
-        //     AdharNo, PanNo, Packages, InvoiceNo,
-        //     VehicleKMReading, DriverLicenseNo, MappedDate,
-        //     NoOfPanicButtons, VechileIDocument: vc,
-        //     RcDocument: Rc, DeviceDocument: Dc,
-        //     PanCardDocument: Pc, AdharCardDocument: Ac,
-        //     InvoiceDocument: Ic, SignatureDocument: Sc,
-        //     PanicButtonWithSticker: Ps,
-        // });
-
+        // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
             manufacturId: userId,
             country, state, distributorName, delerName,
@@ -3169,95 +3311,131 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             PollutionRenewdate, fullName, email, mobileNo,
             GstinNo, Customercountry, Customerstate,
             Customerdistrict, Rto, PinCode, CompliteAddress,
-            AdharNo, PanNo, Packages, InvoiceNo,
+            AdharNo, PanNo, Packages: packageId, InvoiceNo,
             VehicleKMReading, DriverLicenseNo, MappedDate,
-            NoOfPanicButtons, VechileIDocument: null,
-            RcDocument: null, DeviceDocument: null,
-            PanCardDocument: null, AdharCardDocument: null,
-            InvoiceDocument: null, SignatureDocument: null,
+            NoOfPanicButtons,
+            // documents left null for now (upload separately if needed)
+            VechileIDocument: null,
+            RcDocument: null,
+            DeviceDocument: null,
+            PanCardDocument: null,
+            AdharCardDocument: null,
+            InvoiceDocument: null,
+            SignatureDocument: null,
             PanicButtonWithSticker: null,
         });
 
-        await newMapDevice.save();
-
-        // ✅ Step 2: Check if customer already exists
-        let customer = await CoustmerDevice.findOne({ mobileNo });
-
-        if (!customer) {
-            // ✅ New customer
-            customer = new CoustmerDevice({
-                manufacturId: userId,
-                fullName,
-                email,
-                mobileNo,
-                GstinNo,
-                Customercountry,
-                Customerstate,
-                Customerdistrict,
-                Rto,
-                PinCode,
-                CompliteAddress,
-                AdharNo,
-                PanNo,
-                devicesOwened: [],
-            });
-        }
-
-        // ✅ Step 3: Prepare device object for customer schema
-        const deviceObject = {
-            deviceType,
-            deviceNo,
-            voltage,
-            elementType,
-            batchNo,
-            simDetails,
-            Packages,
-            VechileBirth,
-            RegistrationNo,
-            date,
-            ChassisNumber,
-            EngineNumber,
-            VehicleType,
-            MakeModel,
-            ModelYear,
-            InsuranceRenewDate,
-            PollutionRenewdate,
-        };
-
-        // ✅ Step 4: Push device into customer's devicesOwened[]
-        customer.devicesOwened.push(deviceObject);
-
-        // ✅ Step 5: Save customer
-        await customer.save();
-
-        // also save in user collections
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            const newUser = await User.create({
-                email: email,
-                password: mobileNo,
-                role: "coustmer",
-                coustmerId: customer._id,
-            });
-        }
-
-
-        return res.status(200).json({
+        const savedMapDevice = await newMapDevice.save();
+        // Immediate response to client (fast)
+        res.status(200).json({
             success: true,
-            message: "Device mapped & customer updated successfully",
-            mapDevice: newMapDevice,
-            customer,
+            message: "Device mapped successfully (background customer/user processing started)",
+            mapDeviceId: savedMapDevice._id
         });
+
+        // Background processing (non-blocking)
+        setImmediate(async () => {
+            console.time(`manuFacturMAPaDevice:${savedMapDevice._id}`);
+            try {
+                // Step A: find or create customer
+                let customer = await CoustmerDevice.findOne({ mobileNo }).exec();
+
+                if (!customer) {
+                    customer = new CoustmerDevice({
+                        manufacturId: userId,
+                        fullName,
+                        email,
+                        mobileNo,
+                        GstinNo,
+                        Customercountry,
+                        Customerstate,
+                        Customerdistrict,
+                        Rto,
+                        PinCode,
+                        CompliteAddress,
+                        AdharNo,
+                        PanNo,
+                        devicesOwened: []
+                    });
+                }
+
+                // Prepare device object (ensure Packages is ObjectId or null)
+                const deviceObject = {
+                    deviceType,
+                    deviceNo,
+                    voltage,
+                    elementType,
+                    batchNo,
+                    simDetails,
+                    Packages: packageId,
+                    VechileBirth,
+                    RegistrationNo,
+                    date,
+                    ChassisNumber,
+                    EngineNumber,
+                    VehicleType,
+                    MakeModel,
+                    ModelYear,
+                    InsuranceRenewDate,
+                    PollutionRenewdate
+                };
+
+                // Push device into array
+                customer.devicesOwened.push(deviceObject);
+
+                // Save customer (this write may take time)
+                await customer.save();
+                console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "customer saved");
+
+                // Step B: ensure a User record exists (parallel safe)
+                try {
+                    const existingUser = await User.findOne({ email }).exec();
+                    if (!existingUser) {
+                        await User.create({
+                            email,
+                            password: mobileNo,    // consider hashing in future
+                            role: "coustmer",
+                            coustmerId: customer._id
+                        });
+                        console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user created");
+                    } else {
+                        // if existing user needs coustmerId link, update it (optional)
+                        if (!existingUser.coustmerId) {
+                            existingUser.coustmerId = customer._id;
+                            await existingUser.save();
+                            console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "existing user updated");
+                        }
+                    }
+                } catch (uErr) {
+                    console.error("Background user create error:", uErr);
+                }
+
+                // Optionally, if you need to attach the MapDevice id to the customer document:
+                // customer.latestMapDevice = savedMapDevice._id;
+                // await customer.save();
+
+                console.timeEnd(`manuFacturMAPaDevice:${savedMapDevice._1d}`);
+            } catch (bgErr) {
+                console.error("Background processing error for manuFacturMAPaDevice:", bgErr);
+            }
+        });
+
+        // done – immediate response was already sent above
 
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server error while mapping device",
-            error: error.message,
-        });
+        console.error("Error in manuFacturMAPaDevice (main):", error);
+        // If we haven't sent a response yet
+        if (!res.headersSent) {
+            return res.status(500).json({
+                success: false,
+                message: "Server error while mapping device",
+                error: error.message
+            });
+        }
+        // otherwise just log
     }
 };
+
 
 
 exports.fetchCoustmerallDevices = async (req, res) => {
@@ -3594,7 +3772,7 @@ exports.fetchDeviceNoOnBasisOfDeler = async (req, res) => {
         const deviceDetails = dealers.flatMap((dealer) =>
             dealer.allocateBarcodes.map((barcode) => ({
                 deviceSerialNo: barcode.deviceSerialNo,
-                barCodeNo:barcode.barCodeNo,
+                barCodeNo: barcode.barCodeNo,
                 status: barcode.status || "unknown",
                 simDetails: Array.isArray(barcode.simDetails) ? barcode.simDetails : [],
             }))

@@ -77,7 +77,7 @@ const coustmerDeviceSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "createSubscription",
             },
-            
+
             VechileBirth: { type: String, trim: true },
             RegistrationNo: { type: String, trim: true },
             date: { type: String, trim: true },
@@ -88,6 +88,14 @@ const coustmerDeviceSchema = new mongoose.Schema({
             ModelYear: { type: String, trim: true },
             InsuranceRenewDate: { type: String, trim: true },
             PollutionRenewdate: { type: String, trim: true },
+
+            // Extra Add-On Details
+            speed: { type: Number, default: 0 },
+            packageValidate: { type: String, default: '', trim: true },
+            satellites: { type: String, default: '', trim: true },
+            vechileStatus: { type: String, default: '', trim: true },
+            lastUpdated: { type: String, default: '', trim: true },
+            vechileMovingStatus: { type: String, default: '', trim: true },
         }
     ],
 });
