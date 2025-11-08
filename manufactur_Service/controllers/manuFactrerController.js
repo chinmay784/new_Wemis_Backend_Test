@@ -3381,18 +3381,38 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "customer saved");
 
                 // ✅ Now insert coustmerId = savedCustomer._id
-                await User.updateOne(
-                    { email },
-                    {
-                        $setOnInsert: {
-                            email,
-                            password: mobileNo,
-                            role: "coustmer",
-                            coustmerId: savedCustomer._id  // ✅ correct ID
-                        }
-                    },
-                    { upsert: true }
-                );
+                // ✅ Check if user already exists
+
+                // await User.updateOne(
+                //     { email },
+                //     {
+                //         $setOnInsert: {
+                //             email,
+                //             password: mobileNo,
+                //             role: "coustmer",
+                //             coustmerId: savedCustomer._id
+                //         }
+                //     },
+                //     { upsert: true }
+                // );
+
+
+                const existingUser = await User.findOne({ email });
+
+                if (!existingUser) {
+                    // ✅ Create new user
+                    await User.create({
+                        email,
+                        password: mobileNo,
+                        role: "coustmer",
+                        coustmerId: savedCustomer._id
+                    });
+
+                    console.log("✅ New user created");
+                } else {
+                    console.log("✅ User already exists, not creating again");
+                }
+
 
                 console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user processed");
                 console.timeEnd(`manuFacturMAPaDevice:${savedMapDevice._id}`);
@@ -3666,59 +3686,6 @@ exports.viewDocumentsOnMapDevice = async (req, res) => {
 
 
 
-// // for Live Data Tracking on 
-// exports.liveTrackingOnAnMapSingleMapDevice = async (req, res) => {
-//     try {
-//         const userId = req.user.userId;
-
-//         if (!userId) {
-//             return res.status(200).json({
-//                 success: false,
-//                 message: "Please Provide UserId"
-//             });
-//         }
-
-//         const { deviceNo } = req.body;
-
-//         if (!deviceNo) {
-//             return res.status(200).json({
-//                 success: false,
-//                 message: "Please Provide DeviceNo"
-//             });
-//         }
-
-//         // ✅ Fetch live data from TCP Server
-//         const liveData = devices[deviceNo];
-
-//         if (!liveData) {
-//             return res.status(200).json({
-//                 success: false,
-//                 message: "No live tracking data found for this device"
-//             });
-//         }
-
-//         // ✅ Success Response
-//         return res.status(200).json({
-//             success: true,
-//             message: "Live Tracking Data Fetched Successfully",
-//             data: {
-//                 deviceNo,
-//                 liveData
-//             },
-//         });
-
-//     } catch (error) {
-//         console.log("❌ Controller Error:", error.message);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Server Error in LiveTrackingOnAnMapSingleMapDevice"
-//         });
-//     }
-// };
-
-
-
-
 
 // this for only distributors deler only not implemented (Oem dele)
 exports.fetchDeviceNoOnBasisOfDeler = async (req, res) => {
@@ -3946,5 +3913,83 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
             sucess: false,
             message: "Server Error in fetchdelerOnBasisOfDistributor"
         })
+    }
+};
+
+
+
+
+
+// for Live Data Tracking on map device
+
+exports.liveTrackingSingleDevice = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        const { deviceNo } = req.body;
+
+        if (!deviceNo) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide deviceNo"
+            });
+        }
+
+        // ✅ Fetch device from database
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(200).json({
+                success: false,
+                message: "Device not found in database"
+            });
+        }
+
+        // // ✅ IMEI stored in DB
+        const imei = device.devicesOwened[0].deviceNo;
+
+        if (!imei) {
+            return res.status(200).json({
+                success: false,
+                message: "IMEI not found in database for this device"
+            });
+        }
+
+        // // ✅ Fetch live data from TCP memory
+        const liveData = devices[imei];
+
+        if (!liveData) {
+            return res.status(200).json({
+                success: false,
+                message: "No live tracking data found for this device"
+            });
+        }
+
+        console.log(' live data', liveData)
+
+        return res.status(200).json({
+            success: true,
+            message: "Live Tracking Data Fetched Successfully",
+            deviceNo: deviceNo,
+            imei: imei,
+            data: liveData
+        });
+
+    } catch (error) {
+        console.log("❌ Controller Error (Single Device):", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in liveTrackingSingleDevice"
+        });
     }
 };
