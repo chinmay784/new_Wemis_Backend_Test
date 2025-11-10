@@ -1,6 +1,6 @@
 const express = require('express');
 const { authMiddelWere } = require('../middelwere/authMiddelWere');
-const { createDistributor, fetchDistributor, deleteDistributor, fetchDistributorById, editDistributor, createDelerUnderDistributor, fetchDelerDistributor, deleteDelerDistributor, createOem, fetchOems, deleteOems, getOemsById, editOemsById, createDelerUnderOems, fetchDelerUnderOems, deleteDelerUnderOems, getDelerUnderOemsById, editDelerOem, createBarCode, fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice,  } = require('../controllers/manuFactrerController');
+const { createDistributor, fetchDistributor, deleteDistributor, fetchDistributorById, editDistributor, createDelerUnderDistributor, fetchDelerDistributor, deleteDelerDistributor, createOem, fetchOems, deleteOems, getOemsById, editOemsById, createDelerUnderOems, fetchDelerUnderOems, deleteDelerUnderOems, getDelerUnderOemsById, editDelerOem, createBarCode, fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice, liveTrackingAllDevices, } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
 
@@ -79,12 +79,13 @@ router.post("/fetchAllTechnicien", authMiddelWere, fetchAllTechnicien);
 
 
 // Fetch Coustmer All Devices
-router.get("/fetchCoustmerallDevices",authMiddelWere,fetchCoustmerallDevices);
-router.post("/fetchCoustmerSingleDevice",authMiddelWere,fetchCoustmerSingleDevice);
+router.get("/fetchCoustmerallDevices", authMiddelWere, fetchCoustmerallDevices);
+router.post("/fetchCoustmerSingleDevice", authMiddelWere, fetchCoustmerSingleDevice);
 
 // // for single Device LiveTracking Data 
 // router.post("/liveTrackingOnAnMapSingleMapDevice",authMiddelWere,liveTrackingOnAnMapSingleMapDevice);
-router.post("/liveTrackingSingleDevice",authMiddelWere,liveTrackingSingleDevice)
+router.post("/liveTrackingSingleDevice", authMiddelWere, liveTrackingSingleDevice);
+router.get("/liveTrackingAllDevices", authMiddelWere, liveTrackingAllDevices)
 
 
 module.exports = router;

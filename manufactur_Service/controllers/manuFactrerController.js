@@ -3993,3 +3993,85 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         });
     }
 };
+
+
+// for liveTrackingAllDevices
+exports.liveTrackingAllDevices = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide userId",
+            });
+        }
+
+        // fetch coustmer on the basis of userId
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "No Coustmer Found",
+            });
+        }
+
+
+        // find in coustmer device collections
+        const coustmer = await CoustmerDevice.findById(user.coustmerId);
+
+        if (!coustmer) {
+            return res.status(200).json({
+                success: false,
+                message: "No Coustmer Device Found",
+            });
+        }
+
+        // ✅ Extract all device numbers
+        const devicesOwened = coustmer.devicesOwened || [];
+        // const allDeviceNos = devicesOwened.map(d => d.deviceNo);
+
+        // return res.status(200).json({
+        //     success: true,
+        //     message: "Coustmer Fetched Successfully",
+        //     deviceNos: allDeviceNos,
+        // });
+
+
+        const finalDeviceList = devicesOwened.map((dev) => {
+            const imei = dev.deviceNo;  // IMEI stored as deviceNo
+
+            // ✅ Fetch live data from memory
+            const liveData = devices[imei] || null;
+
+            return {
+                // deviceNo: dev.deviceNo,
+                // deviceType: dev.deviceType,
+                // RegistrationNo: dev.RegistrationNo,
+                // MakeModel: dev.MakeModel,
+                // ModelYear: dev.ModelYear,
+                // simDetails: dev.simDetails,
+                // batchNo: dev.batchNo,
+                // date: dev.date,
+
+                // ✅ Live Tracking Data (GPS + Status)
+                liveTracking: liveData
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Customer devices fetched with live tracking data",
+            devices: finalDeviceList
+        });
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            sucess: false,
+            message: "Server Error in liveTrackingAllDevices"
+        })
+    }
+}
