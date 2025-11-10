@@ -142,4 +142,4 @@ function parseTraxoPacket(msg) {
 }
 
 
-module.exports = {devices};
+// module.exports = {devices};
