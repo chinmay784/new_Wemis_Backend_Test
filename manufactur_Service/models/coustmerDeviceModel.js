@@ -93,9 +93,9 @@ const coustmerDeviceSchema = new mongoose.Schema({
             speed: { type: Number, default: 0 },
             packageValidate: { type: String, default: '', trim: true },
             satellites: { type: String, default: '', trim: true },
-            vechileStatus: { type: String, default: '', trim: true },
+            vechileStatus: { type: Boolean, default: false },
             lastUpdated: { type: String, default: '', trim: true },
-            vechileMovingStatus: { type: String, default: '', trim: true },
+            IsvechileMovingStatus: { type: Boolean, default: false },
         }
     ],
 });

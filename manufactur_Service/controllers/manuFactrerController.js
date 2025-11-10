@@ -3922,6 +3922,78 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 
 // for Live Data Tracking on map device
 
+// exports.liveTrackingSingleDevice = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide UserId"
+//             });
+//         }
+
+//         const { deviceNo } = req.body;
+
+//         if (!deviceNo) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide deviceNo"
+//             });
+//         }
+
+//         // ✅ Fetch device from database
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Device not found in database"
+//             });
+//         }
+
+//         // // ✅ IMEI stored in DB
+//         const imei = device.devicesOwened[0].deviceNo;
+
+//         if (!imei) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "IMEI not found in database for this device"
+//             });
+//         }
+
+//         // // ✅ Fetch live data from TCP memory
+//         const liveData = devices[imei];
+
+//         if (!liveData) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "No live tracking data found for this device"
+//             });
+//         }
+
+//         console.log(' live data', liveData)
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live Tracking Data Fetched Successfully",
+//             deviceNo: deviceNo,
+//             imei: imei,
+//             data: liveData
+//         });
+
+//     } catch (error) {
+//         console.log("❌ Controller Error (Single Device):", error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in liveTrackingSingleDevice"
+//         });
+//     }
+// };
+
 exports.liveTrackingSingleDevice = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -3942,21 +4014,34 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             });
         }
 
-        // ✅ Fetch device from database
-        const device = await CoustmerDevice.findOne(
-            { "devicesOwened.deviceNo": deviceNo },
-            { "devicesOwened.$": 1 }
-        );
+        // ✅ Use aggregate to safely get the matched device
+        const result = await CoustmerDevice.aggregate([
+            { $match: { "devicesOwened.deviceNo": deviceNo } },
+            {
+                $project: {
+                    devicesOwened: {
+                        $filter: {
+                            input: "$devicesOwened",
+                            as: "d",
+                            cond: { $eq: ["$$d.deviceNo", deviceNo] }
+                        }
+                    }
+                }
+            }
+        ]);
 
-        if (!device) {
+        if (!result || result.length === 0 || result[0].devicesOwened.length === 0) {
             return res.status(200).json({
                 success: false,
                 message: "Device not found in database"
             });
         }
 
-        // // ✅ IMEI stored in DB
-        const imei = device.devicesOwened[0].deviceNo;
+        // ✅ This is the matched device object
+        const matchedDevice = result[0].devicesOwened[0];
+
+        // ✅ Use deviceNo as IMEI / deviceId
+        const imei = matchedDevice.deviceNo;
 
         if (!imei) {
             return res.status(200).json({
@@ -3965,7 +4050,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             });
         }
 
-        // // ✅ Fetch live data from TCP memory
+        // ✅ Read from in-memory TCP device store
         const liveData = devices[imei];
 
         if (!liveData) {
@@ -3975,24 +4060,23 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             });
         }
 
-        console.log(' live data', liveData)
-
         return res.status(200).json({
             success: true,
             message: "Live Tracking Data Fetched Successfully",
-            deviceNo: deviceNo,
-            imei: imei,
+            deviceNo,
+            imei,
             data: liveData
         });
 
     } catch (error) {
-        console.log("❌ Controller Error (Single Device):", error.message);
+        console.log("❌ Controller Error (Single Device):", error);
         return res.status(500).json({
             success: false,
             message: "Server Error in liveTrackingSingleDevice"
         });
     }
 };
+
 
 
 // for liveTrackingAllDevices

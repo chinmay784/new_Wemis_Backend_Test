@@ -27,6 +27,8 @@ const { connectToDatabase } = require("./dataBase/db");
 
 const manufacturerRouter = require("./routes/manuFacturRoute");
 const SuperAdminRouter = require("./routes/superAdminRoute");
+const { devices } = require("./devicesStore");
+
 
 const app = express();
 const HTTP_PORT = 4004;
@@ -42,7 +44,7 @@ app.use("/", manufacturerRouter, SuperAdminRouter);
 // ===============================
 // ✅ In-Memory Devices Store
 // ===============================
-let devices = {};
+// let devices = {};
 
 // ===============================
 // ✅ TCP SERVER (GPS Devices)
