@@ -55,6 +55,8 @@ const tcpServer = net.createServer(socket => {
   let buffer = "";
 
   socket.on("data", (data) => {
+    console.log("📥 RAW ASCII:", data.toString("utf8"));
+    console.log("📥 RAW HEX:", data.toString("hex"));
     buffer += data.toString();
 
     let messages = buffer.split(/\r?\n/);
