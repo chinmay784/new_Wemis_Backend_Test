@@ -4080,6 +4080,88 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
 
 // for liveTrackingAllDevices
+// exports.liveTrackingAllDevices = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Please provide userId",
+//             });
+//         }
+
+//         // fetch coustmer on the basis of userId
+//         const user = await User.findById(userId);
+
+//         if (!user) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "No Coustmer Found",
+//             });
+//         }
+
+
+//         // find in coustmer device collections
+//         const coustmer = await CoustmerDevice.findById(user.coustmerId);
+
+//         if (!coustmer) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "No Coustmer Device Found",
+//             });
+//         }
+
+//         // ✅ Extract all device numbers
+//         const devicesOwened = coustmer.devicesOwened || [];
+//         // const allDeviceNos = devicesOwened.map(d => d.deviceNo);
+
+//         // return res.status(200).json({
+//         //     success: true,
+//         //     message: "Coustmer Fetched Successfully",
+//         //     deviceNos: allDeviceNos,
+//         // });
+
+
+//         const finalDeviceList = devicesOwened.map((dev) => {
+//             const imei = dev.deviceNo;  // IMEI stored as deviceNo
+
+//             // ✅ Fetch live data from memory
+//             const liveData = devices[imei] || null;
+
+//             return {
+//                 // deviceNo: dev.deviceNo,
+//                 // deviceType: dev.deviceType,
+//                 // RegistrationNo: dev.RegistrationNo,
+//                 // MakeModel: dev.MakeModel,
+//                 // ModelYear: dev.ModelYear,
+//                 // simDetails: dev.simDetails,
+//                 // batchNo: dev.batchNo,
+//                 // date: dev.date,
+
+//                 // ✅ Live Tracking Data (GPS + Status)
+//                 liveTracking: liveData
+//             };
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Customer devices fetched with live tracking data",
+//             devices: finalDeviceList
+//         });
+
+
+//     } catch (error) {
+//         console.log(error, error.message);
+//         return res.status(500).json({
+//             sucess: false,
+//             message: "Server Error in liveTrackingAllDevices"
+//         })
+//     }
+// }
+
+
+
 exports.liveTrackingAllDevices = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -4091,71 +4173,85 @@ exports.liveTrackingAllDevices = async (req, res) => {
             });
         }
 
-        // fetch coustmer on the basis of userId
+        // ✅ Fetch user
         const user = await User.findById(userId);
 
-        if (!user) {
+        if (!user || !user.coustmerId) {
             return res.status(200).json({
                 success: false,
-                message: "No Coustmer Found",
+                message: "No Customer Found",
             });
         }
 
+        // ✅ Fetch customer device list
+        const customer = await CoustmerDevice.findById(user.coustmerId);
 
-        // find in coustmer device collections
-        const coustmer = await CoustmerDevice.findById(user.coustmerId);
-
-        if (!coustmer) {
+        if (!customer || !customer.devicesOwened) {
             return res.status(200).json({
                 success: false,
-                message: "No Coustmer Device Found",
+                message: "No Customer Device Found",
             });
         }
 
-        // ✅ Extract all device numbers
-        const devicesOwened = coustmer.devicesOwened || [];
-        // const allDeviceNos = devicesOwened.map(d => d.deviceNo);
+        const devicesOwened = customer.devicesOwened;
 
-        // return res.status(200).json({
-        //     success: true,
-        //     message: "Coustmer Fetched Successfully",
-        //     deviceNos: allDeviceNos,
-        // });
-
-
+        // ✅ Build final response list
         const finalDeviceList = devicesOwened.map((dev) => {
             const imei = dev.deviceNo;  // IMEI stored as deviceNo
 
-            // ✅ Fetch live data from memory
             const liveData = devices[imei] || null;
 
-            return {
-                // deviceNo: dev.deviceNo,
-                // deviceType: dev.deviceType,
-                // RegistrationNo: dev.RegistrationNo,
-                // MakeModel: dev.MakeModel,
-                // ModelYear: dev.ModelYear,
-                // simDetails: dev.simDetails,
-                // batchNo: dev.batchNo,
-                // date: dev.date,
+            // ✅ Calculate Online/Offline (last update within 40 seconds)
+            let isOnline = false;
+            if (liveData && liveData.lastUpdate) {
+                const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
+                isOnline = diff <= 40000; // 40 seconds threshold
+            }
 
-                // ✅ Live Tracking Data (GPS + Status)
-                liveTracking: liveData
+            return {
+                deviceNo: dev.deviceNo,
+                deviceType: dev.deviceType,
+                RegistrationNo: dev.RegistrationNo,
+                MakeModel: dev.MakeModel,
+                ModelYear: dev.ModelYear,
+                simDetails: dev.simDetails,
+                batchNo: dev.batchNo,
+                date: dev.date,
+
+                // ✅ Live Tracking
+                liveTracking: liveData,
+
+                // ✅ Computed Properties
+                status: isOnline ? "online" : "offline",
+                speed: liveData?.speed || 0,
+                ignition: liveData?.ignition || "0",
+                gpsFix: liveData?.gpsFix || "0",
+                satellites: liveData?.satellites || "0",
+                lastUpdate: liveData?.lastUpdate || null,
+                lat: liveData?.lat || null,
+                lng: liveData?.lng || null,
+
+                movementStatus:
+                    liveData?.speed > 5
+                        ? "moving"
+                        : liveData?.speed > 0
+                            ? "slow moving"
+                            : "stopped",
             };
         });
 
         return res.status(200).json({
             success: true,
             message: "Customer devices fetched with live tracking data",
-            devices: finalDeviceList
+            count: finalDeviceList.length,
+            devices: finalDeviceList,
         });
 
-
     } catch (error) {
-        console.log(error, error.message);
+        console.log("❌ Controller Error (All Devices):", error);
         return res.status(500).json({
-            sucess: false,
-            message: "Server Error in liveTrackingAllDevices"
-        })
+            success: false,
+            message: "Server Error in liveTrackingAllDevices",
+        });
     }
-}
+};
