@@ -4121,9 +4121,9 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
         const matchedDevice = device.devicesOwened[0];
         const imei = matchedDevice.deviceNo;
-
+        console.log(imei,deviceNo)
         // Get live data from in-memory store
-        const liveData = devices[imei];
+        const liveData = devices[deviceNo];
 
         if (!liveData) {
             return res.status(200).json({

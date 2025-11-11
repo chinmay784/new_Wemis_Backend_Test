@@ -251,16 +251,18 @@
 
 // ============================================
 // 📁 server.js (Main Entry Point)
-// ============================================
+/// File: server.js
+
 const express = require("express");
 const net = require("net");
 const { connectToDatabase } = require("./dataBase/db");
 
+// ✅ IMPORT: The shared data store
+const devices = require("./devicesStore");
+
+// --- Router Imports (assuming these paths are correct) ---
 const manufacturerRouter = require("./routes/manuFacturRoute");
 const SuperAdminRouter = require("./routes/superAdminRoute");
-
-// ✅ Shared device store
-const devices = require("./devicesStore");
 
 const app = express();
 const HTTP_PORT = 4004;
@@ -287,40 +289,34 @@ app.get("/health", (req, res) => {
 // ============================================
 const tcpServer = net.createServer(socket => {
   console.log("📡 GPS Device Connected:", socket.remoteAddress);
-
+  // Use Buffer for raw TCP data to prevent binary corruption
   let buffer = Buffer.alloc(0);
 
   socket.on("data", (data) => {
-    // Append to buffer for partial packets
+    // 1. Append to buffer
     buffer = Buffer.concat([buffer, data]);
 
-    const ascii = data.toString("utf8");
+    const asciiStart = buffer.slice(0, 100).toString("utf8");
     const hex = data.toString("hex").toUpperCase();
 
-    console.log("📥 RAW ASCII:", ascii);
+    console.log("📥 RAW ASCII Start:", asciiStart.split('\n')[0]);
     console.log("📥 RAW HEX:", hex);
 
-    // ✅ Block HTTP scanners
-    if (ascii.startsWith("GET") || ascii.startsWith("POST") || ascii.includes("HTTP")) {
+    // ✅ Block HTTP scanners 
+    if (asciiStart.startsWith("GET") || asciiStart.startsWith("POST") || asciiStart.includes("HTTP")) {
       console.log("❌ HTTP scanner blocked");
       socket.destroy();
       return;
     }
 
-    // ✅ Validate packet length
-    if (data.length < 10) {
-      console.log("❌ Invalid short packet blocked");
-      return;
-    }
-
-    // ✅ Try to parse packet
+    // 2. Try to parse packet from the buffer
     const parsed = parseTraxoPacket(buffer);
 
     if (parsed && parsed.deviceId) {
-      // Store in shared memory
+      // ✅ WRITE: Update the *shared* devices object
       devices[parsed.deviceId] = {
         ...parsed,
-        lastUpdate: new Date(),
+        lastUpdate: new Date().toISOString(),
         connectionInfo: {
           ip: socket.remoteAddress,
           port: socket.remotePort
@@ -328,16 +324,10 @@ const tcpServer = net.createServer(socket => {
       };
 
       console.log("✅ Device Updated:", parsed.deviceId);
-
-      // Clear buffer after successful parse
+      // Clear buffer after successful parse (assuming successful parse means the entire buffer was consumed)
       buffer = Buffer.alloc(0);
-
-      // Optional: Send acknowledgment back to device
-      // socket.write("OK\r\n");
     } else {
       console.log("⚠️ Unrecognized GPS packet, keeping in buffer");
-
-      // Prevent buffer overflow
       if (buffer.length > 4096) {
         console.log("❌ Buffer overflow, clearing");
         buffer = Buffer.alloc(0);
@@ -348,79 +338,64 @@ const tcpServer = net.createServer(socket => {
   socket.on("end", () => {
     console.log("❌ Device Disconnected:", socket.remoteAddress);
   });
-
   socket.on("error", (err) => {
     console.error("🚨 TCP Socket Error:", err.message);
   });
-
   socket.on("timeout", () => {
     console.log("⏱️ Socket timeout:", socket.remoteAddress);
     socket.destroy();
   });
 
-  // Set timeout (optional)
-  socket.setTimeout(300000); // 5 minutes
+  socket.setTimeout(300000); // 5 minutes timeout
 });
 
 tcpServer.listen(TCP_PORT, "0.0.0.0", () => {
   console.log(`🚀 GPS TCP Server running on port ${TCP_PORT}`);
 });
 
-// Start HTTP server
 app.listen(HTTP_PORT, () => {
   console.log(`🌍 HTTP Server running on port ${HTTP_PORT}`);
 });
 
-// Connect to database
 connectToDatabase();
 
 // ============================================
-// 🔹 PARSER FUNCTION (ASCII + Binary Support)
+// 🔹 PARSER FUNCTION LOGIC
 // ============================================
 function parseTraxoPacket(data) {
   const ascii = data.toString("utf8").trim();
 
-  // ✅ ASCII Packet Format ($PVT,...)
+  // 1. Check for standard ASCII packet
   if (ascii.startsWith("$PVT")) {
+    // Find the full packet line
+    const fullPacketMatch = ascii.match(/\$PVT.*?\r?\n/);
+    if (fullPacketMatch) {
+      return parseAsciiPacket(fullPacketMatch[0]);
+    }
+    return parseAsciiPacket(ascii); // Fallback for single packet without newline
+  }
+
+  // 2. Check for other ASCII packets (e.g., just comma-separated data)
+  if (ascii.includes(",")) {
     return parseAsciiPacket(ascii);
   }
 
-  // ✅ Check if it's a complete newline-terminated packet
-  const asciiLines = ascii.split(/\r?\n/).filter(line => line.trim());
-
-  if (asciiLines.length > 0) {
-    const lastLine = asciiLines[asciiLines.length - 1];
-
-    // Try parsing as comma-separated ASCII
-    if (lastLine.includes(",")) {
-      return parseAsciiPacket(lastLine);
-    }
-  }
-
-  // ✅ Binary packet parsing (implement based on your protocol)
+  // 3. Fallback for Binary (Must be implemented based on protocol)
   return parseBinaryPacket(data);
 }
 
-// ============================================
-// 🔹 ASCII Packet Parser
-// ============================================
 function parseAsciiPacket(msg) {
   try {
     const parts = msg.trim().split(/[,\s]+/);
-    console.log("📦 ASCII Parts:", parts);
+    // console.log("📦 ASCII Parts:", parts); // Uncomment for debugging
 
-    // Validate minimum fields
-    if (parts.length < 15) {
-      console.log("⚠️ Incomplete ASCII packet");
+    if (parts.length < 32) { // 32 is roughly the minimum complete set
       return null;
     }
 
     const deviceId = parts[6];
 
-    if (!deviceId || deviceId === "unknown") {
-      console.log("⚠️ No valid IMEI found");
-      return null;
-    }
+    if (!deviceId || deviceId === "unknown") return null;
 
     return {
       deviceId,
@@ -467,37 +442,15 @@ function parseAsciiPacket(msg) {
   }
 }
 
-// ============================================
-// 🔹 Binary Packet Parser
-// ============================================
 function parseBinaryPacket(data) {
-  try {
-    const hex = data.toString("hex").toUpperCase();
-    console.log("📦 Binary HEX:", hex);
-
-    // TODO: Implement your binary protocol parser
-    // This is a placeholder - adjust based on your device's binary format
-
-    // Example: Extract IMEI from specific byte positions
-    // const imeiStart = 10; // adjust based on protocol
-    // const imeiLength = 15;
-    // const imei = data.slice(imeiStart, imeiStart + imeiLength).toString('ascii');
-
-    return {
-      deviceId: null, // Extract from binary
-      packetType: "BINARY",
-      rawHex: hex,
-      timestamp: new Date().toISOString(),
-      // Add more fields based on binary protocol
-    };
-  } catch (err) {
-    console.error("❌ Binary Parse Error:", err.message);
-    return null;
-  }
+  // Placeholder - implement your specific binary protocol here
+  // Example: Check for a header like 0x7878
+  // if (data.length > 2 && data[0] === 0x78 && data[1] === 0x78) { ... }
+  return null;
 }
 
 // ============================================
-// 🔹 CLEANUP: Remove stale devices (optional)
+// 🔹 CLEANUP: Remove stale devices (Essential for Memory)
 // ============================================
 setInterval(() => {
   const now = Date.now();
