@@ -12,8 +12,9 @@ const createSubscription = require("../models/CreateNewSubscriptions");
 const MapDevice = require("../models/mapADeviceModel");
 const Technicien = require("../models/CreateTechnicien");
 const { cloudinary } = require("../config/cloudinary");
-const { devices } = require("../devicesStore");
+// const { devices } = require("../devicesStore");
 const CoustmerDevice = require("../models/coustmerDeviceModel");
+const devices = require("../devicesStore");
 
 
 
