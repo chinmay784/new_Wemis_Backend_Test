@@ -4119,6 +4119,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
         // ✅ CORRECT — GET LIVE DATA FROM IMEI
         const liveData = devices[imei];
+        console.log(liveData)
 
         if (!liveData) {
             return res.status(200).json({

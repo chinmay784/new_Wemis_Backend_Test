@@ -286,6 +286,12 @@ const tcpServer = net.createServer(socket => {
   socket.on("data", (data) => {
     const ascii = data.toString("utf8");
 
+    console.log("====================================");
+    console.log("📥 RAW ASCII:", data.toString("utf8"));
+    console.log("📥 RAW HEX:", data.toString("hex").toUpperCase());
+    console.log("📥 BUFFER LENGTH:", data.length);
+    console.log("====================================");
+
     // 🔥 BLOCK HTTP SCANNERS
     if (ascii.includes("GET") || ascii.includes("HTTP")) {
       console.log("❌ HTTP Scanner Blocked");
