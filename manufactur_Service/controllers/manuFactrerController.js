@@ -4100,7 +4100,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         }
 
         // Find device in database
-        const result = await CustomerDevice.aggregate([
+        const result = await CoustmerDevice.aggregate([
             {
                 $match: {
                     userId: userId,
