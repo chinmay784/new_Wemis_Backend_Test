@@ -4100,34 +4100,26 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         }
 
         // Find device in database
-        const result = await CoustmerDevice.aggregate([
-            {
-                $match: {
-                    userId: userId,
-                    "devicesOwened.deviceNo": deviceNo
-                }
-            },
-            {
-                $project: {
-                    devicesOwened: {
-                        $filter: {
-                            input: "$devicesOwened",
-                            as: "d",
-                            cond: { $eq: ["$$d.deviceNo", deviceNo] }
-                        }
-                    }
-                }
-            }
-        ]);
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
 
-        if (!result?.[0]?.devicesOwened?.length) {
-            return res.status(404).json({
+        if (!device) {
+            return res.status(200).json({
                 success: false,
-                message: "Device not found or not authorized"
+                message: "Device not found in database"
             });
         }
 
-        const matchedDevice = result[0].devicesOwened[0];
+        // if (!result?.[0]?.devicesOwened?.length) {
+        //     return res.status(404).json({
+        //         success: false,
+        //         message: "Device not found or not authorized"
+        //     });
+        // }
+
+        const matchedDevice = device.devicesOwened[0];
         const imei = matchedDevice.deviceNo;
 
         // Get live data from in-memory store
@@ -4148,7 +4140,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         }
         console.log(liveData)
 
-        // Calculate data age
+        // // Calculate data age
         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
         const isRecent = dataAge < 5 * 60 * 1000; // 5 minutes threshold
 
@@ -4199,7 +4191,8 @@ exports.liveTrackingSingleDevice = async (req, res) => {
                 dataAgeSeconds: Math.floor(dataAge / 1000)
             },
             connectionInfo: liveData.connectionInfo || null,
-            rawData: liveData // Include full packet for debugging
+            rawData: liveData,// Include full packet for debugging
+            device
         });
 
     } catch (error) {
