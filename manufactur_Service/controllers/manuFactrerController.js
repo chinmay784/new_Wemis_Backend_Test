@@ -3996,28 +3996,117 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 // };
 
 
+// exports.liveTrackingSingleDevice = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide UserId"
+//             });
+//         }
+
+//         const { deviceNo } = req.body;
+
+//         if (!deviceNo) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide deviceNo"
+//             });
+//         }
+
+//         const result = await CoustmerDevice.aggregate([
+//             { $match: { "devicesOwened.deviceNo": deviceNo } },
+//             {
+//                 $project: {
+//                     devicesOwened: {
+//                         $filter: {
+//                             input: "$devicesOwened",
+//                             as: "d",
+//                             cond: { $eq: ["$$d.deviceNo", deviceNo] }
+//                         }
+//                     }
+//                 }
+//             }
+//         ]);
+
+//         if (!result || !result[0] || result[0].devicesOwened.length === 0) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Device not found in database"
+//             });
+//         }
+
+//         const matchedDevice = result[0].devicesOwened[0];
+//         const imei = matchedDevice.deviceNo;
+
+//         if (!imei) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "IMEI not found for this device"
+//             });
+//         }
+//         console.log(devices)
+
+//         const liveData = devices[imei];
+
+//         if (!liveData) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "No live tracking data found for this device"
+//             });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live Tracking Data Fetched Successfully",
+//             deviceNo,
+//             imei,
+//             data: liveData
+//         });
+
+//     } catch (error) {
+//         console.log("❌ Controller Error (Single Device):", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in liveTrackingSingleDevice"
+//         });
+//     }
+// };
+
+
+
+
+
 exports.liveTrackingSingleDevice = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user?.userId;
 
         if (!userId) {
-            return res.status(200).json({
+            return res.status(400).json({
                 success: false,
-                message: "Please Provide UserId"
+                message: "User authentication required"
             });
         }
 
         const { deviceNo } = req.body;
 
         if (!deviceNo) {
-            return res.status(200).json({
+            return res.status(400).json({
                 success: false,
-                message: "Please Provide deviceNo"
+                message: "Device number is required"
             });
         }
 
-        const result = await CoustmerDevice.aggregate([
-            { $match: { "devicesOwened.deviceNo": deviceNo } },
+        // Find device in database
+        const result = await CustomerDevice.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    "devicesOwened.deviceNo": deviceNo
+                }
+            },
             {
                 $project: {
                     devicesOwened: {
@@ -4031,46 +4120,94 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             }
         ]);
 
-        if (!result || !result[0] || result[0].devicesOwened.length === 0) {
-            return res.status(200).json({
+        if (!result?.[0]?.devicesOwened?.length) {
+            return res.status(404).json({
                 success: false,
-                message: "Device not found in database"
+                message: "Device not found or not authorized"
             });
         }
 
         const matchedDevice = result[0].devicesOwened[0];
         const imei = matchedDevice.deviceNo;
 
-        if (!imei) {
-            return res.status(200).json({
-                success: false,
-                message: "IMEI not found for this device"
-            });
-        }
-        console.log(devices)
-
+        // Get live data from in-memory store
         const liveData = devices[imei];
 
         if (!liveData) {
             return res.status(200).json({
                 success: false,
-                message: "No live tracking data found for this device"
+                message: "Device is offline or no recent data available",
+                deviceInfo: {
+                    deviceNo,
+                    imei,
+                    vehicleName: matchedDevice.vehicleName || "Unknown",
+                    status: "offline"
+                },
+                lastSeen: null
             });
+        }
+        console.log(liveData)
+
+        // Calculate data age
+        const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
+        const isRecent = dataAge < 5 * 60 * 1000; // 5 minutes threshold
+
+        // Format GPS coordinates properly
+        let formattedLat = liveData.lat;
+        let formattedLng = liveData.lng;
+
+        // Convert to decimal degrees if needed (based on direction)
+        if (liveData.latDir === 'S' && formattedLat > 0) {
+            formattedLat = -formattedLat;
+        }
+        if (liveData.lngDir === 'W' && formattedLng > 0) {
+            formattedLng = -formattedLng;
         }
 
         return res.status(200).json({
             success: true,
-            message: "Live Tracking Data Fetched Successfully",
-            deviceNo,
-            imei,
-            data: liveData
+            message: "Live tracking data retrieved successfully",
+            deviceInfo: {
+                deviceNo,
+                imei,
+                vehicleName: matchedDevice.vehicleName || "Unknown",
+                status: isRecent ? "online" : "stale"
+            },
+            location: {
+                latitude: formattedLat,
+                longitude: formattedLng,
+                speed: liveData.speed || 0,
+                heading: liveData.heading || 0,
+                altitude: liveData.altitude || 0,
+                gpsFix: liveData.gpsFix
+            },
+            deviceStatus: {
+                ignition: liveData.ignition,
+                batteryVoltage: liveData.batteryVoltage,
+                mainsVoltage: liveData.mainsVoltage,
+                gsmSignal: liveData.gsmSignal,
+                satellites: liveData.satellites
+            },
+            alerts: {
+                sosStatus: liveData.sosStatus,
+                tamperAlert: liveData.tamperAlert
+            },
+            timestamp: {
+                date: liveData.date,
+                time: liveData.time,
+                lastUpdate: liveData.lastUpdate,
+                dataAgeSeconds: Math.floor(dataAge / 1000)
+            },
+            connectionInfo: liveData.connectionInfo || null,
+            rawData: liveData // Include full packet for debugging
         });
 
     } catch (error) {
-        console.log("❌ Controller Error (Single Device):", error);
+        console.error("❌ Controller Error (Single Device):", error);
         return res.status(500).json({
             success: false,
-            message: "Server Error in liveTrackingSingleDevice"
+            message: "Server error while fetching live tracking data",
+            //error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
