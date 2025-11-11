@@ -145,14 +145,16 @@
 
 
 
-
+// server.js
 const express = require("express");
 const net = require("net");
 const { connectToDatabase } = require("./dataBase/db");
 
 const manufacturerRouter = require("./routes/manuFacturRoute");
 const SuperAdminRouter = require("./routes/superAdminRoute");
-const devices = require("./devicesStore");   // ✅ CORRECT IMPORT
+
+// ✅ Shared memory object
+const devices = require("./devicesStore");
 
 const app = express();
 const HTTP_PORT = 4004;
@@ -181,18 +183,17 @@ const tcpServer = net.createServer(socket => {
       return socket.destroy();
     }
 
-    // ✅ Block unknown short packets
     if (data.length < 10) {
       console.log("❌ Invalid short packet blocked");
       return;
     }
 
-    // ✅ Parse GPS packet (binary or ASCII)
+    // ✅ Parse ASCII + Binary packets
     const parsed = parseTraxoPacket(data);
 
     if (parsed && parsed.deviceId) {
-      devices[parsed.deviceId] = parsed;
-      console.log("✅ Device Updated:", parsed);
+      devices[parsed.deviceId] = { ...parsed, lastUpdate: new Date() };
+      console.log("✅ Device Updated:", parsed.deviceId);
     } else {
       console.log("⚠️ Unrecognized GPS packet");
     }
@@ -218,14 +219,14 @@ app.listen(HTTP_PORT, () => {
 connectToDatabase();
 
 
-// ✅ NEW PARSER — Accepts BOTH ASCII & Binary
+// ✅ PARSER (ASCII + binary fallback)
 function parseTraxoPacket(data) {
+  const ascii = data.toString("utf8").trim();
 
-  const ascii = data.toString("utf8");
-
-  // ✅ Check if ASCII PVT Message
+  // ✅ If ASCII packet ($PVT)
   if (ascii.startsWith("$PVT")) {
-    const parts = ascii.trim().split(",");
+    const parts = ascii.split(",");
+
     return {
       deviceId: parts[6],
       imei: parts[6],
@@ -234,13 +235,12 @@ function parseTraxoPacket(data) {
     };
   }
 
-  // ✅ Else assume BINARY packet
+  // ✅ Otherwise treat as binary — IMEI needed
   const hex = data.toString("hex").toUpperCase();
 
-  // ✅ WAIT — WE NEED YOUR FULL BINARY FORMAT
-  // ✅ Return raw packet for now
+  // ❌ TEMPORARY until you give full packet
   return {
-    deviceId: null,
+    deviceId: null,   // must be extracted
     packetType: "BINARY",
     rawHex: hex
   };

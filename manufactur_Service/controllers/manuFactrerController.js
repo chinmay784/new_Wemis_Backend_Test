@@ -3995,6 +3995,7 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 //     }
 // };
 
+
 exports.liveTrackingSingleDevice = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -4015,7 +4016,6 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             });
         }
 
-        // ✅ Use aggregate to safely get the matched device
         const result = await CoustmerDevice.aggregate([
             { $match: { "devicesOwened.deviceNo": deviceNo } },
             {
@@ -4031,27 +4031,24 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             }
         ]);
 
-        if (!result || result.length === 0 || result[0].devicesOwened.length === 0) {
+        if (!result || !result[0] || result[0].devicesOwened.length === 0) {
             return res.status(200).json({
                 success: false,
                 message: "Device not found in database"
             });
         }
 
-        // ✅ This is the matched device object
         const matchedDevice = result[0].devicesOwened[0];
-
-        // ✅ Use deviceNo as IMEI / deviceId
         const imei = matchedDevice.deviceNo;
 
         if (!imei) {
             return res.status(200).json({
                 success: false,
-                message: "IMEI not found in database for this device"
+                message: "IMEI not found for this device"
             });
         }
+        console.log(devices)
 
-        // ✅ Read from in-memory TCP device store
         const liveData = devices[imei];
 
         if (!liveData) {
