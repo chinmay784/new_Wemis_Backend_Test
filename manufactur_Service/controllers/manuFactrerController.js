@@ -4194,6 +4194,8 @@ exports.liveTrackingAllDevices = async (req, res) => {
             });
         }
 
+        console.log(devices);
+
         const devicesOwened = customer.devicesOwened;
 
         // ✅ Build final response list
