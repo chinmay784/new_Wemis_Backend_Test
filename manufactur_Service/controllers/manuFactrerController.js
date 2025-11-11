@@ -4099,36 +4099,31 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             });
         }
 
-        // Find device in database
+        // ✅ Fetch device from DB
         const device = await CoustmerDevice.findOne(
             { "devicesOwened.deviceNo": deviceNo },
             { "devicesOwened.$": 1 }
         );
 
         if (!device) {
-            return res.status(200).json({
+            return res.status(404).json({
                 success: false,
                 message: "Device not found in database"
             });
         }
 
-        // if (!result?.[0]?.devicesOwened?.length) {
-        //     return res.status(404).json({
-        //         success: false,
-        //         message: "Device not found or not authorized"
-        //     });
-        // }
-
         const matchedDevice = device.devicesOwened[0];
-        const imei = matchedDevice.deviceNo;
-        console.log(imei,deviceNo)
-        // Get live data from in-memory store
-        const liveData = devices[deviceNo];
+        const imei = matchedDevice.deviceNo; // ✅ THIS IS THE IMEI
+
+        console.log("✅ IMEI From DB:", imei);
+
+        // ✅ CORRECT — GET LIVE DATA FROM IMEI
+        const liveData = devices[imei];
 
         if (!liveData) {
             return res.status(200).json({
                 success: false,
-                message: "Device is offline or no recent data available",
+                message: "Device is offline or no live data available",
                 deviceInfo: {
                     deviceNo,
                     imei,
@@ -4138,17 +4133,17 @@ exports.liveTrackingSingleDevice = async (req, res) => {
                 lastSeen: null
             });
         }
-        console.log(liveData)
 
-        // // Calculate data age
+        console.log("✅ LIVE DATA FOUND:", liveData);
+
+        // Calculate data age
         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
-        const isRecent = dataAge < 5 * 60 * 1000; // 5 minutes threshold
+        const isRecent = dataAge < 5 * 60 * 1000;
 
-        // Format GPS coordinates properly
+        // Format GPS coordinates
         let formattedLat = liveData.lat;
         let formattedLng = liveData.lng;
 
-        // Convert to decimal degrees if needed (based on direction)
         if (liveData.latDir === 'S' && formattedLat > 0) {
             formattedLat = -formattedLat;
         }
@@ -4159,12 +4154,14 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Live tracking data retrieved successfully",
+
             deviceInfo: {
                 deviceNo,
                 imei,
                 vehicleName: matchedDevice.vehicleName || "Unknown",
                 status: isRecent ? "online" : "stale"
             },
+
             location: {
                 latitude: formattedLat,
                 longitude: formattedLng,
@@ -4173,6 +4170,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
                 altitude: liveData.altitude || 0,
                 gpsFix: liveData.gpsFix
             },
+
             deviceStatus: {
                 ignition: liveData.ignition,
                 batteryVoltage: liveData.batteryVoltage,
@@ -4180,30 +4178,33 @@ exports.liveTrackingSingleDevice = async (req, res) => {
                 gsmSignal: liveData.gsmSignal,
                 satellites: liveData.satellites
             },
+
             alerts: {
                 sosStatus: liveData.sosStatus,
                 tamperAlert: liveData.tamperAlert
             },
+
             timestamp: {
                 date: liveData.date,
                 time: liveData.time,
                 lastUpdate: liveData.lastUpdate,
                 dataAgeSeconds: Math.floor(dataAge / 1000)
             },
+
             connectionInfo: liveData.connectionInfo || null,
-            rawData: liveData,// Include full packet for debugging
-            device
+
+            rawData: liveData,   // ✅ full packet
         });
 
     } catch (error) {
         console.error("❌ Controller Error (Single Device):", error);
         return res.status(500).json({
             success: false,
-            message: "Server error while fetching live tracking data",
-            //error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            message: "Server error while fetching live tracking data"
         });
     }
 };
+
 
 
 

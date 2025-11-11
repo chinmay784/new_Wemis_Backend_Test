@@ -253,104 +253,83 @@
 // 📁 server.js (Main Entry Point)
 /// File: server.js
 
+// manufacturer/server.js
+
 const express = require("express");
 const net = require("net");
 const { connectToDatabase } = require("./dataBase/db");
 
-// ✅ IMPORT: The shared data store
+// ✅ Shared In-Memory Store
 const devices = require("./devicesStore");
 
-// --- Router Imports (assuming these paths are correct) ---
+// Routers
 const manufacturerRouter = require("./routes/manuFacturRoute");
-const SuperAdminRouter = require("./routes/superAdminRoute");
+const superAdminRouter = require("./routes/superAdminRoute");
 
 const app = express();
 const HTTP_PORT = 4004;
 const TCP_PORT = 5000;
 
-// Middleware
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
-// Routes
-app.use("/", manufacturerRouter, SuperAdminRouter);
+app.use("/", manufacturerRouter, superAdminRouter);
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    connectedDevices: Object.keys(devices).length,
-    uptime: process.uptime()
-  });
-});
+let buffer = ""; // global streaming buffer
 
-// ============================================
-// 🔹 TCP SERVER (GPS Device Listener)
-// ============================================
+// =========================================
+// ✅ TCP SERVER (Traxo GPS Devices)
+// =========================================
 const tcpServer = net.createServer(socket => {
-  console.log("📡 GPS Device Connected:", socket.remoteAddress);
-  // Use Buffer for raw TCP data to prevent binary corruption
-  let buffer = Buffer.alloc(0);
+  console.log("📡 Device Connected:", socket.remoteAddress);
 
   socket.on("data", (data) => {
-    // 1. Append to buffer
-    buffer = Buffer.concat([buffer, data]);
+    const ascii = data.toString("utf8");
 
-    const asciiStart = buffer.slice(0, 100).toString("utf8");
-    const hex = data.toString("hex").toUpperCase();
-
-    console.log("📥 RAW ASCII Start:", asciiStart.split('\n')[0]);
-    console.log("📥 RAW HEX:", hex);
-
-    // ✅ Block HTTP scanners 
-    if (asciiStart.startsWith("GET") || asciiStart.startsWith("POST") || asciiStart.includes("HTTP")) {
-      console.log("❌ HTTP scanner blocked");
-      socket.destroy();
-      return;
+    // 🔥 BLOCK HTTP SCANNERS
+    if (ascii.includes("GET") || ascii.includes("HTTP")) {
+      console.log("❌ HTTP Scanner Blocked");
+      return socket.destroy();
     }
 
-    // 2. Try to parse packet from the buffer
-    const parsed = parseTraxoPacket(buffer);
+    // ✅ Append to buffer (device sends without newline)
+    buffer += ascii;
 
-    if (parsed && parsed.deviceId) {
-      // ✅ WRITE: Update the *shared* devices object
-      devices[parsed.deviceId] = {
-        ...parsed,
-        lastUpdate: new Date().toISOString(),
-        connectionInfo: {
-          ip: socket.remoteAddress,
-          port: socket.remotePort
-        }
-      };
+    // ✅ Check if buffer contains a PVT packet
+    if (buffer.includes("$PVT")) {
+      const start = buffer.indexOf("$PVT");
+      let end = buffer.indexOf("\n", start);
 
-      console.log("✅ Device Updated:", parsed.deviceId);
-      // Clear buffer after successful parse (assuming successful parse means the entire buffer was consumed)
-      buffer = Buffer.alloc(0);
-    } else {
-      console.log("⚠️ Unrecognized GPS packet, keeping in buffer");
-      if (buffer.length > 4096) {
-        console.log("❌ Buffer overflow, clearing");
-        buffer = Buffer.alloc(0);
+      if (end === -1) {
+        // No newline — maybe single full packet
+        end = buffer.length;
       }
+
+      const packet = buffer.slice(start, end).trim();
+
+      console.log("📥 RAW PACKET:", packet);
+
+      const parsed = parsePvtPacket(packet);
+
+      if (parsed && parsed.deviceId) {
+        devices[parsed.deviceId] = parsed;
+        console.log("✅ UPDATED DEVICE:", parsed.deviceId);
+      }
+
+      // ✅ Remove processed packet from buffer
+      buffer = buffer.slice(end);
     }
+
+    // ✅ Prevent buffer overflow
+    if (buffer.length > 5000) buffer = "";
   });
 
-  socket.on("end", () => {
-    console.log("❌ Device Disconnected:", socket.remoteAddress);
-  });
-  socket.on("error", (err) => {
-    console.error("🚨 TCP Socket Error:", err.message);
-  });
-  socket.on("timeout", () => {
-    console.log("⏱️ Socket timeout:", socket.remoteAddress);
-    socket.destroy();
-  });
-
-  socket.setTimeout(300000); // 5 minutes timeout
+  socket.on("end", () => console.log("❌ Device Disconnected"));
+  socket.on("error", (err) => console.log("🚨 TCP ERROR:", err.message));
 });
 
-tcpServer.listen(TCP_PORT, "0.0.0.0", () => {
-  console.log(`🚀 GPS TCP Server running on port ${TCP_PORT}`);
+tcpServer.listen(TCP_PORT, () => {
+  console.log(`🚀 TCP Server running on port ${TCP_PORT}`);
 });
 
 app.listen(HTTP_PORT, () => {
@@ -359,107 +338,41 @@ app.listen(HTTP_PORT, () => {
 
 connectToDatabase();
 
-// ============================================
-// 🔹 PARSER FUNCTION LOGIC
-// ============================================
-function parseTraxoPacket(data) {
-  const ascii = data.toString("utf8").trim();
-
-  // 1. Check for standard ASCII packet
-  if (ascii.startsWith("$PVT")) {
-    // Find the full packet line
-    const fullPacketMatch = ascii.match(/\$PVT.*?\r?\n/);
-    if (fullPacketMatch) {
-      return parseAsciiPacket(fullPacketMatch[0]);
-    }
-    return parseAsciiPacket(ascii); // Fallback for single packet without newline
-  }
-
-  // 2. Check for other ASCII packets (e.g., just comma-separated data)
-  if (ascii.includes(",")) {
-    return parseAsciiPacket(ascii);
-  }
-
-  // 3. Fallback for Binary (Must be implemented based on protocol)
-  return parseBinaryPacket(data);
-}
-
-function parseAsciiPacket(msg) {
+// =========================================
+// ✅ PARSER FOR ASCII PVT PACKET
+// =========================================
+function parsePvtPacket(packet) {
   try {
-    const parts = msg.trim().split(/[,\s]+/);
-    // console.log("📦 ASCII Parts:", parts); // Uncomment for debugging
+    const parts = packet.split(",");
 
-    if (parts.length < 32) { // 32 is roughly the minimum complete set
-      return null;
-    }
-
-    const deviceId = parts[6];
-
-    if (!deviceId || deviceId === "unknown") return null;
+    if (parts.length < 10) return null; // not enough fields
 
     return {
-      deviceId,
-      packetType: "ASCII",
-      packetHeader: parts[0] || null,
-      vendorId: parts[1] || null,
-      firmware: parts[2] || null,
-      packetTypeCode: parts[3] || null,
-      alertId: parts[4] || null,
-      packetStatus: parts[5] || null,
-      imei: parts[6] || null,
-      vehicleNo: parts[7] || null,
-      gpsFix: parts[8] || null,
-      date: parts[9] || null,
-      time: parts[10] || null,
+      deviceId: parts[6],       // IMEI
+      imei: parts[6],
+      packetHeader: parts[0],
+      vendorId: parts[1],
+      firmware: parts[2],
+      packetType: parts[3],
+      alertId: parts[4],
+      packetStatus: parts[5],
+      vehicleNo: parts[7],
+      gpsFix: parts[8],
+      date: parts[9],
+      time: parts[10],
       lat: parseFloat(parts[11]) || null,
-      latDir: parts[12] || null,
+      latDir: parts[12],
       lng: parseFloat(parts[13]) || null,
-      lngDir: parts[14] || null,
+      lngDir: parts[14],
       speed: parseFloat(parts[15]) || 0,
-      heading: parts[16] || null,
-      satellites: parseInt(parts[17]) || 0,
-      altitude: parseFloat(parts[18]) || null,
-      pdop: parts[19] || null,
-      hdop: parts[20] || null,
-      networkOperator: parts[21] || null,
-      ignition: parts[22] || null,
-      mainsPowerStatus: parts[23] || null,
-      mainsVoltage: parseFloat(parts[24]) || null,
-      batteryVoltage: parseFloat(parts[25]) || null,
-      sosStatus: parts[26] || null,
-      tamperAlert: parts[27] || null,
-      gsmSignal: parseInt(parts[28]) || 0,
-      mcc: parts[29] || null,
-      mnc: parts[30] || null,
-      lac: parts[31] || null,
-      cellId: parts[32] || null,
-      rawPacket: msg,
-      timestamp: new Date().toISOString()
+      satellites: parts[17] || "",
+      batteryVoltage: parts[25] || "",
+      gsmSignal: parts[28] || "",
+      timestamp: new Date().toISOString(),
+      lastUpdate: new Date()
     };
-  } catch (err) {
-    console.error("❌ ASCII Parse Error:", err.message);
+  } catch (e) {
+    console.log("❌ PVT Parse Error:", e.message);
     return null;
   }
 }
-
-function parseBinaryPacket(data) {
-  // Placeholder - implement your specific binary protocol here
-  // Example: Check for a header like 0x7878
-  // if (data.length > 2 && data[0] === 0x78 && data[1] === 0x78) { ... }
-  return null;
-}
-
-// ============================================
-// 🔹 CLEANUP: Remove stale devices (Essential for Memory)
-// ============================================
-setInterval(() => {
-  const now = Date.now();
-  const timeout = 10 * 60 * 1000; // 10 minutes
-
-  for (const [deviceId, data] of Object.entries(devices)) {
-    if (now - new Date(data.lastUpdate).getTime() > timeout) {
-      console.log(`🧹 Removing stale device: ${deviceId}`);
-      delete devices[deviceId];
-    }
-  }
-}, 60000); // Check every minute
