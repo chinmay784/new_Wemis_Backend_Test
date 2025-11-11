@@ -1,3 +1,2 @@
-module.exports = {
-    devices: {}  // This is a shared global object
-};
+const devices = {};
+module.exports = devices;
