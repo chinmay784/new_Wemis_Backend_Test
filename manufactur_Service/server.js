@@ -352,29 +352,71 @@ function parsePvtPacket(packet) {
     const parts = packet.split(",");
 
     if (parts.length < 10) return null; // not enough fields
+    console.log("speed For Normal", parseFloat(parts[15]) || 0);
+    console.log("speed for Trunc", Math.trunc(parseFloat(parts[15])) || 0);
+    // return {
+    //   deviceId: parts[6],       // IMEI
+    //   imei: parts[6],
+    //   packetHeader: parts[0],
+    //   vendorId: parts[1],
+    //   firmware: parts[2],
+    //   packetType: parts[3],
+    //   alertId: parts[4],
+    //   packetStatus: parts[5],
+    //   vehicleNo: parts[7],
+    //   gpsFix: parts[8],
+    //   date: parts[9],
+    //   time: parts[10],
+    //   lat: parseFloat(parts[11]) || null,
+    //   latDir: parts[12],
+    //   lng: parseFloat(parts[13]) || null,
+    //   lngDir: parts[14],
+    //   // speed: parseFloat(parts[15]) || 0,
+    //   speed: Math.trunc(parseFloat(parts[15])) || 0,
+    //   satellites: parts[17] || "",
+    //   batteryVoltage: parts[25] || "",
+    //   gsmSignal: parts[28] || "",
+    //   timestamp: new Date().toISOString(),
+    //   lastUpdate: new Date()
+    // };
+
 
     return {
-      deviceId: parts[6],       // IMEI
-      imei: parts[6],
-      packetHeader: parts[0],
-      vendorId: parts[1],
-      firmware: parts[2],
-      packetType: parts[3],
-      alertId: parts[4],
-      packetStatus: parts[5],
-      vehicleNo: parts[7],
-      gpsFix: parts[8],
-      date: parts[9],
-      time: parts[10],
+      deviceId: parts[6] || "unknown",     // IMEI
+      packetHeader: parts[0] || null,
+      vendorId: parts[1] || null,
+      firmware: parts[2] || null,
+      packetType: parts[3] || null,
+      alertId: parts[4] || null,
+      packetStatus: parts[5] || null,
+      imei: parts[6] || null,
+      vehicleNo: parts[7] || null,
+      gpsFix: parts[8] || null,
+      date: parts[9] || null,
+      time: parts[10] || null,
       lat: parseFloat(parts[11]) || null,
-      latDir: parts[12],
+      latDir: parts[12] || null,
       lng: parseFloat(parts[13]) || null,
-      lngDir: parts[14],
-      // speed: parseFloat(parts[15]) || 0,
+      lngDir: parts[14] || null,
       speed: Math.trunc(parseFloat(parts[15])) || 0,
-      satellites: parts[17] || "",
-      batteryVoltage: parts[25] || "",
-      gsmSignal: parts[28] || "",
+      headDegree: parts[16] || null,
+      satellites: parts[17] || null,
+      altitude: parts[18] || null,
+      pdop: parts[19] || null,
+      hdop: parts[20] || null,
+      networkOperator: parts[21] || null,
+      ignition: parts[22] || null,
+      mainsPowerStatus: parts[23] || null,
+      mainsVoltage: parts[24] || null,
+      batteryVoltage: parts[25] || null,
+      sosStatus: parts[26] || null,
+      tamperAlert: parts[27] || null,
+      gsmSignal: parts[28] || null,
+      mcc: parts[29] || null,
+      mnc: parts[30] || null,
+      lac: parts[31] || null,
+      cellId: parts[32] || null,
+      // add more indexes if your packet has them
       timestamp: new Date().toISOString(),
       lastUpdate: new Date()
     };
