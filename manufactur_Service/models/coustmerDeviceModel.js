@@ -77,7 +77,8 @@ const coustmerDeviceSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "createSubscription",
             },
-
+            
+            vechileNo: { type: String, trim: true },
             VechileBirth: { type: String, trim: true },
             RegistrationNo: { type: String, trim: true },
             date: { type: String, trim: true },

@@ -36,6 +36,7 @@ const mapDeviceSchema = new mongoose.Schema({
     ModelYear: { type: String, trim: true },
     InsuranceRenewDate: { type: String, trim: true },
     PollutionRenewdate: { type: String, trim: true },
+    vechileNo: { type: String, trim: true },
 
     // Customer Info
     fullName: { type: String, trim: true },

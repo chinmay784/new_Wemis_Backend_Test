@@ -3279,7 +3279,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerstate, Customerdistrict, Rto, PinCode,
             CompliteAddress, AdharNo, PanNo, Packages,
             InvoiceNo, VehicleKMReading, DriverLicenseNo,
-            MappedDate, NoOfPanicButtons,
+            MappedDate, NoOfPanicButtons,vechileNo
         } = req.body;
 
         // Parse simDetails if string
@@ -3308,6 +3308,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             AdharNo, PanNo, Packages, InvoiceNo,
             VehicleKMReading, DriverLicenseNo, MappedDate,
             NoOfPanicButtons,
+            vechileNo,
             // documents left null for now (upload separately if needed)
             VechileIDocument: null,
             RcDocument: null,
@@ -3349,7 +3350,8 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     MakeModel,
                     ModelYear,
                     InsuranceRenewDate,
-                    PollutionRenewdate
+                    PollutionRenewdate,
+                    vechileNo,
                 };
 
                 // ✅ Create or update customer AND return customer document
@@ -4256,3 +4258,10 @@ exports.liveTrackingAllDevices = async (req, res) => {
         });
     }
 };
+
+
+
+
+
+
+// distributor deler api will work on
