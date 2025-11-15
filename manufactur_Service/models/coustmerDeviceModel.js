@@ -97,6 +97,16 @@ const coustmerDeviceSchema = new mongoose.Schema({
             vechileStatus: { type: Boolean, default: false },
             lastUpdated: { type: String, default: '', trim: true },
             IsvechileMovingStatus: { type: Boolean, default: false },
+
+
+            // ticket issues related to this device
+            ticketIssues: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "TicketIssue",
+                }
+            ],
+
         }
     ],
 });

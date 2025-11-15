@@ -120,7 +120,14 @@ const CreateDelerUnderDistributor = new mongoose.Schema({
                 }
             ]
         }
-    ]
+    ],
+    // ✅ Add ticket issues here
+    ticketIssues: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "TicketIssue",
+        }
+    ],
 });
 
 

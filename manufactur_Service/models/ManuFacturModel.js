@@ -79,6 +79,13 @@ const ManuFacturSchema = new mongoose.Schema({
         },
         default: []
     },
+    // ✅ Add ticket issues here
+    ticketIssues: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "TicketIssue",
+        }
+    ],
 });
 
 module.exports = mongoose.model('ManuFactur', ManuFacturSchema);

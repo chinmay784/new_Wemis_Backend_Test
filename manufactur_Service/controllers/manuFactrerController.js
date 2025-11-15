@@ -15,6 +15,7 @@ const { cloudinary } = require("../config/cloudinary");
 // const { devices } = require("../devicesStore");
 const CoustmerDevice = require("../models/coustmerDeviceModel");
 const devices = require("../devicesStore");
+const TicketIssue = require("../models/TicketIssueModel")
 
 
 
@@ -3279,7 +3280,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerstate, Customerdistrict, Rto, PinCode,
             CompliteAddress, AdharNo, PanNo, Packages,
             InvoiceNo, VehicleKMReading, DriverLicenseNo,
-            MappedDate, NoOfPanicButtons,vechileNo
+            MappedDate, NoOfPanicButtons, vechileNo
         } = req.body;
 
         // Parse simDetails if string
@@ -4265,4 +4266,488 @@ exports.liveTrackingAllDevices = async (req, res) => {
 
 
 // distributor deler api will work on
-// work Now
+// work Now deler api
+
+
+
+
+
+
+
+
+
+
+
+
+// -----------------------------------------------//
+// work on Ticket-Issue System Or Feture
+exports.ticketIssueByCoustmer = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "UserId missing"
+            });
+        }
+
+        const { vechileNo, issueType, issueDescription, address } = req.body;
+
+        if (!vechileNo || !issueType || !issueDescription || !address) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required"
+            });
+        }
+
+        // ----------------------------------------------
+        // 🚀 1. Single optimized query to get:
+        //    - Parent CustomerDevice Document
+        //    - Nested device _id
+        // ----------------------------------------------
+        const deviceMatch = await CoustmerDevice.aggregate([
+            { $unwind: "$devicesOwened" },
+            { $match: { "devicesOwened.vechileNo": vechileNo } },
+            {
+                $project: {
+                    parentId: "$_id",
+                    deviceId: "$devicesOwened._id",
+                    manufacturId: "$manufacturId"
+                }
+            },
+            { $limit: 1 } // faster on AWS
+        ]);
+
+        if (!deviceMatch.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found for this vehicle number"
+            });
+        }
+
+        const { parentId, deviceId, manufacturId } = deviceMatch[0];
+
+        // ----------------------------------------------
+        // 🚀 2. Fetch manufacturer directly (no double lookup)
+        // ----------------------------------------------
+        // 1. Get manufacturUser (not ManuFactur directly)
+        const manufacturUser = await User.findById(manufacturId).lean();
+        if (!manufacturUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufactur User not found"
+            });
+        }
+
+        // 2. Retrieve ManuFactur model
+        const manuFactur = await ManuFactur.findById(manufacturUser.manufacturId).lean();
+        if (!manuFactur) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found"
+            });
+        }
+
+        // ----------------------------------------------
+        // 🚀 3. Create ticket in one step
+        // ----------------------------------------------
+        const newTicketIssue = await TicketIssue.create({
+            coustmerTicketIssueId: userId,
+            ticketIssueNo: Math.floor(100000 + Math.random() * 900000),
+            vechileNo,
+            issueType,
+            issueDescription,
+            address,
+            issuseAssignTo: manuFactur._id,
+            issuseAssignToModel: "ManuFactur",
+            issueStatus: "Open",
+        });
+
+        // ----------------------------------------------
+        // 🚀 4. Update nested device ticketIssues quickly using arrayFilters
+        // ----------------------------------------------
+        const deviceUpdate = CoustmerDevice.updateOne(
+            { _id: parentId },
+            {
+                $push: {
+                    "devicesOwened.$[dev].ticketIssues": newTicketIssue._id
+                }
+            },
+            {
+                arrayFilters: [{ "dev._id": deviceId }]
+            }
+        );
+
+        // ----------------------------------------------
+        // 🚀 5. Push ticket to manufacturer
+        // ----------------------------------------------
+        const manufacturerUpdate = ManuFactur.updateOne(
+            { _id: manuFactur._id },
+            { $push: { ticketIssues: newTicketIssue._id } }
+        );
+
+        await Promise.all([deviceUpdate, manufacturerUpdate]); // parallel execution for speed 🚀
+
+        return res.status(200).json({
+            success: true,
+            message: "Ticket created successfully",
+            ticketIssue: newTicketIssue,
+            parentId,
+            deviceId
+        });
+
+    } catch (error) {
+        console.error("Ticket Issue Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while creating ticket"
+        });
+    }
+};
+
+
+exports.fetchAllCoustmerVechileNo = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                sucess: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        // find in user collections
+        const coustmerUser = await User.findById(userId);
+
+        if (!coustmerUser) {
+            return res.status(200).json({
+                sucess: false,
+                message: "No Coustmer User Found"
+            })
+        }
+
+        const coustmer = await CoustmerDevice.findById(coustmerUser.coustmerId);
+
+        if (!coustmer) {
+            return res.status(200).json({
+                sucess: false,
+                message: "No Coustmer Device Found"
+            })
+        }
+
+        return res.status(200).json({
+            sucess: true,
+            vechileNumbers: coustmer.devicesOwened.map(device => device.vechileNo),
+            message: "Fecthed All Vechile Numbers SucessFully"
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            sucess: false,
+            message: "Server Error in fetchAllCoustmerVechileNo"
+        })
+    }
+}
+
+
+exports.getCustomerTicketIssues = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                sucess: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const coustmerUser = await User.findById(userId);
+        if (!coustmerUser) {
+            return res.status(404).json({ success: false, message: "Customer User Not Found" });
+        }
+
+        const coustmer = await CoustmerDevice.findById(coustmerUser.coustmerId)
+            .populate({
+                path: "devicesOwened.ticketIssues",
+                model: "TicketIssue"
+            });
+
+        if (!coustmer) {
+            return res.status(404).json({ success: false, message: "Customer Device Not Found" });
+        }
+
+        let allTickets = [];
+
+        coustmer.devicesOwened.forEach(device => {
+            if (device.ticketIssues.length > 0) {
+                allTickets.push(...device.ticketIssues);
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            totalTickets: allTickets.length,
+            tickets: allTickets
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server Error in getCustomerTicketIssues" });
+    }
+};
+
+
+exports.getTicketIssuesListManufactur = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide userId"
+            });
+        }
+
+        const manufacturUser = await User.findById(userId);
+
+        if (!manufacturUser || !manufacturUser.manufacturId) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found"
+            });
+        }
+
+        const manufactur = await ManuFactur.findById(manufacturUser.manufacturId)
+            .populate("ticketIssues");
+
+        return res.status(200).json({
+            success: true,
+            ticketIssues: manufactur.ticketIssues
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+};
+// -----------------------------------------------//
+
+
+
+// work on Ticket Issue System For Deler
+exports.ticketIssueByDeler = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "UserId missing"
+            });
+        }
+
+        const { vechileNo, issueType, issueDescription, address } = req.body;
+
+        if (!vechileNo || !issueType || !issueDescription || !address) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required"
+            });
+        }
+
+        // ----------------------------------------------------
+        // 1️⃣ Find dealer user
+        // ----------------------------------------------------
+        const dealerUser = await User.findById(userId).lean();
+        if (!dealerUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Dealer not found"
+            });
+        }
+
+        // ----------------------------------------------------
+        // 2️⃣ Find manufacturer user (this is stored in dealer.manufacturId)
+        // ----------------------------------------------------
+        const manufacturUser = await User.findById(dealerUser.manufacturId).lean();
+        if (!manufacturUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer user not found"
+            });
+        }
+
+        // ----------------------------------------------------
+        // 3️⃣ Find manufacturer company (ManuFactur)
+        //     This is stored inside manufacturUser.manufacturId
+        // ----------------------------------------------------
+        const manufacturer = await ManuFactur.findById(manufacturUser.manufacturId).lean();
+        if (!manufacturer) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found"
+            });
+        }
+
+        // ----------------------------------------------------
+        // 4️⃣ Create ticket
+        // ----------------------------------------------------
+        const newTicketIssue = await TicketIssue.create({
+            delerTicketIssueId: userId,
+            ticketIssueNo: Math.floor(100000 + Math.random() * 900000),
+            vechileNo,
+            issueType,
+            issueDescription,
+            address,
+            issuseAssignTo: manufacturer._id,
+            issuseAssignToModel: "ManuFactur",
+            issueStatus: "Open",
+        });
+
+        // ----------------------------------------------------
+        // 5️⃣ Push ticket into manufacturer + dealer (parallel)
+        // ----------------------------------------------------
+        await Promise.all([
+            ManuFactur.updateOne(
+                { _id: manufacturer._id },
+                { $push: { ticketIssues: newTicketIssue._id } }
+            ),
+            CreateDelerUnderDistributor.updateOne(
+                { _id: dealerUser.distributorDelerId },
+                { $push: { ticketIssues: newTicketIssue._id } }
+            )
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            message: "Ticket created successfully",
+            ticket: newTicketIssue
+        });
+
+    } catch (error) {
+        console.error("Ticket Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
+
+exports.fetchAllDelerTicketIssue = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                sucess: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+
+        // find in user collections
+        const delerUser = await User.findById(userId);
+        if (!delerUser) {
+            return res.status(200).json({
+                sucess: false,
+                message: "No Deler User Found"
+            })
+        }
+
+        // find in deler collections
+        const deler = await CreateDelerUnderDistributor.findById(delerUser.distributorDelerId)
+            .populate("ticketIssues");
+
+        if (!deler) {
+            return res.status(200).json({
+                sucess: false,
+                message: "No Deler Found"
+            })
+        }
+
+        return res.status(200).json({
+            sucess: true,
+            totalTickets: deler.ticketIssues.length,
+            tickets: deler.ticketIssues,
+            message: "Fecthed All Ticket Issues SucessFully"
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            sucess: false,
+            message: "Server Error in fetchAllDelerTicketIssue"
+        })
+    }
+}
+
+exports.fetchAllVechileNoByDeler = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "UserId missing"
+            });
+        }
+
+        // 1️⃣ Fetch dealer user (lean = faster)
+        const dealerUser = await User.findById(userId)
+            .select("manufacturId")
+            .lean();
+
+        if (!dealerUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Dealer not found"
+            });
+        }
+
+        // 2️⃣ Fetch manufacturer user
+        const manufacturUser = await User.findById(dealerUser.manufacturId)
+            .select("_id")
+            .lean();
+
+        if (!manufacturUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer user not found"
+            });
+        }
+
+        // 3️⃣ Fetch only `vechileNo` with projection
+        const vehicles = await MapDevice.find(
+            { manufacturId: manufacturUser._id },
+            { vechileNo: 1, _id: 0 } // only required field → faster
+        ).lean();
+
+        if (!vehicles.length) {
+            return res.status(200).json({
+                success: false,
+                message: "No vehicle numbers found",
+                vechileNos: []
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            vechileNos: vehicles.map(v => v.vechileNo),
+            message: "Fetched all vehicle numbers successfully"
+        });
+
+    } catch (error) {
+        console.error("Fetch Vehicle Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in fetchAllVechileNoByDeler"
+        });
+    }
+};
