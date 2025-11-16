@@ -5002,22 +5002,166 @@ exports.getAllMessagesBetweenUsers = async (req, res) => {
 
 
 // Here work on Chatting In between Coustmer and Manufactur 
-exports.chatBetweenCoustmerAndManuFactur = async (req, res) =>{
+exports.chatBetweenCoustmerAndManuFactur = async (req, res) => {
     try {
-        const userId = req.user.userId;
-    } catch (error) {
-        console.log(error,error.message);
-        return res.status(500).json({
-            success:false,
-            message:"Server Error in chatBetweenCoustmerAndManuFactur"
-        })
-    }
-}
+        const userId = req.user?.userId;
 
-exports.getAllMessagesBetweenCoustmerAndManufactur = async (req,res) =>{
-    try {
-        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a valid userId"
+            });
+        }
+
+        const { receiverId, message, ticketIssueId } = req.body;
+
+        // Basic validation
+        if (!receiverId || !message || !ticketIssueId) {
+            return res.status(400).json({
+                success: false,
+                message: "receiverId, message and ticketIssueId are required"
+            });
+        }
+
+        // Fetch current user
+        const currentUser = await User.findById(userId).lean();
+        if (!currentUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Sender user not found"
+            });
+        }
+
+        let finalReceiverId;
+
+        /**
+         * ➤ If the sender is a customer:
+         * receiverId = manufacturId → Convert to actual User._id
+         */
+        if (currentUser.role === "coustmer") {
+            const receiverUser = await User.findOne({ manufacturId: receiverId }).lean();
+
+            if (!receiverUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Receiver user not found (Invalid manufacturId)"
+                });
+            }
+
+            finalReceiverId = receiverUser._id;
+        } 
+        else {
+            // Any other role: direct message with provided receiverId
+            finalReceiverId = receiverId;
+        }
+
+        // Save Chat Message
+        const newChat = await ChatMessage.create({
+            senderId: userId,
+            receiverId: finalReceiverId,
+            ticketIssueId,
+            message,
+            delivered: false,
+            read: false,
+            messageType: "text",
+            timestamp: new Date()
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Message sent successfully",
+            chat: newChat
+        });
+
     } catch (error) {
-        
+        console.error("Chat Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in chatBetweenCoustmerAndManuFactur"
+        });
     }
-}
+};
+
+
+exports.getAllMessagesBetweenCoustmerAndManufactur = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "UserId missing"
+            });
+        }
+
+        const { receiverId, ticketIssueId } = req.body;
+
+        if (!receiverId || !ticketIssueId) {
+            return res.status(400).json({
+                success: false,
+                message: "receiverId and ticketIssueId are required"
+            });
+        }
+
+        // Fetch sender (current user)
+        const currentUser = await User.findById(userId).lean();
+        if (!currentUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Sender user not found"
+            });
+        }
+
+        let finalReceiverId;
+
+        /**
+         * If current user is a customer:
+         * receiverId = manufacturId → convert to actual User._id
+         */
+        if (currentUser.role === "coustmer") {
+            const receiverUser = await User.findOne({ manufacturId: receiverId }).lean();
+
+            if (!receiverUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Receiver user not found"
+                });
+            }
+
+            finalReceiverId = receiverUser._id;
+        } else {
+            // For manufacturer or admin just use receiverId directly
+            finalReceiverId = receiverId;
+        }
+
+        // Verify user is allowed to view these messages
+        if (userId !== finalReceiverId && userId !== currentUser._id.toString()) {
+            // already validated but extra protection
+        }
+
+        // Fetch the chat messages
+        const messages = await ChatMessage.find({
+            ticketIssueId,
+            $or: [
+                { senderId: userId, receiverId: finalReceiverId },
+                { senderId: finalReceiverId, receiverId: userId }
+            ]
+        })
+        .sort({ timestamp: 1 })    // ascending → oldest to newest
+        .lean();
+
+        return res.status(200).json({
+            success: true,
+            message: "Messages fetched successfully",
+            total: messages.length,
+            messages
+        });
+
+    } catch (error) {
+        console.log("Error in getAllMessagesBetweenCoustmerAndManufactur:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in getAllMessagesBetweenCoustmerAndManufactur"
+        });
+    }
+};
