@@ -15,7 +15,8 @@ const { cloudinary } = require("../config/cloudinary");
 // const { devices } = require("../devicesStore");
 const CoustmerDevice = require("../models/coustmerDeviceModel");
 const devices = require("../devicesStore");
-const TicketIssue = require("../models/TicketIssueModel")
+const TicketIssue = require("../models/TicketIssueModel");
+const ChatMessage = require("../models/ChatSchemaModel")
 
 
 
@@ -4751,3 +4752,272 @@ exports.fetchAllVechileNoByDeler = async (req, res) => {
         });
     }
 };
+
+
+// Here Chatting for manufactur and deler 
+// -----------------------------------------------//
+// exports.chatBetweenManufacturAndDeler = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+//         if (!userId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "UserId missing"
+//             });
+//         }
+
+
+//         const { receiverId, message, ticketIssueId } = req.body;
+//         if (!receiverId || !message || !ticketIssueId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "receiverId and message and ticketIssueId are required"
+//             });
+//         }
+
+//         // Here I have to Convert receiverId to User.manufacturId (For user is Deler)
+//         const user = await User.findById(userId);
+//         const rec = await User.findOne({ manufacturId: receiverId })
+
+//         if (!res) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "ReciverId Not Found"
+//             })
+//         }
+
+//         if (user.role === "dealer-distributor") {
+//             // create new chat message
+//             const newChat = await ChatMessage.create({
+//                 senderId: userId,
+//                 receiverId: rec._id,
+//                 ticketIssueId,
+//                 message,
+//                 timestamp: new Date()
+//             });
+
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "Message sent successfully",
+//                 chat: newChat
+//             });
+//         } else {
+//             // create new chat message
+//             const newChat = await ChatMessage.create({
+//                 senderId: userId,
+//                 receiverId,
+//                 ticketIssueId,
+//                 message,
+//                 timestamp: new Date()
+//             });
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "Message sent successfully",
+//                 chat: newChat
+//             });
+//         }
+
+//     } catch (error) {
+//         console.error("Chat Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error in chatBetweenManufacturAndDeler"
+//         });
+//     }
+// }
+
+
+exports.chatBetweenManufacturAndDeler = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "UserId missing"
+            });
+        }
+
+        const { receiverId, message, ticketIssueId } = req.body;
+
+        if (!receiverId || !message || !ticketIssueId) {
+            return res.status(400).json({
+                success: false,
+                message: "receiverId, message and ticketIssueId are required"
+            });
+        }
+
+        // Fetch the logged-in user
+        const currentUser = await User.findById(userId).lean();
+        if (!currentUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        let finalReceiverId;
+
+        // -----------------------------
+        // If sender is DEALER:
+        // receiverId = manufacturerId (not User._id!)
+        // We convert it into actual User._id
+        // -----------------------------
+        if (currentUser.role === "dealer-distributor") {
+            const manufacturer = await User.findOne({ manufacturId: receiverId }).lean();
+
+            if (!manufacturer) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufacturer not found for provided receiverId"
+                });
+            }
+
+            finalReceiverId = manufacturer._id;
+
+        } else {
+            // -----------------------------
+            // If sender is MANUFACTURER:
+            // receiverId is already User._id of dealer
+            // -----------------------------
+            const dealer = await User.findById(receiverId).lean();
+
+            if (!dealer) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Dealer not found for receiverId"
+                });
+            }
+
+            finalReceiverId = receiverId;
+        }
+
+        // -----------------------------
+        // Create message
+        // -----------------------------
+        const newChat = await ChatMessage.create({
+            senderId: userId,
+            receiverId: finalReceiverId,
+            ticketIssueId,
+            message,
+            delivered: false,
+            read: false,
+            messageType: "text",
+            timestamp: Date.now()
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Message sent successfully",
+            chat: newChat
+        });
+
+    } catch (error) {
+        console.error("Chat Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in chatBetweenManufacturAndDeler",
+            error: error.message
+        });
+    }
+};
+
+
+
+exports.getAllMessagesBetweenUsers = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "UserId missing"
+            });
+        }
+
+        const { otherUserId, ticketIssueId } = req.body;
+
+        if (!otherUserId || !ticketIssueId) {
+            return res.status(400).json({
+                success: false,
+                message: "otherUserId and ticketIssueId are required"
+            });
+        }
+
+        // --------------------------------------------
+        // Resolve receiver like chatBetweenManufacturAndDeler
+        // If sender is dealer, otherUserId = manufacturId
+        // If sender is manufacturer, otherUserId = dealer userId
+        // --------------------------------------------
+        const currentUser = await User.findById(userId);
+
+        let otherUser;
+
+        if (currentUser.role === "dealer-distributor") {
+            // dealer → manufacturer
+            otherUser = await User.findOne({ manufacturId: otherUserId });
+        } else {
+            // manufacturer → dealer
+            otherUser = await User.findById(otherUserId);
+        }
+
+        if (!otherUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Chat user not found"
+            });
+        }
+
+        // --------------------------------------------
+        // Fetch messages between these two users
+        // --------------------------------------------
+        const messages = await ChatMessage.find({
+            ticketIssueId,
+            $or: [
+                { senderId: userId, receiverId: otherUser._id },
+                { senderId: otherUser._id, receiverId: userId }
+            ]
+        })
+            .sort({ timestamp: 1 })
+            .lean();
+
+        return res.status(200).json({
+            success: true,
+            message: "Messages fetched successfully",
+            total: messages.length,
+            messages
+        });
+
+    } catch (error) {
+        console.error("Fetch Chat Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in getAllMessagesBetweenUsers"
+        });
+    }
+};
+
+
+
+// Here work on Chatting In between Coustmer and Manufactur 
+exports.chatBetweenCoustmerAndManuFactur = async (req, res) =>{
+    try {
+        const userId = req.user.userId;
+    } catch (error) {
+        console.log(error,error.message);
+        return res.status(500).json({
+            success:false,
+            message:"Server Error in chatBetweenCoustmerAndManuFactur"
+        })
+    }
+}
+
+exports.getAllMessagesBetweenCoustmerAndManufactur = async (req,res) =>{
+    try {
+        
+    } catch (error) {
+        
+    }
+}
