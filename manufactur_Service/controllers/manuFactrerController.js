@@ -5165,3 +5165,72 @@ exports.getAllMessagesBetweenCoustmerAndManufactur = async (req, res) => {
         });
     }
 };
+
+
+
+// close the Ticket API
+exports.manufacturCloseTicketApi = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        const { ticketId } = req.body;
+
+        if (!ticketId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide ticketId"
+            });
+        }
+
+        // Validate User
+        const user = await User.findById(userId).lean();
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Only manufacturer allowed
+        if (user.role !== "manufacturer") {
+            return res.status(403).json({
+                success: false,
+                message: "You are unauthorized to close this ticket"
+            });
+        }
+
+        // Fetch ticket
+        const ticket = await TicketIssue.findById(ticketId);
+        if (!ticket) {
+            return res.status(404).json({
+                success: false,
+                message: "Ticket not found"
+            });
+        }
+
+        // Update ticket status → Close
+        ticket.issueStatus = "Close";  // or "Closed" if your system uses that
+        ticket.closedAt = new Date();  // optional: track time
+        await ticket.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Ticket closed successfully",
+            ticket
+        });
+
+    } catch (error) {
+        console.log("Error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in ManufacturCloseTicket"
+        });
+    }
+};
