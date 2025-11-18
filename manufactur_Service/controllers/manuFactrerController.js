@@ -1796,47 +1796,6 @@ exports.AllocateBarCode = async (req, res) => {
 
             console.log(`Allocating ${barcodes.length} Barcodes to Distributor:`, distributor);
 
-            // // ✅ Correctly push barcodes from req.body
-            // dist.allocateBarcodes.push(...barcodes);
-
-            // await dist.save();
-
-            // // also create AllocateBarcode
-            // const allocated = await AllocateBarCode.create({
-            //     country,
-            //     state,
-            //     checkBoxValue,
-            //     // distributor,
-            //     // oem,
-            //     // deler,
-            //     status: "used",
-            //     element,
-            //     elementType,
-            //     modelNo,
-            //     Voltege,
-            //     partNo,
-            //     type,
-            //     allocatedBarCode: barcodes,
-            //     manufacturAllocateId: userId,
-            //     allocatedDistributorId: distributor,
-            //     allocatedOemId: null,
-            //     allocatedDelerId: deler
-            // })
-
-
-            // // Optional: Remove allocated barcodes from the 'available' list (e.g., in a Barcode model)
-            // // await createBarCode.updateMany(
-            // //     { barCodeNo: { $in: barcodes } },
-            // //     { $set: { status: 'ALLOCATED', distributorId: distributor } } // Example
-            // // );
-
-            // return res.status(200).json({
-            //     success: true,
-            //     message: "Barcodes allocated successfully to Distributor",
-            //     data: dist
-            // });
-
-
 
 
             // 🔍 Find barcode objects from createBarCode collection
@@ -1884,19 +1843,41 @@ exports.AllocateBarCode = async (req, res) => {
             await dist.save();
 
 
-            console.log(deler)
-            // find deler name 
-            const delername = await CreateDelerUnderDistributor.findById(deler);
+            // console.log(deler)
+            // // find deler name 
+            // const delername = await CreateDelerUnderDistributor.findById(deler);
 
-            // ✅ Ensure the array exists
-            if (!Array.isArray(delername.allocateBarcodes)) {
-                delername.allocateBarcodes = [];
+            // // ✅ Ensure the array exists
+            // if (!Array.isArray(delername.allocateBarcodes)) {
+            //     delername.allocateBarcodes = [];
+            // }
+
+            // // ✅ Push all barcode objects
+            // delername.allocateBarcodes.push(...formattedBarcodes);
+
+            // await delername.save()
+
+
+
+            // ==========================
+            // ⭐ Dealer Logic (Optional)
+            // ==========================
+            const isDealerValid = deler && deler !== "N/A";
+
+            let delerNameValue = null;
+
+            if (isDealerValid) {
+                const dealerDoc = await CreateDelerUnderDistributor.findById(deler);
+
+                if (dealerDoc) {
+                    if (!Array.isArray(dealerDoc.allocateBarcodes)) dealerDoc.allocateBarcodes = [];
+                    dealerDoc.allocateBarcodes.push(...formattedBarcodes);
+                    await dealerDoc.save();
+
+                    delerNameValue = dealerDoc.name;
+                }
             }
 
-            // ✅ Push all barcode objects
-            delername.allocateBarcodes.push(...formattedBarcodes);
-
-            await delername.save()
 
 
             // ✅ Also create AllocateBarcode entry
@@ -1915,8 +1896,10 @@ exports.AllocateBarCode = async (req, res) => {
                 manufacturAllocateId: userId,
                 allocatedDistributorId: distributor,
                 allocatedOemId: null,
-                allocatedDelerId: deler,
-                delerName: delername.name
+                // allocatedDelerId: deler,
+                // delerName: delername.name
+                allocatedDelerId: isDealerValid ? deler : null,
+                delerName: isDealerValid ? delerNameValue : null
             });
 
 
@@ -1937,67 +1920,6 @@ exports.AllocateBarCode = async (req, res) => {
 
         }
 
-        // --- 4. OEM Allocation ---
-        // else if (checkBoxValue === "OEM") {
-        //     if (!oem) {
-        //         return res.status(200).json({
-        //             success: false,
-        //             message: "Please Provide OEM ID"
-        //         });
-        //     }
-
-        //     // Note: Assuming OemModelSchema is imported as OemModelSchema
-        //     const OeM = await OemModelSchema.findById(oem);
-
-        //     if (!OeM) {
-        //         return res.status(404).json({
-        //             success: false,
-        //             message: "OEM not found",
-        //         });
-        //     }
-
-        //     // 🛑 CRITICAL FIX: Use 'barcodes' from req.body, DO NOT fetch from another model
-        //     // Original incorrect logic removed: 
-        //     // const elementName = await createBarCode.findOne({ elementName: element });
-        //     // const barcodes = elementName ? elementName.barCodeNo : [];
-
-        //     console.log(`Allocating ${barcodes.length} Barcodes to OEM:`, oem);
-
-        //     // ✅ Correctly push barcodes from req.body
-        //     OeM.allocateBarcodes.push(...barcodes);
-
-        //     await OeM.save();
-
-
-        //     const allocated = await AllocateBarCode.create({
-        //         country,
-        //         state,
-        //         checkBoxValue,
-        //         status: "used",
-        //         element,
-        //         elementType,
-        //         modelNo,
-        //         Voltege,
-        //         partNo,
-        //         type,
-        //         allocatedBarCode: barcodes,
-        //         manufacturAllocateId: userId,
-        //         allocatedDistributorId: null,
-        //         allocatedOemId: oem,
-        //         allocatedDelerId: deler,
-        //     })
-
-        //     // Optional: Remove allocated barcodes from the 'available' list (e.g., in a Barcode model)
-        //     // await createBarCode.updateMany(
-        //     //     { barCodeNo: { $in: barcodes } },
-        //     //     { $set: { status: 'ALLOCATED', oemId: oem } } // Example
-        //     // );
-
-        //     return res.status(200).json({
-        //         success: true,
-        //         message: "Barcodes allocated successfully to OEM",
-        //         data: OeM
-        //     });
 
 
         // --- 4. OEM Allocation ---
@@ -2060,19 +1982,38 @@ exports.AllocateBarCode = async (req, res) => {
 
             await OeM.save();
 
-            console.log(deler)
-            // find deler name 
-            const delername = await CreateDelerUnderOems.findById(deler);
+            // console.log(deler)
+            // // find deler name 
+            // const delername = await CreateDelerUnderOems.findById(deler);
 
-            // ✅ Ensure the array exists
-            if (!Array.isArray(delername.allocateBarcodes)) {
-                delername.allocateBarcodes = [];
+            // // ✅ Ensure the array exists
+            // if (!Array.isArray(delername.allocateBarcodes)) {
+            //     delername.allocateBarcodes = [];
+            // }
+
+            // // ✅ Push the full barcode objects
+            // delername.allocateBarcodes.push(...formattedBarcodes)
+
+            // await delername.save();
+
+
+            // ==========================
+            // ⭐ Dealer Logic (Optional)
+            // ==========================
+            const isDealerValid = deler && deler !== "N/A";
+            let delerNameValue = null;
+
+            if (isDealerValid) {
+                const dealerDoc = await CreateDelerUnderOems.findById(deler);
+
+                if (dealerDoc) {
+                    if (!Array.isArray(dealerDoc.allocateBarcodes)) dealerDoc.allocateBarcodes = [];
+                    dealerDoc.allocateBarcodes.push(...formattedBarcodes);
+                    await dealerDoc.save();
+
+                    delerNameValue = dealerDoc.name;
+                }
             }
-
-            // ✅ Push the full barcode objects
-            delername.allocateBarcodes.push(...formattedBarcodes)
-
-            await delername.save();
 
             // 🧾 Also create AllocateBarCode record for tracking
             const allocated = await AllocateBarCode.create({
@@ -2090,8 +2031,10 @@ exports.AllocateBarCode = async (req, res) => {
                 manufacturAllocateId: userId,
                 allocatedDistributorId: null,
                 allocatedOemId: oem,
-                allocatedDelerId: deler,
-                delerName: delername.name
+                // allocatedDelerId: deler,
+                // delerName: delername.name
+                allocatedDelerId: isDealerValid ? deler : null,
+                delerName: isDealerValid ? delerNameValue : null
             });
 
             // 🔁 Optionally mark these barcodes as allocated in their own collection
@@ -5049,7 +4992,7 @@ exports.chatBetweenCoustmerAndManuFactur = async (req, res) => {
             }
 
             finalReceiverId = receiverUser._id;
-        } 
+        }
         else {
             // Any other role: direct message with provided receiverId
             finalReceiverId = receiverId;
@@ -5147,8 +5090,8 @@ exports.getAllMessagesBetweenCoustmerAndManufactur = async (req, res) => {
                 { senderId: finalReceiverId, receiverId: userId }
             ]
         })
-        .sort({ timestamp: 1 })    // ascending → oldest to newest
-        .lean();
+            .sort({ timestamp: 1 })    // ascending → oldest to newest
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -5234,3 +5177,11 @@ exports.manufacturCloseTicketApi = async (req, res) => {
         });
     }
 };
+
+
+
+
+
+
+
+// now working on distributor
