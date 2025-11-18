@@ -5184,4 +5184,47 @@ exports.manufacturCloseTicketApi = async (req, res) => {
 
 
 
-// now working on distributor
+// now working on distributor fetch all allocated Barcode
+exports.fetchDistributorAllocatedBarcode = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        };
+
+
+        const distUser = await User.findById(userId);
+
+        if (!distUser) {
+            return res.status(200).json({
+                success: false,
+                message: "Distributor User Not Found"
+            });
+        };
+
+        const dist = await Distributor.findById(distUser.distributorId);
+        if (!dist) {
+            return res.status(200).json({
+                success: false,
+                message: "Distributor Not Found"
+            });
+        };
+
+        return res.status(200).json({
+            success:true,
+            message:"Barcode Fetched SucessFully",
+            distributor:dist.allocateBarcodes
+        })
+
+    } catch (error) {
+        console.log("Error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchDistributorAllocatedBarcode"
+        });
+    }
+}
