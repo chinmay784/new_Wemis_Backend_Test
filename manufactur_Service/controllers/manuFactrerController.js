@@ -16,7 +16,8 @@ const { cloudinary } = require("../config/cloudinary");
 const CoustmerDevice = require("../models/coustmerDeviceModel");
 const devices = require("../devicesStore");
 const TicketIssue = require("../models/TicketIssueModel");
-const ChatMessage = require("../models/ChatSchemaModel")
+const ChatMessage = require("../models/ChatSchemaModel");
+const DistributorAllocateBarcode = require("../models/DistributorAllocatedBarcode");
 
 
 
@@ -5236,19 +5237,317 @@ exports.fetchDistributorAllocatedBarcode = async (req, res) => {
 //         const userId = req.user.userId;
 
 //         if (!userId) {
-//             return res.status(500).json({
+//             return res.status(401).json({
 //                 success: false,
-//                 message: "Please Provide UserID"
+//                 message: "Unauthorized: Please Provide UserID"
 //             });
 //         }
 
-//         const {delerId , barcodeNo } = req.body;
+//         const { delerId, barcodeNos } = req.body;
+
+//         if (!delerId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide delerId"
+//             });
+//         }
+
+//         if (!barcodeNos || !Array.isArray(barcodeNos) || barcodeNos.length === 0) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide barcodeNos as a non-empty array"
+//             });
+//         }
+
+//         // Find Dealer
+//         const realDeler = await CreateDelerUnderDistributor.findById(delerId);
+//         if (!realDeler) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Dealer Not Found"
+//             });
+//         }
+
+//         // Fetch barcode objects
+//         const barcodeObjects = await createBarCode.find({
+//             barCodeNo: { $in: barcodeNos }
+//         });
+
+//         if (barcodeObjects.length !== barcodeNos.length) {
+//             const found = barcodeObjects.map(b => b.barCodeNo);
+//             const missing = barcodeNos.filter(b => !found.includes(b));
+
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Some barcodes not found",
+//                 missing
+//             });
+//         }
+
+//         // Prevent double allocation
+//         const alreadyAllocated = barcodeObjects.filter(b =>
+//             b.allocatedTo || b.allocatedDistributorId || b.allocatedDelerId
+//         );
+
+//         if (alreadyAllocated.length > 0) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Some barcodes are already allocated",
+//                 alreadyAllocated: alreadyAllocated.map(b => b.barCodeNo)
+//             });
+//         }
+
+//         // ------------------- CREATE FULL BARCODE OBJECTS -------------------
+//         const formattedBarcodes = barcodeObjects.map(b => ({
+//             manufacturId: b.manufacturId,
+//             elementName: b.elementName,
+//             elementType: b.elementType,
+//             elementModelNo: b.elementModelNo,
+//             elementPartNo: b.elementPartNo,
+//             elementTacNo: b.elementTacNo,
+//             elementCopNo: b.elementCopNo,
+//             copValid: b.copValid,
+//             voltage: b.voltage,
+//             batchNo: b.batchNo,
+//             baecodeCreationType: b.baecodeCreationType,
+//             barCodeNo: b.barCodeNo,
+//             is_Renew: b.is_Renew,
+//             deviceSerialNo: b.deviceSerialNo,
+//             simDetails: b.simDetails,
+//             status: b.status
+//         }));
+
+//         // ------------------- UPDATE BARCODE COLLECTION -------------------
+//         await createBarCode.updateMany(
+//             { barCodeNo: { $in: barcodeNos } },
+//             {
+//                 $set: {
+//                     status: "ALLOCATED",
+//                     allocatedTo: "DEALER",
+//                     allocatedDistributorId: userId,
+//                     allocatedDelerId: delerId,
+//                     allocatedAt: new Date()
+//                 }
+//             }
+//         );
+
+//         // ------------------- PUSH FULL BARCODE OBJECTS TO DEALER -------------------
+//         if (!Array.isArray(realDeler.allocateBarcodes)) {
+//             realDeler.allocateBarcodes = [];
+//         }
+
+//         realDeler.allocateBarcodes.push(...formattedBarcodes);
+//         await realDeler.save();
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Barcodes allocated successfully to dealer",
+//             dealerName: realDeler.name,
+//             allocatedCount: formattedBarcodes.length,
+//             allocatedBarcodes: formattedBarcodes
+//         });
 
 //     } catch (error) {
 //         console.log("Error:", error.message);
 //         return res.status(500).json({
 //             success: false,
-//             message: "Server Error in distributorAllocatedBarCode"
+//             message: "Server Error in distributorAllocatedBarCode",
+//             error: error.message
 //         });
 //     }
-// }
+// };
+
+
+exports.fetchDelerUnderDistributor = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        const distUser = await User.findById(userId);
+        if (!distUser) {
+            return res.status(200).json({
+                success: false,
+                message: "No Distributor User Found"
+            });
+        }
+
+        // Fetch all dealers under this distributor
+        const delerList = await CreateDelerUnderDistributor.find({
+            distributorId: distUser.distributorId
+        });
+
+        if (delerList.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "No Dealers Found"
+            });
+        }
+
+        // Format dealer list response
+        const formattedDelerList = delerList.map(deler => ({
+            _id: deler._id,
+            dealerName: deler.business_Name,
+            mobile: deler.mobile,
+            email: deler.email
+        }));
+
+        return res.status(200).json({
+            success: true,
+            delerList: formattedDelerList
+        });
+
+    } catch (error) {
+        console.log("Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchDelerUnderDistributor",
+            error: error.message
+        });
+    }
+};
+
+
+exports.distributorAllocatedBarCode = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized: Please Provide UserID"
+            });
+        }
+
+        const { delerId, barcodeNos } = req.body;
+
+        if (!delerId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide delerId"
+            });
+        }
+
+        if (!barcodeNos || !Array.isArray(barcodeNos) || barcodeNos.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide barcodeNos as a non-empty array"
+            });
+        }
+
+        // ---------------- FIND DEALER ----------------
+        const realDeler = await CreateDelerUnderDistributor.findById(delerId);
+        if (!realDeler) {
+            return res.status(404).json({
+                success: false,
+                message: "Dealer Not Found"
+            });
+        }
+
+        // ---------------- FETCH BARCODE OBJECTS ----------------
+        const barcodeObjects = await createBarCode.find({
+            barCodeNo: { $in: barcodeNos }
+        });
+
+        if (barcodeObjects.length !== barcodeNos.length) {
+            const found = barcodeObjects.map(b => b.barCodeNo);
+            const missing = barcodeNos.filter(b => !found.includes(b));
+
+            return res.status(404).json({
+                success: false,
+                message: "Some barcodes not found",
+                missing
+            });
+        }
+
+        // ---------------- PREVENT DOUBLE ALLOCATION ----------------
+        const alreadyAllocated = barcodeObjects.filter(b =>
+            b.allocatedTo || b.allocatedDistributorId || b.allocatedDelerId
+        );
+
+        if (alreadyAllocated.length > 0) {
+            return res.status(200).json({
+                success: false,
+                message: "Some barcodes are already allocated",
+                alreadyAllocated: alreadyAllocated.map(b => b.barCodeNo)
+            });
+        }
+
+        // ---------------- CREATE FULL BARCODE OBJECTS ----------------
+        const formattedBarcodes = barcodeObjects.map(b => ({
+            manufacturId: b.manufacturId,
+            elementName: b.elementName,
+            elementType: b.elementType,
+            elementModelNo: b.elementModelNo,
+            elementPartNo: b.elementPartNo,
+            elementTacNo: b.elementTacNo,
+            elementCopNo: b.elementCopNo,
+            copValid: b.copValid,
+            voltage: b.voltage,
+            batchNo: b.batchNo,
+            baecodeCreationType: b.baecodeCreationType,
+            barCodeNo: b.barCodeNo,
+            is_Renew: b.is_Renew,
+            deviceSerialNo: b.deviceSerialNo,
+            simDetails: b.simDetails,
+            status: b.status
+        }));
+
+        // ---------------- UPDATE BARCODE COLLECTION ----------------
+        await createBarCode.updateMany(
+            { barCodeNo: { $in: barcodeNos } },
+            {
+                $set: {
+                    status: "ALLOCATED",
+                    allocatedTo: "DEALER",
+                    allocatedDistributorId: userId,
+                    allocatedDelerId: delerId,
+                    allocatedAt: new Date()
+                }
+            }
+        );
+
+        // ---------------- SAVE TO DEALER MODEL ----------------
+        if (!Array.isArray(realDeler.allocateBarcodes)) {
+            realDeler.allocateBarcodes = [];
+        }
+
+        realDeler.allocateBarcodes.push(...formattedBarcodes);
+        await realDeler.save();
+
+        // ---------------- SAVE TO DistributorAllocateBarcode COLLECTION ----------------
+
+        const distributorBarcode = new DistributorAllocateBarcode({
+            distributorId: userId,
+            allocatedDelerId: delerId,
+            allocatedBarcode: formattedBarcodes,
+            delerName: realDeler.name,
+            country: realDeler.country,
+            state: realDeler.state,
+            element: formattedBarcodes[0].elementName
+        });
+
+        await distributorBarcode.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Barcodes allocated successfully to dealer",
+            dealerName: realDeler.name,
+            allocatedCount: formattedBarcodes.length,
+            allocatedBarcodes: formattedBarcodes
+        });
+
+    } catch (error) {
+        console.log("Error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in distributorAllocatedBarCode",
+            error: error.message
+        });
+    }
+};
