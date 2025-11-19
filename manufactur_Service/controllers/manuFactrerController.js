@@ -4159,6 +4159,7 @@ exports.liveTrackingAllDevices = async (req, res) => {
                 else if (speed > 0) movementStatus = "slow moving";
                 else movementStatus = "stopped";
             }
+            console.log(liveData)
 
             return {
                 dev,
@@ -5215,9 +5216,9 @@ exports.fetchDistributorAllocatedBarcode = async (req, res) => {
         };
 
         return res.status(200).json({
-            success:true,
-            message:"Barcode Fetched SucessFully",
-            distributor:dist.allocateBarcodes
+            success: true,
+            message: "Barcode Fetched SucessFully",
+            distributor: dist.allocateBarcodes
         })
 
     } catch (error) {
@@ -5228,3 +5229,26 @@ exports.fetchDistributorAllocatedBarcode = async (req, res) => {
         });
     }
 }
+
+
+// exports.distributorAllocatedBarCode = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(500).json({
+//                 success: false,
+//                 message: "Please Provide UserID"
+//             });
+//         }
+
+//         const {delerId , barcodeNo } = req.body;
+
+//     } catch (error) {
+//         console.log("Error:", error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in distributorAllocatedBarCode"
+//         });
+//     }
+// }
