@@ -5551,3 +5551,49 @@ exports.distributorAllocatedBarCode = async (req, res) => {
         });
     }
 };
+
+
+exports.AllocatedListOfBarCode = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "UserId Is Missing",
+            })
+        }
+
+        // find user in User Collections
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "user Is Not Found",
+            })
+        }
+
+        // find in DistributorAllocated Barcode
+        const listOfDistrinutorAllocatedBarCode = await DistributorAllocateBarcode.find({ distributorId: user._id });
+
+        if (!listOfDistrinutorAllocatedBarCode) {
+            return res.status(200).json({
+                success: false,
+                message: "listOfDistrinutorAllocatedBarCode Is Not Found",
+            })
+        };
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched SucessFully",
+            listOfDistrinutorAllocatedBarCode,
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in AllocatedListOfBarCode"
+        })
+    }
+}
