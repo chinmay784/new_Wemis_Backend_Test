@@ -5583,6 +5583,7 @@ exports.AllocatedListOfBarCode = async (req, res) => {
             })
         };
 
+        // return res To Client
         return res.status(200).json({
             success: true,
             message: "Fetched SucessFully",
@@ -5597,3 +5598,198 @@ exports.AllocatedListOfBarCode = async (req, res) => {
         })
     }
 }
+
+
+exports.DistributorCreateDeler = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Missing userId"
+            });
+        }
+
+        const {
+            business_Name, name, email, gender, mobile, date_of_birth,
+            age, Is_Map_Device_Edit, pan_Number, occupation,
+            Advance_Payment, languages_Known, country, state,
+            district, RTO_Division, Pin_Code, area, address
+        } = req.body;
+
+        // 🟥 REQUIRED fields list
+        const requiredFields = {
+            business_Name: "Business Name",
+            name: "Name",
+            email: "Email",
+            gender: "Gender",
+            mobile: "Mobile",
+            date_of_birth: "Date of Birth",
+            age: "Age",
+            Is_Map_Device_Edit: "Is_Map_Device_Edit",
+            pan_Number: "PAN Number",
+            occupation: "Occupation",
+            Advance_Payment: "Advance Payment",
+            languages_Known: "Languages Known",
+            country: "Country",
+            state: "State",
+            district: "District",
+            RTO_Division: "RTO Division",
+            Pin_Code: "Pin Code",
+            area: "Area",
+            address: "Address"
+        };
+
+        // 🟦 Loop through validation
+        for (const [key, label] of Object.entries(requiredFields)) {
+            if (!req.body[key]) {
+                return res.status(200).json({
+                    success: false,
+                    message: `Please provide ${label}`
+                });
+            }
+        }
+
+        // 🟩 Email Format Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(200).json({
+                success: false,
+                message: "Invalid email format"
+            });
+        }
+
+        // 🟩 Mobile Validation (10 digits)
+        if (mobile.length !== 10) {
+            return res.status(200).json({
+                success: false,
+                message: "Mobile number must be 10 digits"
+            });
+        }
+
+        // ❗ Check if Dealer Email Already Exists
+        const existsInDealerTable = await CreateDelerUnderDistributor.findOne({ email });
+        const existsInUserTable = await User.findOne({ email });
+
+        if (existsInDealerTable || existsInUserTable) {
+            return res.status(200).json({
+                success: false,
+                message: "Dealer already exists"
+            });
+        }
+
+        // Fetch distributor user
+        const userDist = await User.findById(userId);
+        if (!userDist) {
+            return res.status(200).json({
+                success: false,
+                message: "Distributor user not found"
+            });
+        }
+
+        if (!userDist.distributorId) {
+            return res.status(200).json({
+                success: false,
+                message: "Distributor ID missing for this user"
+            });
+        }
+
+        // ⭐ Create Dealer in CreateDelerUnderDistributor collection
+        const saveDeler = new CreateDelerUnderDistributor({
+            distributorId: userDist.distributorId,
+            business_Name,
+            name,
+            email,
+            gender,
+            mobile,
+            date_of_birth,
+            age,
+            Is_Map_Device_Edit,
+            pan_Number,
+            occupation,
+            Advance_Payment,
+            languages_Known,
+            country,
+            state,
+            district,
+            RTO_Division,
+            Pin_Code,
+            area,
+            address,
+        });
+
+        await saveDeler.save();
+
+        // ⭐ Create Login User for dealer
+        const newUser = new User({
+            distributorId: userDist.distributorId,
+            email,
+            password: mobile,   // password = mobile number
+            role: "dealer-distributor",
+            distributorDelerId: saveDeler._id
+        });
+
+        await newUser.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Dealer created successfully",
+        });
+
+    } catch (error) {
+        console.log("Error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in DistributorCreateDeler"
+        });
+    }
+};
+
+
+exports.fetchAllDistributorDelerList = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Missing userId"
+            });
+        }
+
+        // find in user.distributorId
+        const fakeUserRefference = await User.findById(userId);
+
+        if (!fakeUserRefference) {
+            return res.status(401).json({
+                success: false,
+                message: "No Data Found"
+            });
+        }
+
+        // find in CreateDelerUnderDistributor
+        const realDistributor = await CreateDelerUnderDistributor.find({ distributorId: fakeUserRefference.distributorId });
+
+        if (realDistributor.length === 0) {
+            return res.status(401).json({
+                success: false,
+                message: "No Data Found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "fetchAllDistributorDelerList",
+            countDeler: realDistributor.length,
+            realDistributor
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchAllDistributorDelerList"
+        })
+    }
+};
