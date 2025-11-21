@@ -4211,15 +4211,6 @@ exports.liveTrackingAllDevices = async (req, res) => {
 
 
 
-// distributor deler api will work on
-// work Now deler api
-
-
-
-
-
-
-
 
 
 
@@ -5793,3 +5784,168 @@ exports.fetchAllDistributorDelerList = async (req, res) => {
         })
     }
 };
+
+
+
+// work on Deler All API
+exports.getAllBarcodeListByCurrentDeler = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "User Id Missing"
+            })
+        };
+
+        const reffernceUser = await User.findById(userId);
+        if (!reffernceUser) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        };
+
+        // find in CreateUnderDistributor Collections 
+        const realUser = await CreateDelerUnderDistributor.findById(reffernceUser.distributorDelerId);
+        if (!realUser) {
+            return res.status(200).json({
+                success: false,
+                message: "realUser Not Found"
+            })
+        };
+
+        return res.status(200).json({
+            success: true,
+            message: "Get GetAllBarcodeListByCurrentDeler",
+            data: realUser.allocateBarcodes,
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in getAllBarcodeListByCurrentDeler"
+        })
+    }
+}
+
+
+exports.technicianCreateByDeler = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "User Id Missing"
+            })
+        };
+
+        const { name, gender, email, mobile, adhar, dateOfBirth, qualification } = req.body;
+
+        // REQUIRED fields list
+        const requiredFields = {
+            name: "Name",
+            gender: "Gender",
+            email: "Email",
+            mobile: "Mobile Number",
+            adhar: "Aadhar Number",
+            dateOfBirth: "Date of Birth",
+            qualification: "Qualification"
+        };
+
+        // Loop to check missing fields
+        for (const [key, label] of Object.entries(requiredFields)) {
+            if (!req.body[key]) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Please provide ${label}`
+                });
+            }
+        }
+
+
+        // now find in userCollection
+        const refUser = await User.findById(userId);
+        if (!refUser) {
+            return res.status(200).json({
+                success: false,
+                message: "refUser Not Found",
+            })
+        }
+
+        // save in DB
+        const newTechenician = new Technicien({
+            name,
+            gender,
+            email,
+            mobile,
+            adhar,
+            dateOfBirth,
+            qualification,
+            distributorUnderDelerId: refUser.distributorDelerId
+        });
+
+        await newTechenician.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "new Techenican Created SuccessFully",
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in technicianCreateByDeler"
+        })
+    }
+}
+
+
+exports.fetchAllDelerTechenicien = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId",
+            })
+        }
+
+
+        const refUser = await User.findById(userId);
+        if (!refUser) {
+            return res.status(200).json({
+                success: false,
+                message: "No Data Found",
+            })
+        }
+
+        // find in techenicien Collections
+        const allTec = await Technicien.find({ distributorUnderDelerId: refUser.distributorDelerId });
+        if (allTec.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "No Data Found",
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched SuccessFully",
+            allTec,
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchAllDelerTechenicien"
+        })
+    }
+}
