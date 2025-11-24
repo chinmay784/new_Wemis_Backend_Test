@@ -268,7 +268,7 @@ const superAdminRouter = require("./routes/superAdminRoute");
 
 const app = express();
 const HTTP_PORT = 4004;
-const TCP_PORT = 5000;
+const TCP_PORT = 4005;
 
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));

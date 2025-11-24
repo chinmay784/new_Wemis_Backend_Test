@@ -18,6 +18,7 @@ const devices = require("../devicesStore");
 const TicketIssue = require("../models/TicketIssueModel");
 const ChatMessage = require("../models/ChatSchemaModel");
 const DistributorAllocateBarcode = require("../models/DistributorAllocatedBarcode");
+const DelerMapDevice = require('../models/DelerMapDevices')
 
 
 
@@ -5947,5 +5948,186 @@ exports.fetchAllDelerTechenicien = async (req, res) => {
             success: false,
             message: "Server Error in fetchAllDelerTechenicien"
         })
+    }
+}
+
+
+exports.delerMapDevice = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "UserId Missing"
+            })
+        }
+
+        // read data from req.body;
+        let {
+            country, state, deviceType, deviceNo, voltage, elementType, batchNo, simDetails, VechileBirth, RegistrationNo, date, ChassisNumber, EngineNumber, VehicleType, MakeModel, ModelYear, InsuranceRenewDate, PollutionRenewdate, vechileNo, fullName, email, mobileNo, GstinNo, Customercountry, Customerstate, Customerdistrict, Rto, PinCode, CompliteAddress, AdharNo, PanNo, Packages, InvoiceNo, VehicleKMReading, DriverLicenseNo, MappedDate, NoOfPanicButtons
+        } = req.body;
+
+
+        // Parse simDetails if string
+        try {
+            if (typeof simDetails === "string" && simDetails.trim() !== "") {
+                simDetails = JSON.parse(simDetails);
+            }
+        } catch (err) {
+            return res.status(400).json({ success: false, message: "Invalid simDetails format" });
+        }
+
+
+        // save in db
+        const newDelerMapDevice = new DelerMapDevice({
+            delerId: userId, country, state, deviceType, deviceNo, voltage, elementType, batchNo, simDetails, VechileBirth, RegistrationNo, date, ChassisNumber, EngineNumber, VehicleType, MakeModel, ModelYear, InsuranceRenewDate, PollutionRenewdate, vechileNo, fullName, email, mobileNo, GstinNo, Customercountry, Customerstate, Customerdistrict, Rto, PinCode, CompliteAddress, AdharNo, PanNo, Packages, InvoiceNo, VehicleKMReading, DriverLicenseNo, MappedDate, NoOfPanicButtons,
+        });
+
+        const savedMapDevice = await newDelerMapDevice.save();
+        // Immediate response to client (fast)
+        res.status(200).json({
+            success: true,
+            message: "Device mapped successfully (background customer/user processing started)",
+            mapDeviceId: savedMapDevice._id
+        });
+
+
+        // Background processing (non-blocking)
+        setImmediate(async () => {
+            console.time(`manuFacturMAPaDevice:${savedMapDevice._id}`);
+
+            try {
+                const deviceObject = {
+                    deviceType,
+                    deviceNo,
+                    voltage,
+                    elementType,
+                    batchNo,
+                    simDetails,
+                    Packages,
+                    VechileBirth,
+                    RegistrationNo,
+                    date,
+                    ChassisNumber,
+                    EngineNumber,
+                    VehicleType,
+                    MakeModel,
+                    ModelYear,
+                    InsuranceRenewDate,
+                    PollutionRenewdate,
+                    vechileNo,
+                };
+
+                // ✅ Create or update customer AND return customer document
+                const savedCustomer = await CoustmerDevice.findOneAndUpdate(
+                    { mobileNo },
+                    {
+                        $setOnInsert: {
+                            delerId: userId,
+                            fullName,
+                            email,
+                            mobileNo,
+                            GstinNo,
+                            Customercountry,
+                            Customerstate,
+                            Customerdistrict,
+                            Rto,
+                            PinCode,
+                            CompliteAddress,
+                            AdharNo,
+                            PanNo
+                        },
+                        $push: { devicesOwened: deviceObject }
+                    },
+                    {
+                        upsert: true,
+                        new: true // ✅ returns the document
+                    }
+                );
+
+                console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "customer saved");
+
+                // ✅ Now insert coustmerId = savedCustomer._id
+                // ✅ Check if user already exists
+
+                // await User.updateOne(
+                //     { email },
+                //     {
+                //         $setOnInsert: {
+                //             email,
+                //             password: mobileNo,
+                //             role: "coustmer",
+                //             coustmerId: savedCustomer._id
+                //         }
+                //     },
+                //     { upsert: true }
+                // );
+
+
+                const existingUser = await User.findOne({ email });
+
+                if (!existingUser) {
+                    // ✅ Create new user
+                    await User.create({
+                        email,
+                        password: mobileNo,
+                        role: "coustmer",
+                        coustmerId: savedCustomer._id
+                    });
+
+                    console.log("✅ New user created");
+                } else {
+                    console.log("✅ User already exists, not creating again");
+                }
+
+
+                console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user processed");
+                console.timeEnd(`manuFacturMAPaDevice:${savedMapDevice._id}`);
+
+            } catch (err) {
+                console.error("Background processing error:", err);
+            }
+        });
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in delerMapDevice"
+        })
+    }
+}
+
+exports.fetchDelerMapDevices = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId",
+            })
+        }
+
+        // find in delerMapDevice Collections
+        const delMapDevice = await DelerMapDevice.find({ delerId: userId });
+
+        if (delMapDevice.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "No Map Device Found",
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched DelerMap device SuccessFully",
+            count: delMapDevice.length,
+            delMapDevice,
+        })
+
+    } catch (error) {
+        console.log(error, error.message)
     }
 }
