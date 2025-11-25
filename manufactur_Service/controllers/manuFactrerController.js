@@ -6131,3 +6131,42 @@ exports.fetchDelerMapDevices = async (req, res) => {
         console.log(error, error.message)
     }
 }
+
+
+exports.fetchdelerSubscriptionPlans = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "please Provide UserId"
+            })
+        }
+
+        // fetch plans 
+        const Packages = await createSubscription.find({});
+
+        if (Packages.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "No Package Found"
+            })
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"Fetched SuccessFully",
+            Packages,
+        })
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchdelerSubscriptionPlans"
+        })
+    }
+}
