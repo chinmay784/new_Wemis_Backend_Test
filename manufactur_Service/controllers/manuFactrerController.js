@@ -3878,6 +3878,142 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 
 
 
+// exports.liveTrackingSingleDevice = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+
+//         if (!userId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "User authentication required"
+//             });
+//         }
+
+//         const { deviceNo } = req.body;
+
+//         if (!deviceNo) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Device number is required"
+//             });
+//         }
+
+//         // ✅ Fetch device from DB
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Device not found in database"
+//             });
+//         }
+
+//         const matchedDevice = device.devicesOwened[0];
+//         const imei = matchedDevice.deviceNo; // ✅ THIS IS THE IMEI
+
+//         console.log("✅ IMEI From DB:", imei);
+
+//         // ✅ CORRECT — GET LIVE DATA FROM IMEI
+//         const liveData = devices[imei];
+//         console.log(liveData)
+
+//         if (!liveData) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Device is offline or no live data available",
+//                 deviceInfo: {
+//                     deviceNo,
+//                     imei,
+//                     vehicleName: matchedDevice.vehicleName || "Unknown",
+//                     status: "offline"
+//                 },
+//                 lastSeen: null
+//             });
+//         }
+
+//         console.log("✅ LIVE DATA FOUND:", liveData);
+
+//         // Calculate data age
+//         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
+//         const isRecent = dataAge < 5 * 60 * 1000;
+
+//         // Format GPS coordinates
+//         let formattedLat = liveData.lat;
+//         let formattedLng = liveData.lng;
+
+//         if (liveData.latDir === 'S' && formattedLat > 0) {
+//             formattedLat = -formattedLat;
+//         }
+//         if (liveData.lngDir === 'W' && formattedLng > 0) {
+//             formattedLng = -formattedLng;
+//         }
+
+
+//         // Here Implement On latitude and longitude logic
+
+
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live tracking data retrieved successfully",
+
+//             deviceInfo: {
+//                 deviceNo,
+//                 imei,
+//                 vehicleName: matchedDevice.vehicleName || "Unknown",
+//                 status: isRecent ? "online" : "stale"
+//             },
+
+//             location: {
+//                 latitude: formattedLat,
+//                 longitude: formattedLng,
+//                 speed: liveData.speed || 0,
+//                 heading: liveData.heading || 0,
+//                 altitude: liveData.altitude || 0,
+//                 gpsFix: liveData.gpsFix
+//             },
+
+//             deviceStatus: {
+//                 ignition: liveData.ignition,
+//                 batteryVoltage: liveData.batteryVoltage,
+//                 mainsVoltage: liveData.mainsVoltage,
+//                 gsmSignal: liveData.gsmSignal,
+//                 satellites: liveData.satellites
+//             },
+
+//             alerts: {
+//                 sosStatus: liveData.sosStatus,
+//                 tamperAlert: liveData.tamperAlert
+//             },
+
+//             timestamp: {
+//                 date: liveData.date,
+//                 time: liveData.time,
+//                 lastUpdate: liveData.lastUpdate,
+//                 dataAgeSeconds: Math.floor(dataAge / 1000)
+//             },
+
+//             connectionInfo: liveData.connectionInfo || null,
+//             device: device.devicesOwened[0],
+//             rawData: liveData,   // ✅ full packet
+//         });
+
+//     } catch (error) {
+//         console.error("❌ Controller Error (Single Device):", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while fetching live tracking data"
+//         });
+//     }
+// };
+// ================================
+// GLOBAL — Store previous latitude & longitude
+// ================================
+let lastLocation = {};   // { imei: { lat, lng } }
+
 exports.liveTrackingSingleDevice = async (req, res) => {
     try {
         const userId = req.user?.userId;
@@ -3898,7 +4034,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             });
         }
 
-        // ✅ Fetch device from DB
+        // Fetch device
         const device = await CoustmerDevice.findOne(
             { "devicesOwened.deviceNo": deviceNo },
             { "devicesOwened.$": 1 }
@@ -3907,53 +4043,74 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         if (!device) {
             return res.status(404).json({
                 success: false,
-                message: "Device not found in database"
+                message: "Device not found"
             });
         }
 
         const matchedDevice = device.devicesOwened[0];
-        const imei = matchedDevice.deviceNo; // ✅ THIS IS THE IMEI
+        const imei = matchedDevice.deviceNo;
 
-        console.log("✅ IMEI From DB:", imei);
-
-        // ✅ CORRECT — GET LIVE DATA FROM IMEI
+        // Live GPS data from memory
         const liveData = devices[imei];
-        console.log(liveData)
 
         if (!liveData) {
             return res.status(200).json({
                 success: false,
-                message: "Device is offline or no live data available",
-                deviceInfo: {
-                    deviceNo,
-                    imei,
-                    vehicleName: matchedDevice.vehicleName || "Unknown",
-                    status: "offline"
-                },
+                message: "Device offline",
                 lastSeen: null
             });
         }
-
-        console.log("✅ LIVE DATA FOUND:", liveData);
 
         // Calculate data age
         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
         const isRecent = dataAge < 5 * 60 * 1000;
 
-        // Format GPS coordinates
+        // Format GPS
         let formattedLat = liveData.lat;
         let formattedLng = liveData.lng;
 
-        if (liveData.latDir === 'S' && formattedLat > 0) {
-            formattedLat = -formattedLat;
+        if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
+        if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
+
+        // ==========================================
+        // 🌟 PREVIOUS & CURRENT LAT/LNG LOGIC
+        // ==========================================
+
+        let previousLat = null;
+        let previousLng = null;
+
+        // If already stored → load previous values
+        if (lastLocation[imei]) {
+            previousLat = lastLocation[imei].lat;
+            previousLng = lastLocation[imei].lng;
         }
-        if (liveData.lngDir === 'W' && formattedLng > 0) {
-            formattedLng = -formattedLng;
-        }
+
+        // Current coordinates
+        const currentLat = formattedLat;
+        const currentLng = formattedLng;
+
+        // Save current values for next request
+        lastLocation[imei] = {
+            lat: currentLat,
+            lng: currentLng
+        };
+
+        // ==========================================
 
         return res.status(200).json({
             success: true,
             message: "Live tracking data retrieved successfully",
+
+            // Previous and current location for smooth animation
+            previousLocation: {
+                latitude: previousLat,
+                longitude: previousLng
+            },
+
+            currentLocation: {
+                latitude: currentLat,
+                longitude: currentLng
+            },
 
             deviceInfo: {
                 deviceNo,
@@ -3963,8 +4120,8 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             },
 
             location: {
-                latitude: formattedLat,
-                longitude: formattedLng,
+                latitude: currentLat,
+                longitude: currentLng,
                 speed: liveData.speed || 0,
                 heading: liveData.heading || 0,
                 altitude: liveData.altitude || 0,
@@ -3991,19 +4148,18 @@ exports.liveTrackingSingleDevice = async (req, res) => {
                 dataAgeSeconds: Math.floor(dataAge / 1000)
             },
 
-            connectionInfo: liveData.connectionInfo || null,
-            device: device.devicesOwened[0],
-            rawData: liveData,   // ✅ full packet
+            rawData: liveData
         });
 
     } catch (error) {
-        console.error("❌ Controller Error (Single Device):", error);
+        console.error("❌ Controller Error:", error);
         return res.status(500).json({
             success: false,
             message: "Server error while fetching live tracking data"
         });
     }
 };
+
 
 
 
@@ -6156,8 +6312,8 @@ exports.fetchdelerSubscriptionPlans = async (req, res) => {
         }
 
         return res.status(200).json({
-            success:true,
-            message:"Fetched SuccessFully",
+            success: true,
+            message: "Fetched SuccessFully",
             Packages,
         })
 
