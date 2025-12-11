@@ -4413,7 +4413,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
                     currentStopSeconds: vehicleState[imei].isStopped
                         ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
                         : 0
-                  }
+                }
                 : null;
 
             return res.status(200).json({
@@ -4635,6 +4635,134 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
 
 
+// exports.liveTrackingAllDevices = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+
+//         if (!userId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "User authentication required",
+//             });
+//         }
+
+//         // ✅ Fetch user details
+//         const user = await User.findById(userId);
+//         if (!user || !user.coustmerId) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "No customer found for this user",
+//             });
+//         }
+
+//         // ✅ Fetch customer and their devices
+//         const customer = await CoustmerDevice.findById(user.coustmerId);
+//         if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "No devices found for this customer",
+//             });
+//         }
+
+//         const devicesOwened = customer.devicesOwened;
+
+//         // ✅ Build response list for each device
+//         const finalDeviceList = devicesOwened.map((dev) => {
+//             const imei = dev.deviceNo; // IMEI = deviceNo
+//             const liveData = devices[imei]; // Live data from memory (manufacture server)
+
+//             let status = "offline";
+//             let formattedLat = null;
+//             let formattedLng = null;
+//             let speed = 0;
+//             let ignition = "0";
+//             let gpsFix = "0";
+//             let satellites = "0";
+//             let lastUpdate = null;
+//             let movementStatus = "stopped";
+
+//             // ✅ Check live data availability
+//             if (liveData) {
+//                 // Calculate if device is online (recent within 60 sec)
+//                 const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
+//                 const isRecent = diff <= 60000;
+//                 status = isRecent ? "online" : "stale";
+
+//                 // Handle lat/lng direction
+//                 formattedLat = liveData.lat;
+//                 formattedLng = liveData.lng;
+//                 if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
+//                 if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
+
+//                 speed = liveData.speed || 0;
+//                 ignition = liveData.ignition || "0";
+//                 gpsFix = liveData.gpsFix || "0";
+//                 satellites = liveData.satellites || "0";
+//                 lastUpdate = liveData.lastUpdate;
+
+//                 // Determine movement
+//                 if (speed > 5) movementStatus = "moving";
+//                 else if (speed > 0) movementStatus = "slow moving";
+//                 else movementStatus = "stopped";
+//             }
+//             console.log(liveData)
+
+//             return {
+//                 dev,
+//                 deviceNo: dev.deviceNo,
+//                 deviceType: dev.deviceType,
+//                 RegistrationNo: dev.RegistrationNo,
+//                 MakeModel: dev.MakeModel,
+//                 ModelYear: dev.ModelYear,
+//                 batchNo: dev.batchNo,
+//                 date: dev.date,
+//                 simDetails: dev.simDetails || [],
+
+//                 // ✅ Live Tracking Info
+//                 liveTracking: liveData || null,
+
+//                 // ✅ Computed Fields
+//                 status,
+//                 lat: formattedLat,
+//                 lng: formattedLng,
+//                 speed,
+//                 ignition,
+//                 gpsFix,
+//                 satellites,
+//                 lastUpdate,
+//                 movementStatus,
+//             };
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live tracking data for all customer devices retrieved successfully",
+//             totalDevices: finalDeviceList.length,
+//             devices: finalDeviceList,
+//         });
+
+//     } catch (error) {
+//         console.error("❌ Controller Error (All Devices):", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while fetching live tracking data for all devices",
+//             error: error.message,
+//         });
+//     }
+// };
+
+
+
+// =========================
+// GLOBAL MEMORY (Same as single)
+// =========================
+// let lastLocation = {};       // { imei: { previous, current, speed, heading } }
+// let lastTimestamp = {};      // { imei: timestamp }
+// let vehicleState = {};       // { imei: { isStopped, stopStartTime, totalStoppedSeconds } }
+
+// =========================
+// LIVE TRACKING ALL DEVICES
+// =========================
 exports.liveTrackingAllDevices = async (req, res) => {
     try {
         const userId = req.user?.userId;
@@ -4646,111 +4774,140 @@ exports.liveTrackingAllDevices = async (req, res) => {
             });
         }
 
-        // ✅ Fetch user details
         const user = await User.findById(userId);
         if (!user || !user.coustmerId) {
             return res.status(404).json({
                 success: false,
-                message: "No customer found for this user",
+                message: "No customer found",
             });
         }
 
-        // ✅ Fetch customer and their devices
         const customer = await CoustmerDevice.findById(user.coustmerId);
-        if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
+        if (!customer || customer.devicesOwened.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: "No devices found for this customer",
+                message: "No devices found",
             });
         }
 
         const devicesOwened = customer.devicesOwened;
 
-        // ✅ Build response list for each device
-        const finalDeviceList = devicesOwened.map((dev) => {
-            const imei = dev.deviceNo; // IMEI = deviceNo
-            const liveData = devices[imei]; // Live data from memory (manufacture server)
+        let finalDeviceList = devicesOwened.map((dev) => {
+            const imei = dev.deviceNo;
+            const liveData = devices[imei];
 
-            let status = "offline";
             let formattedLat = null;
             let formattedLng = null;
             let speed = 0;
-            let ignition = "0";
-            let gpsFix = "0";
-            let satellites = "0";
-            let lastUpdate = null;
-            let movementStatus = "stopped";
+            let heading = 0;
+            let status = "offline";
+            let lastUpdate = lastTimestamp[imei] || null;
 
-            // ✅ Check live data availability
+            // ===============================
+            // A) HANDLE ONLINE DEVICE (NEW DATA)
+            // ===============================
             if (liveData) {
-                // Calculate if device is online (recent within 60 sec)
                 const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
                 const isRecent = diff <= 60000;
                 status = isRecent ? "online" : "stale";
 
-                // Handle lat/lng direction
                 formattedLat = liveData.lat;
                 formattedLng = liveData.lng;
-                if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
-                if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
+
+                if (liveData.latDir === "S") formattedLat = -formattedLat;
+                if (liveData.lngDir === "W") formattedLng = -formattedLng;
 
                 speed = liveData.speed || 0;
-                ignition = liveData.ignition || "0";
-                gpsFix = liveData.gpsFix || "0";
-                satellites = liveData.satellites || "0";
-                lastUpdate = liveData.lastUpdate;
+                heading = liveData.heading || 0;
 
-                // Determine movement
-                if (speed > 5) movementStatus = "moving";
-                else if (speed > 0) movementStatus = "slow moving";
-                else movementStatus = "stopped";
+                const currentLoc = { latitude: formattedLat, longitude: formattedLng };
+                const previousLoc = lastLocation[imei]?.current || null;
+
+                lastLocation[imei] = { previous: previousLoc, current: currentLoc, speed, heading };
+                lastTimestamp[imei] = liveData.lastUpdate;
+
+                // ===========================
+                // STOP LOGIC (ONLINE)
+                // ===========================
+                if (!vehicleState[imei]) {
+                    vehicleState[imei] = {
+                        isStopped: false,
+                        stopStartTime: null,
+                        totalStoppedSeconds: 0,
+                    };
+                }
+
+                if (speed === 0) {
+                    if (!vehicleState[imei].isStopped) {
+                        vehicleState[imei].isStopped = true;
+                        vehicleState[imei].stopStartTime = Date.now();
+                    }
+                } else {
+                    if (vehicleState[imei].isStopped) {
+                        let duration = Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000);
+                        vehicleState[imei].totalStoppedSeconds += duration;
+                    }
+                    vehicleState[imei].isStopped = false;
+                    vehicleState[imei].stopStartTime = null;
+                }
             }
-            console.log(liveData)
+
+            // ===============================
+            // B) HANDLE OFFLINE DEVICE (NO LIVE DATA)
+            // ===============================
+            else if (!liveData && lastLocation[imei]) {
+                formattedLat = lastLocation[imei].current.latitude;
+                formattedLng = lastLocation[imei].current.longitude;
+                speed = lastLocation[imei].speed || 0;
+                heading = lastLocation[imei].heading || 0;
+                status = "offline";
+            }
+
+            // STOP INFO ALWAYS RETURNED
+            const stopInfo = vehicleState[imei]
+                ? {
+                    isStopped: vehicleState[imei].isStopped,
+                    stopStartTime: vehicleState[imei].stopStartTime,
+                    totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+                    currentStopSeconds: vehicleState[imei].isStopped
+                        ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+                        : 0,
+                }
+                : {
+                    isStopped: false,
+                    stopStartTime: null,
+                    totalStoppedSeconds: 0,
+                    currentStopSeconds: 0,
+                };
 
             return {
                 dev,
-                deviceNo: dev.deviceNo,
-                deviceType: dev.deviceType,
-                RegistrationNo: dev.RegistrationNo,
-                MakeModel: dev.MakeModel,
-                ModelYear: dev.ModelYear,
-                batchNo: dev.batchNo,
-                date: dev.date,
-                simDetails: dev.simDetails || [],
-
-                // ✅ Live Tracking Info
-                liveTracking: liveData || null,
-
-                // ✅ Computed Fields
+                deviceNo: imei,
                 status,
                 lat: formattedLat,
                 lng: formattedLng,
                 speed,
-                ignition,
-                gpsFix,
-                satellites,
-                lastUpdate,
-                movementStatus,
+                heading,
+                lastUpdate: lastTimestamp[imei] || null,
+                stopInfo,
             };
         });
 
         return res.status(200).json({
             success: true,
-            message: "Live tracking data for all customer devices retrieved successfully",
+            message: "All live data fetched",
             totalDevices: finalDeviceList.length,
             devices: finalDeviceList,
         });
 
-    } catch (error) {
-        console.error("❌ Controller Error (All Devices):", error);
+    } catch (err) {
+        console.error("❌ Error:", err);
         return res.status(500).json({
             success: false,
-            message: "Server error while fetching live tracking data for all devices",
-            error: error.message,
+            message: "Server error",
         });
     }
 };
-
 
 
 
