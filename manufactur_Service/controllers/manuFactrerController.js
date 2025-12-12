@@ -4359,7 +4359,7 @@ let lastLocation = {};   // { imei: { previous, current, speed, heading } }
 let lastTimestamp = {};
 let vehicleState = {};
 
-function generateSmoothPath(prev, curr, steps = 10) {
+function generateSmoothPath(prev, curr, steps = 16) {
     if (!prev || !curr) return [];
 
     let path = [];
