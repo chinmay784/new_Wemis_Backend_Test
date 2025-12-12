@@ -266,6 +266,10 @@ const devices = require("./devicesStore");
 const manufacturerRouter = require("./routes/manuFacturRoute");
 const superAdminRouter = require("./routes/superAdminRoute");
 
+// Mongo Model for Route Playback
+const RouteHistory = require("./models/RouteHistory");
+
+
 const app = express();
 const HTTP_PORT = 4004;
 const TCP_PORT = 4005;
@@ -276,6 +280,29 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 app.use("/", manufacturerRouter, superAdminRouter);
 
 let buffer = ""; // global streaming buffer
+
+
+// ================================
+//  AUTO SAVE ROUTE HISTORY FUNCTION
+// ================================
+async function saveToRouteHistory(parsed) {
+  try {
+    if (!parsed || !parsed.deviceId) return;
+
+    await RouteHistory.create({
+      imei: parsed.deviceId,
+      latitude: parsed.lat,
+      longitude: parsed.lng,
+      speed: parsed.speed,
+      raw: parsed,
+      timestamp: parsed.lastUpdate || new Date()
+    });
+
+    console.log(`📍 Route point saved for IMEI: ${parsed.deviceId}`);
+  } catch (err) {
+    console.log("❌ Route Save Error:", err.message);
+  }
+}
 
 // =========================================
 // ✅ TCP SERVER (Traxo GPS Devices)
@@ -320,6 +347,10 @@ const tcpServer = net.createServer(socket => {
       if (parsed && parsed.deviceId) {
         devices[parsed.deviceId] = parsed;
         console.log("✅ UPDATED DEVICE:", parsed.deviceId);
+
+
+        // 🔥 AUTO SAVE TO DB FOR ROUTE PLAYBACK
+        saveToRouteHistory(parsed);
       }
 
       // ✅ Remove processed packet from buffer
