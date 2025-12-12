@@ -4482,6 +4482,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Live GPS data retrieved successfully",
+            VehicleType: matchedDevice.VehicleType || "Unknown",
             previousLocation,
             currentLocation,
             smoothPath, // IMPORTANT
