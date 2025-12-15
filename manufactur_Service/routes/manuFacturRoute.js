@@ -1,6 +1,6 @@
 const express = require('express');
 const { authMiddelWere } = require('../middelwere/authMiddelWere');
-const { createDistributor, fetchDistributor, deleteDistributor, fetchDistributorById, editDistributor, createDelerUnderDistributor, fetchDelerDistributor, deleteDelerDistributor, createOem, fetchOems, deleteOems, getOemsById, editOemsById, createDelerUnderOems, fetchDelerUnderOems, deleteDelerUnderOems, getDelerUnderOemsById, editDelerOem, createBarCode, fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice, liveTrackingAllDevices, ticketIssueByCoustmer, fetchAllCoustmerVechileNo, getCustomerTicketIssues, getTicketIssuesListManufactur, ticketIssueByDeler, fetchAllDelerTicketIssue, fetchAllVechileNoByDeler, chatBetweenManufacturAndDeler, getAllMessagesBetweenUsers, chatBetweenCoustmerAndManuFactur, getAllMessagesBetweenCoustmerAndManufactur, manufacturCloseTicketApi, fetchDistributorAllocatedBarcode, fetchDelerUnderDistributor, distributorAllocatedBarCode, AllocatedListOfBarCode, DistributorCreateDeler, fetchAllDistributorDelerList, getAllBarcodeListByCurrentDeler, technicianCreateByDeler, fetchAllDelerTechenicien, delerMapDevice, fetchDelerMapDevices, fetchdelerSubscriptionPlans, } = require('../controllers/manuFactrerController');
+const { createDistributor, fetchDistributor, deleteDistributor, fetchDistributorById, editDistributor, createDelerUnderDistributor, fetchDelerDistributor, deleteDelerDistributor, createOem, fetchOems, deleteOems, getOemsById, editOemsById, createDelerUnderOems, fetchDelerUnderOems, deleteDelerUnderOems, getDelerUnderOemsById, editDelerOem, createBarCode, fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice, liveTrackingAllDevices, ticketIssueByCoustmer, fetchAllCoustmerVechileNo, getCustomerTicketIssues, getTicketIssuesListManufactur, ticketIssueByDeler, fetchAllDelerTicketIssue, fetchAllVechileNoByDeler, chatBetweenManufacturAndDeler, getAllMessagesBetweenUsers, chatBetweenCoustmerAndManuFactur, getAllMessagesBetweenCoustmerAndManufactur, manufacturCloseTicketApi, fetchDistributorAllocatedBarcode, fetchDelerUnderDistributor, distributorAllocatedBarCode, AllocatedListOfBarCode, DistributorCreateDeler, fetchAllDistributorDelerList, getAllBarcodeListByCurrentDeler, technicianCreateByDeler, fetchAllDelerTechenicien, delerMapDevice, fetchDelerMapDevices, fetchdelerSubscriptionPlans, fetchSingleRoutePlayback, } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
 
@@ -86,7 +86,7 @@ router.post("/fetchCoustmerSingleDevice", authMiddelWere, fetchCoustmerSingleDev
 // router.post("/liveTrackingOnAnMapSingleMapDevice",authMiddelWere,liveTrackingOnAnMapSingleMapDevice);
 router.post("/liveTrackingSingleDevice", authMiddelWere, liveTrackingSingleDevice);
 router.get("/liveTrackingAllDevices", authMiddelWere, liveTrackingAllDevices);
-
+router.post("/fetchSingleRoutePlayback", authMiddelWere, fetchSingleRoutePlayback)
 
 
 
@@ -130,9 +130,9 @@ router.get("/fetchAllDistributorDelerList", authMiddelWere, fetchAllDistributorD
 // Now work on Deler API Sections
 router.get("/getAllBarcodeListByCurrentDeler", authMiddelWere, getAllBarcodeListByCurrentDeler);
 router.post("/technicianCreateByDeler", authMiddelWere, technicianCreateByDeler);
-router.get("/fetchAllDelerTechenicien",authMiddelWere,fetchAllDelerTechenicien);
-router.post("/delerMapDevice",authMiddelWere,delerMapDevice);
-router.get("/fetchDelerMapDevices",authMiddelWere,fetchDelerMapDevices);
-router.get("/fetchdelerSubscriptionPlans",authMiddelWere,fetchdelerSubscriptionPlans)
+router.get("/fetchAllDelerTechenicien", authMiddelWere, fetchAllDelerTechenicien);
+router.post("/delerMapDevice", authMiddelWere, delerMapDevice);
+router.get("/fetchDelerMapDevices", authMiddelWere, fetchDelerMapDevices);
+router.get("/fetchdelerSubscriptionPlans", authMiddelWere, fetchdelerSubscriptionPlans)
 
 module.exports = router;

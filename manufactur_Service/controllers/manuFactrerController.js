@@ -4882,6 +4882,122 @@ exports.liveTrackingAllDevices = async (req, res) => {
 
 
 
+const RoutePlayback = require("../models/RouteHistory");
+
+exports.fetchSingleRoutePlayback = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { deviceNo, startTime, endTime } = req.body;
+
+        if (!deviceNo || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, startTime and endTime are required"
+            });
+        }
+
+        // 🔍 Validate device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📌 Fetch route data
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: new Date(startTime),
+                $lte: new Date(endTime)
+            }
+        })
+            .sort({ timestamp: 1 }) // IMPORTANT
+            .select("latitude longitude speed raw.headDegree timestamp");
+
+        if (!points.length) {
+            return res.status(200).json({
+                success: true,
+                deviceNo,
+                totalPoints: 0,
+                route: []
+            });
+        }
+
+        let lastHeading = 0;
+
+        const route = points.map((p, index) => {
+            let heading = lastHeading;
+
+            // ✅ 1. Use device heading if available
+            if (p.raw?.headDegree) {
+                heading = parseFloat(p.raw.headDegree);
+                lastHeading = heading;
+            }
+            // ✅ 2. Calculate heading from coordinates
+            else if (index > 0) {
+                heading = calculateHeading(points[index - 1], p);
+                lastHeading = heading;
+            }
+            // ✅ 3. Vehicle stopped → keep last heading
+            else {
+                heading = lastHeading;
+            }
+
+            return {
+                latitude: p.latitude,
+                longitude: p.longitude,
+                speed: p.speed,
+                heading,
+                timestamp: p.timestamp
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            totalPoints: route.length,
+            route
+        });
+
+    } catch (error) {
+        console.error("❌ Route Playback Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch route playback"
+        });
+    }
+};
+
+// ===============================
+// 🧭 HEADING CALCULATION FUNCTION
+// ===============================
+function calculateHeading(from, to) {
+    const lat1 = from.latitude * Math.PI / 180;
+    const lat2 = to.latitude * Math.PI / 180;
+    const dLng = (to.longitude - from.longitude) * Math.PI / 180;
+
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x =
+        Math.cos(lat1) * Math.sin(lat2) -
+        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
 
 
 
