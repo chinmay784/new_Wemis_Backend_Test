@@ -3870,296 +3870,7 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 
 
 
-// for Live Data Tracking on map device
-
-
-
-
-
-
-
-// exports.liveTrackingSingleDevice = async (req, res) => {
-//     try {
-//         const userId = req.user?.userId;
-
-//         if (!userId) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "User authentication required"
-//             });
-//         }
-
-//         const { deviceNo } = req.body;
-
-//         if (!deviceNo) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Device number is required"
-//             });
-//         }
-
-//         // ✅ Fetch device from DB
-//         const device = await CoustmerDevice.findOne(
-//             { "devicesOwened.deviceNo": deviceNo },
-//             { "devicesOwened.$": 1 }
-//         );
-
-//         if (!device) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Device not found in database"
-//             });
-//         }
-
-//         const matchedDevice = device.devicesOwened[0];
-//         const imei = matchedDevice.deviceNo; // ✅ THIS IS THE IMEI
-
-//         console.log("✅ IMEI From DB:", imei);
-
-//         // ✅ CORRECT — GET LIVE DATA FROM IMEI
-//         const liveData = devices[imei];
-//         console.log(liveData)
-
-//         if (!liveData) {
-//             return res.status(200).json({
-//                 success: false,
-//                 message: "Device is offline or no live data available",
-//                 deviceInfo: {
-//                     deviceNo,
-//                     imei,
-//                     vehicleName: matchedDevice.vehicleName || "Unknown",
-//                     status: "offline"
-//                 },
-//                 lastSeen: null
-//             });
-//         }
-
-//         console.log("✅ LIVE DATA FOUND:", liveData);
-
-//         // Calculate data age
-//         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
-//         const isRecent = dataAge < 5 * 60 * 1000;
-
-//         // Format GPS coordinates
-//         let formattedLat = liveData.lat;
-//         let formattedLng = liveData.lng;
-
-//         if (liveData.latDir === 'S' && formattedLat > 0) {
-//             formattedLat = -formattedLat;
-//         }
-//         if (liveData.lngDir === 'W' && formattedLng > 0) {
-//             formattedLng = -formattedLng;
-//         }
-
-
-//         // Here Implement On latitude and longitude logic
-
-
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Live tracking data retrieved successfully",
-
-//             deviceInfo: {
-//                 deviceNo,
-//                 imei,
-//                 vehicleName: matchedDevice.vehicleName || "Unknown",
-//                 status: isRecent ? "online" : "stale"
-//             },
-
-//             location: {
-//                 latitude: formattedLat,
-//                 longitude: formattedLng,
-//                 speed: liveData.speed || 0,
-//                 heading: liveData.heading || 0,
-//                 altitude: liveData.altitude || 0,
-//                 gpsFix: liveData.gpsFix
-//             },
-
-//             deviceStatus: {
-//                 ignition: liveData.ignition,
-//                 batteryVoltage: liveData.batteryVoltage,
-//                 mainsVoltage: liveData.mainsVoltage,
-//                 gsmSignal: liveData.gsmSignal,
-//                 satellites: liveData.satellites
-//             },
-
-//             alerts: {
-//                 sosStatus: liveData.sosStatus,
-//                 tamperAlert: liveData.tamperAlert
-//             },
-
-//             timestamp: {
-//                 date: liveData.date,
-//                 time: liveData.time,
-//                 lastUpdate: liveData.lastUpdate,
-//                 dataAgeSeconds: Math.floor(dataAge / 1000)
-//             },
-
-//             connectionInfo: liveData.connectionInfo || null,
-//             device: device.devicesOwened[0],
-//             rawData: liveData,   // ✅ full packet
-//         });
-
-//     } catch (error) {
-//         console.error("❌ Controller Error (Single Device):", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Server error while fetching live tracking data"
-//         });
-//     }
-// };
-// ================================
-// GLOBAL — Store previous latitude & longitude
-// ================================
-// let lastLocation = {};   // { imei: { lat, lng } }
-
-// exports.liveTrackingSingleDevice = async (req, res) => {
-//     try {
-//         const userId = req.user?.userId;
-
-//         if (!userId) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "User authentication required"
-//             });
-//         }
-
-//         const { deviceNo } = req.body;
-
-//         if (!deviceNo) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Device number is required"
-//             });
-//         }
-
-//         // Fetch device
-//         const device = await CoustmerDevice.findOne(
-//             { "devicesOwened.deviceNo": deviceNo },
-//             { "devicesOwened.$": 1 }
-//         );
-
-//         if (!device) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Device not found"
-//             });
-//         }
-
-//         const matchedDevice = device.devicesOwened[0];
-//         const imei = matchedDevice.deviceNo;
-
-//         // Live GPS data from memory
-//         const liveData = devices[imei];
-
-//         if (!liveData) {
-//             return res.status(200).json({
-//                 success: false,
-//                 message: "Device offline",
-//                 lastSeen: null
-//             });
-//         }
-
-//         // Calculate data age
-//         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
-//         const isRecent = dataAge < 5 * 60 * 1000;
-
-//         // Format GPS
-//         let formattedLat = liveData.lat;
-//         let formattedLng = liveData.lng;
-
-//         if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
-//         if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
-
-//         // ==========================================
-//         // 🌟 PREVIOUS & CURRENT LAT/LNG LOGIC
-//         // ==========================================
-
-//         let previousLat = null;
-//         let previousLng = null;
-
-//         // If already stored → load previous values
-//         if (lastLocation[imei]) {
-//             previousLat = lastLocation[imei].lat;
-//             previousLng = lastLocation[imei].lng;
-//         }
-
-//         // Current coordinates
-//         const currentLat = formattedLat;
-//         const currentLng = formattedLng;
-
-//         // Save current values for next request
-//         lastLocation[imei] = {
-//             lat: currentLat,
-//             lng: currentLng
-//         };
-
-//         // ==========================================
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Live tracking data retrieved successfully",
-
-//             // Previous and current location for smooth animation
-//             previousLocation: {
-//                 latitude: previousLat,
-//                 longitude: previousLng
-//             },
-
-//             currentLocation: {
-//                 latitude: currentLat,
-//                 longitude: currentLng
-//             },
-
-//             deviceInfo: {
-//                 deviceNo,
-//                 imei,
-//                 vehicleName: matchedDevice.vehicleName || "Unknown",
-//                 status: isRecent ? "online" : "stale"
-//             },
-
-//             location: {
-//                 latitude: currentLat,
-//                 longitude: currentLng,
-//                 speed: liveData.speed || 0,
-//                 heading: liveData.heading || 0,
-//                 altitude: liveData.altitude || 0,
-//                 gpsFix: liveData.gpsFix
-//             },
-
-//             deviceStatus: {
-//                 ignition: liveData.ignition,
-//                 batteryVoltage: liveData.batteryVoltage,
-//                 mainsVoltage: liveData.mainsVoltage,
-//                 gsmSignal: liveData.gsmSignal,
-//                 satellites: liveData.satellites
-//             },
-
-//             alerts: {
-//                 sosStatus: liveData.sosStatus,
-//                 tamperAlert: liveData.tamperAlert
-//             },
-
-//             timestamp: {
-//                 date: liveData.date,
-//                 time: liveData.time,
-//                 lastUpdate: liveData.lastUpdate,
-//                 dataAgeSeconds: Math.floor(dataAge / 1000)
-//             },
-
-//             rawData: liveData
-//         });
-
-//     } catch (error) {
-//         console.error("❌ Controller Error:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Server error while fetching live tracking data"
-//         });
-//     }
-// };
-
+// for Live Data Tracking on map devic
 
 // let lastLocation = {};   // { imei: { previous, current, speed, heading } }
 // let lastTimestamp = {};  // { imei: lastUpdate }
@@ -4355,11 +4066,181 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 //     }
 // };
 
-let lastLocation = {};   // { imei: { previous, current, speed, heading } }
+
+
+// let lastLocation = {};   // { imei: { previous, current, speed, heading } }
+// let lastTimestamp = {};
+// let vehicleState = {};
+
+// function generateSmoothPath(prev, curr, steps = 16) {
+//     if (!prev || !curr) return [];
+
+//     let path = [];
+//     let latStep = (curr.latitude - prev.latitude) / steps;
+//     let lngStep = (curr.longitude - prev.longitude) / steps;
+
+//     for (let i = 1; i <= steps; i++) {
+//         path.push({
+//             latitude: prev.latitude + latStep * i,
+//             longitude: prev.longitude + lngStep * i
+//         });
+//     }
+
+//     return path;
+// }
+
+// exports.liveTrackingSingleDevice = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+//         if (!userId) {
+//             return res.status(400).json({ success: false, message: "User authentication required" });
+//         }
+
+//         const { deviceNo } = req.body;
+//         if (!deviceNo) {
+//             return res.status(400).json({ success: false, message: "Device number is required" });
+//         }
+
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({ success: false, message: "Device not found" });
+//         }
+
+//         const matchedDevice = device.devicesOwened[0];
+//         const imei = matchedDevice.deviceNo;
+//         let liveData = devices[imei];
+
+//         // ============== DEVICE OFFLINE BUT WE HAVE LAST LOCATION ==============
+//         if (!liveData) {
+//             if (!lastLocation[imei]) {
+//                 return res.status(200).json({
+//                     success: false,
+//                     message: "Device offline and no last known location"
+//                 });
+//             }
+
+//             const last = lastLocation[imei];
+
+//             const smoothPath = generateSmoothPath(last.previous, last.current);
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "Device offline, returning last known smooth movement",
+//                 previousLocation: last.previous,
+//                 currentLocation: last.current,
+//                 smoothPath, // NEW FOR SMOOTH MOVEMENT
+//                 deviceInfo: {
+//                     deviceNo, imei, vehicleName: matchedDevice.vehicleName || "Unknown",
+//                     status: "offline"
+//                 },
+//                 location: {
+//                     latitude: last.current.latitude,
+//                     longitude: last.current.longitude,
+//                     speed: last.speed,
+//                     heading: last.heading
+//                 },
+//                 stopInfo: vehicleState[imei] || null,
+//                 rawData: null
+//             });
+//         }
+
+//         // ======================== FORMAT LIVE DATA ==========================
+//         let lat = liveData.lat;
+//         let lng = liveData.lng;
+
+//         if (liveData.latDir === "S") lat = -lat;
+//         if (liveData.lngDir === "W") lng = -lng;
+
+//         const currentLocation = { latitude: lat, longitude: lng };
+//         const previousLocation = lastLocation[imei]?.current || currentLocation;
+
+//         // ======================== CREATE SMOOTH PATH ========================
+//         const smoothPath = generateSmoothPath(previousLocation, currentLocation);
+
+//         // save data
+//         lastLocation[imei] = {
+//             previous: previousLocation,
+//             current: currentLocation,
+//             speed: liveData.speed || 0,
+//             heading: liveData.heading || 0
+//         };
+//         lastTimestamp[imei] = liveData.lastUpdate;
+
+//         // ========================= STOP / MOVEMENT LOGIC =========================
+//         if (!vehicleState[imei]) {
+//             vehicleState[imei] = { isStopped: false, stopStartTime: null, totalStoppedSeconds: 0 };
+//         }
+
+//         let speed = liveData.speed || 0;
+
+//         if (speed === 0 && !vehicleState[imei].isStopped) {
+//             vehicleState[imei].isStopped = true;
+//             vehicleState[imei].stopStartTime = Date.now();
+//         }
+
+//         if (speed > 0 && vehicleState[imei].isStopped) {
+//             vehicleState[imei].isStopped = false;
+//             let stoppedFor = Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000);
+//             vehicleState[imei].totalStoppedSeconds += stoppedFor;
+//             vehicleState[imei].stopStartTime = null;
+//         }
+
+//         // ======================== FINAL RESPONSE ========================
+//         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live GPS data retrieved successfully",
+//             VehicleType: matchedDevice.VehicleType || "Unknown",
+//             previousLocation,
+//             currentLocation,
+//             smoothPath, // IMPORTANT
+//             deviceInfo: {
+//                 deviceNo, imei,
+//                 vehicleName: matchedDevice.vehicleName || "Unknown",
+//                 status: dataAge < 60000 ? "online" : "stale"
+//             },
+//             location: {
+//                 latitude: lat, longitude: lng,
+//                 speed: speed, heading: liveData.heading
+//             },
+//             stopInfo: {
+//                 ...vehicleState[imei],
+//                 currentStopSeconds: vehicleState[imei].isStopped
+//                     ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+//                     : 0
+//             },
+//             timestamp: {
+//                 lastUpdate: liveData.lastUpdate,
+//                 dataAgeSeconds: Math.floor(dataAge / 1000)
+//             },
+//             rawData: liveData
+//         });
+
+//     } catch (error) {
+//         console.error("❌ Controller Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while fetching live GPS data"
+//         });
+//     }
+// };
+
+
+// const haversine = require("haversine-distance");
+
+let lastLocation = {};
 let lastTimestamp = {};
 let vehicleState = {};
 
-function generateSmoothPath(prev, curr, steps = 16) {
+const DEVICE_INTERVAL_MS = 5000; // device sends every 5 sec
+const animationSteps = 5; // break into 1 sec smooth steps
+
+function generateSmoothPath(prev, curr, steps = animationSteps) {
     if (!prev || !curr) return [];
 
     let path = [];
@@ -4369,7 +4250,8 @@ function generateSmoothPath(prev, curr, steps = 16) {
     for (let i = 1; i <= steps; i++) {
         path.push({
             latitude: prev.latitude + latStep * i,
-            longitude: prev.longitude + lngStep * i
+            longitude: prev.longitude + lngStep * i,
+            delay: DEVICE_INTERVAL_MS / steps  // frontend can delay 1000ms each
         });
     }
 
@@ -4399,9 +4281,10 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
         const matchedDevice = device.devicesOwened[0];
         const imei = matchedDevice.deviceNo;
+
         let liveData = devices[imei];
 
-        // ============== DEVICE OFFLINE BUT WE HAVE LAST LOCATION ==============
+        // ================= OFFLINE HANDLING ==================
         if (!liveData) {
             if (!lastLocation[imei]) {
                 return res.status(200).json({
@@ -4416,26 +4299,18 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Device offline, returning last known smooth movement",
+                message: "Device offline last known movement",
                 previousLocation: last.previous,
                 currentLocation: last.current,
-                smoothPath, // NEW FOR SMOOTH MOVEMENT
+                smoothPath,
                 deviceInfo: {
                     deviceNo, imei, vehicleName: matchedDevice.vehicleName || "Unknown",
                     status: "offline"
-                },
-                location: {
-                    latitude: last.current.latitude,
-                    longitude: last.current.longitude,
-                    speed: last.speed,
-                    heading: last.heading
-                },
-                stopInfo: vehicleState[imei] || null,
-                rawData: null
+                }
             });
         }
 
-        // ======================== FORMAT LIVE DATA ==========================
+        // ================= CONVERT LAT LNG ======================
         let lat = liveData.lat;
         let lng = liveData.lng;
 
@@ -4445,10 +4320,10 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         const currentLocation = { latitude: lat, longitude: lng };
         const previousLocation = lastLocation[imei]?.current || currentLocation;
 
-        // ======================== CREATE SMOOTH PATH ========================
-        const smoothPath = generateSmoothPath(previousLocation, currentLocation);
+        // ================= GENERATE 5 SECOND SMOOTH PATH =================
+        const smoothPath = generateSmoothPath(previousLocation, currentLocation, animationSteps);
 
-        // save data
+        // save last
         lastLocation[imei] = {
             previous: previousLocation,
             current: currentLocation,
@@ -4457,7 +4332,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         };
         lastTimestamp[imei] = liveData.lastUpdate;
 
-        // ========================= STOP / MOVEMENT LOGIC =========================
+        // ================= STOP LOGIC ======================
         if (!vehicleState[imei]) {
             vehicleState[imei] = { isStopped: false, stopStartTime: null, totalStoppedSeconds: 0 };
         }
@@ -4476,35 +4351,31 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             vehicleState[imei].stopStartTime = null;
         }
 
-        // ======================== FINAL RESPONSE ========================
         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
 
         return res.status(200).json({
             success: true,
-            message: "Live GPS data retrieved successfully",
-            VehicleType: matchedDevice.VehicleType || "Unknown",
+            message: "Live GPS data retrieved",
+            smoothPath,                    // smooth animation path
+            interval: DEVICE_INTERVAL_MS,  // 5000ms
+            animationSteps,                // 5 steps
             previousLocation,
             currentLocation,
-            smoothPath, // IMPORTANT
             deviceInfo: {
                 deviceNo, imei,
                 vehicleName: matchedDevice.vehicleName || "Unknown",
-                status: dataAge < 60000 ? "online" : "stale"
+                status: dataAge < 15000 ? "online" : "stale"
             },
             location: {
-                latitude: lat, longitude: lng,
-                speed: speed, heading: liveData.heading
+                latitude: lat,
+                longitude: lng,
+                speed: speed,
+                heading: liveData.heading
             },
             stopInfo: {
-                ...vehicleState[imei],
-                currentStopSeconds: vehicleState[imei].isStopped
-                    ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-                    : 0
+                ...vehicleState[imei]
             },
-            timestamp: {
-                lastUpdate: liveData.lastUpdate,
-                dataAgeSeconds: Math.floor(dataAge / 1000)
-            },
+            timestamp: liveData.lastUpdate,
             rawData: liveData
         });
 
@@ -4516,6 +4387,9 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         });
     }
 };
+
+
+
 
 
 
@@ -6953,6 +6827,30 @@ exports.fetchdelerSubscriptionPlans = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server Error in fetchdelerSubscriptionPlans"
+        })
+    }
+}
+
+
+
+exports.reportsApi = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId",
+            })
+        }
+
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in reportsApi"
         })
     }
 }
