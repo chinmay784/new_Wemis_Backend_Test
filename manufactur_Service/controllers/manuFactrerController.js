@@ -4068,179 +4068,11 @@ exports.fetchdelerOnBasisOfDistributor = async (req, res) => {
 
 
 
-// let lastLocation = {};   // { imei: { previous, current, speed, heading } }
-// let lastTimestamp = {};
-// let vehicleState = {};
-
-// function generateSmoothPath(prev, curr, steps = 16) {
-//     if (!prev || !curr) return [];
-
-//     let path = [];
-//     let latStep = (curr.latitude - prev.latitude) / steps;
-//     let lngStep = (curr.longitude - prev.longitude) / steps;
-
-//     for (let i = 1; i <= steps; i++) {
-//         path.push({
-//             latitude: prev.latitude + latStep * i,
-//             longitude: prev.longitude + lngStep * i
-//         });
-//     }
-
-//     return path;
-// }
-
-// exports.liveTrackingSingleDevice = async (req, res) => {
-//     try {
-//         const userId = req.user?.userId;
-//         if (!userId) {
-//             return res.status(400).json({ success: false, message: "User authentication required" });
-//         }
-
-//         const { deviceNo } = req.body;
-//         if (!deviceNo) {
-//             return res.status(400).json({ success: false, message: "Device number is required" });
-//         }
-
-//         const device = await CoustmerDevice.findOne(
-//             { "devicesOwened.deviceNo": deviceNo },
-//             { "devicesOwened.$": 1 }
-//         );
-
-//         if (!device) {
-//             return res.status(404).json({ success: false, message: "Device not found" });
-//         }
-
-//         const matchedDevice = device.devicesOwened[0];
-//         const imei = matchedDevice.deviceNo;
-//         let liveData = devices[imei];
-
-//         // ============== DEVICE OFFLINE BUT WE HAVE LAST LOCATION ==============
-//         if (!liveData) {
-//             if (!lastLocation[imei]) {
-//                 return res.status(200).json({
-//                     success: false,
-//                     message: "Device offline and no last known location"
-//                 });
-//             }
-
-//             const last = lastLocation[imei];
-
-//             const smoothPath = generateSmoothPath(last.previous, last.current);
-
-//             return res.status(200).json({
-//                 success: true,
-//                 message: "Device offline, returning last known smooth movement",
-//                 previousLocation: last.previous,
-//                 currentLocation: last.current,
-//                 smoothPath, // NEW FOR SMOOTH MOVEMENT
-//                 deviceInfo: {
-//                     deviceNo, imei, vehicleName: matchedDevice.vehicleName || "Unknown",
-//                     status: "offline"
-//                 },
-//                 location: {
-//                     latitude: last.current.latitude,
-//                     longitude: last.current.longitude,
-//                     speed: last.speed,
-//                     heading: last.heading
-//                 },
-//                 stopInfo: vehicleState[imei] || null,
-//                 rawData: null
-//             });
-//         }
-
-//         // ======================== FORMAT LIVE DATA ==========================
-//         let lat = liveData.lat;
-//         let lng = liveData.lng;
-
-//         if (liveData.latDir === "S") lat = -lat;
-//         if (liveData.lngDir === "W") lng = -lng;
-
-//         const currentLocation = { latitude: lat, longitude: lng };
-//         const previousLocation = lastLocation[imei]?.current || currentLocation;
-
-//         // ======================== CREATE SMOOTH PATH ========================
-//         const smoothPath = generateSmoothPath(previousLocation, currentLocation);
-
-//         // save data
-//         lastLocation[imei] = {
-//             previous: previousLocation,
-//             current: currentLocation,
-//             speed: liveData.speed || 0,
-//             heading: liveData.heading || 0
-//         };
-//         lastTimestamp[imei] = liveData.lastUpdate;
-
-//         // ========================= STOP / MOVEMENT LOGIC =========================
-//         if (!vehicleState[imei]) {
-//             vehicleState[imei] = { isStopped: false, stopStartTime: null, totalStoppedSeconds: 0 };
-//         }
-
-//         let speed = liveData.speed || 0;
-
-//         if (speed === 0 && !vehicleState[imei].isStopped) {
-//             vehicleState[imei].isStopped = true;
-//             vehicleState[imei].stopStartTime = Date.now();
-//         }
-
-//         if (speed > 0 && vehicleState[imei].isStopped) {
-//             vehicleState[imei].isStopped = false;
-//             let stoppedFor = Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000);
-//             vehicleState[imei].totalStoppedSeconds += stoppedFor;
-//             vehicleState[imei].stopStartTime = null;
-//         }
-
-//         // ======================== FINAL RESPONSE ========================
-//         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Live GPS data retrieved successfully",
-//             VehicleType: matchedDevice.VehicleType || "Unknown",
-//             previousLocation,
-//             currentLocation,
-//             smoothPath, // IMPORTANT
-//             deviceInfo: {
-//                 deviceNo, imei,
-//                 vehicleName: matchedDevice.vehicleName || "Unknown",
-//                 status: dataAge < 60000 ? "online" : "stale"
-//             },
-//             location: {
-//                 latitude: lat, longitude: lng,
-//                 speed: speed, heading: liveData.heading
-//             },
-//             stopInfo: {
-//                 ...vehicleState[imei],
-//                 currentStopSeconds: vehicleState[imei].isStopped
-//                     ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-//                     : 0
-//             },
-//             timestamp: {
-//                 lastUpdate: liveData.lastUpdate,
-//                 dataAgeSeconds: Math.floor(dataAge / 1000)
-//             },
-//             rawData: liveData
-//         });
-
-//     } catch (error) {
-//         console.error("❌ Controller Error:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Server error while fetching live GPS data"
-//         });
-//     }
-// };
-
-
-// const haversine = require("haversine-distance");
-
-let lastLocation = {};
+let lastLocation = {};   // { imei: { previous, current, speed, heading } }
 let lastTimestamp = {};
 let vehicleState = {};
 
-const DEVICE_INTERVAL_MS = 5000; // device sends every 5 sec
-const animationSteps = 5; // break into 1 sec smooth steps
-
-function generateSmoothPath(prev, curr, steps = animationSteps) {
+function generateSmoothPath(prev, curr, steps = 16) {
     if (!prev || !curr) return [];
 
     let path = [];
@@ -4250,8 +4082,7 @@ function generateSmoothPath(prev, curr, steps = animationSteps) {
     for (let i = 1; i <= steps; i++) {
         path.push({
             latitude: prev.latitude + latStep * i,
-            longitude: prev.longitude + lngStep * i,
-            delay: DEVICE_INTERVAL_MS / steps  // frontend can delay 1000ms each
+            longitude: prev.longitude + lngStep * i
         });
     }
 
@@ -4281,10 +4112,9 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
         const matchedDevice = device.devicesOwened[0];
         const imei = matchedDevice.deviceNo;
-
         let liveData = devices[imei];
 
-        // ================= OFFLINE HANDLING ==================
+        // ============== DEVICE OFFLINE BUT WE HAVE LAST LOCATION ==============
         if (!liveData) {
             if (!lastLocation[imei]) {
                 return res.status(200).json({
@@ -4299,18 +4129,26 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Device offline last known movement",
+                message: "Device offline, returning last known smooth movement",
                 previousLocation: last.previous,
                 currentLocation: last.current,
-                smoothPath,
+                smoothPath, // NEW FOR SMOOTH MOVEMENT
                 deviceInfo: {
                     deviceNo, imei, vehicleName: matchedDevice.vehicleName || "Unknown",
                     status: "offline"
-                }
+                },
+                location: {
+                    latitude: last.current.latitude,
+                    longitude: last.current.longitude,
+                    speed: last.speed,
+                    heading: last.heading
+                },
+                stopInfo: vehicleState[imei] || null,
+                rawData: null
             });
         }
 
-        // ================= CONVERT LAT LNG ======================
+        // ======================== FORMAT LIVE DATA ==========================
         let lat = liveData.lat;
         let lng = liveData.lng;
 
@@ -4320,10 +4158,10 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         const currentLocation = { latitude: lat, longitude: lng };
         const previousLocation = lastLocation[imei]?.current || currentLocation;
 
-        // ================= GENERATE 5 SECOND SMOOTH PATH =================
-        const smoothPath = generateSmoothPath(previousLocation, currentLocation, animationSteps);
+        // ======================== CREATE SMOOTH PATH ========================
+        const smoothPath = generateSmoothPath(previousLocation, currentLocation);
 
-        // save last
+        // save data
         lastLocation[imei] = {
             previous: previousLocation,
             current: currentLocation,
@@ -4332,7 +4170,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         };
         lastTimestamp[imei] = liveData.lastUpdate;
 
-        // ================= STOP LOGIC ======================
+        // ========================= STOP / MOVEMENT LOGIC =========================
         if (!vehicleState[imei]) {
             vehicleState[imei] = { isStopped: false, stopStartTime: null, totalStoppedSeconds: 0 };
         }
@@ -4351,32 +4189,35 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             vehicleState[imei].stopStartTime = null;
         }
 
+        // ======================== FINAL RESPONSE ========================
         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
 
         return res.status(200).json({
             success: true,
-            message: "Live GPS data retrieved",
+            message: "Live GPS data retrieved successfully",
             VehicleType: matchedDevice.VehicleType || "Unknown",
-            smoothPath,                    // smooth animation path
-            interval: DEVICE_INTERVAL_MS,  // 5000ms
-            animationSteps,                // 5 steps
             previousLocation,
             currentLocation,
+            smoothPath, // IMPORTANT
             deviceInfo: {
                 deviceNo, imei,
                 vehicleName: matchedDevice.vehicleName || "Unknown",
-                status: dataAge < 15000 ? "online" : "stale"
+                status: dataAge < 60000 ? "online" : "stale"
             },
             location: {
-                latitude: lat,
-                longitude: lng,
-                speed: speed,
-                heading: liveData.heading
+                latitude: lat, longitude: lng,
+                speed: speed, heading: liveData.heading
             },
             stopInfo: {
-                ...vehicleState[imei]
+                ...vehicleState[imei],
+                currentStopSeconds: vehicleState[imei].isStopped
+                    ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+                    : 0
             },
-            timestamp: liveData.lastUpdate,
+            timestamp: {
+                lastUpdate: liveData.lastUpdate,
+                dataAgeSeconds: Math.floor(dataAge / 1000)
+            },
             rawData: liveData
         });
 
@@ -4388,6 +4229,165 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         });
     }
 };
+
+
+// const haversine = require("haversine-distance");
+
+// let lastLocation = {};
+// let lastTimestamp = {};
+// let vehicleState = {};
+
+// const DEVICE_INTERVAL_MS = 5000; // device sends every 5 sec
+// const animationSteps = 5; // break into 1 sec smooth steps
+
+// function generateSmoothPath(prev, curr, steps = animationSteps) {
+//     if (!prev || !curr) return [];
+
+//     let path = [];
+//     let latStep = (curr.latitude - prev.latitude) / steps;
+//     let lngStep = (curr.longitude - prev.longitude) / steps;
+
+//     for (let i = 1; i <= steps; i++) {
+//         path.push({
+//             latitude: prev.latitude + latStep * i,
+//             longitude: prev.longitude + lngStep * i,
+//             delay: DEVICE_INTERVAL_MS / steps  // frontend can delay 1000ms each
+//         });
+//     }
+
+//     return path;
+// }
+
+// exports.liveTrackingSingleDevice = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+//         if (!userId) {
+//             return res.status(400).json({ success: false, message: "User authentication required" });
+//         }
+
+//         const { deviceNo } = req.body;
+//         if (!deviceNo) {
+//             return res.status(400).json({ success: false, message: "Device number is required" });
+//         }
+
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({ success: false, message: "Device not found" });
+//         }
+
+//         const matchedDevice = device.devicesOwened[0];
+//         const imei = matchedDevice.deviceNo;
+
+//         let liveData = devices[imei];
+
+//         // ================= OFFLINE HANDLING ==================
+//         if (!liveData) {
+//             if (!lastLocation[imei]) {
+//                 return res.status(200).json({
+//                     success: false,
+//                     message: "Device offline and no last known location"
+//                 });
+//             }
+
+//             const last = lastLocation[imei];
+
+//             const smoothPath = generateSmoothPath(last.previous, last.current);
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "Device offline last known movement",
+//                 previousLocation: last.previous,
+//                 currentLocation: last.current,
+//                 smoothPath,
+//                 deviceInfo: {
+//                     deviceNo, imei, vehicleName: matchedDevice.vehicleName || "Unknown",
+//                     status: "offline"
+//                 }
+//             });
+//         }
+
+//         // ================= CONVERT LAT LNG ======================
+//         let lat = liveData.lat;
+//         let lng = liveData.lng;
+
+//         if (liveData.latDir === "S") lat = -lat;
+//         if (liveData.lngDir === "W") lng = -lng;
+
+//         const currentLocation = { latitude: lat, longitude: lng };
+//         const previousLocation = lastLocation[imei]?.current || currentLocation;
+
+//         // ================= GENERATE 5 SECOND SMOOTH PATH =================
+//         const smoothPath = generateSmoothPath(previousLocation, currentLocation, animationSteps);
+
+//         // save last
+//         lastLocation[imei] = {
+//             previous: previousLocation,
+//             current: currentLocation,
+//             speed: liveData.speed || 0,
+//             heading: liveData.heading || 0
+//         };
+//         lastTimestamp[imei] = liveData.lastUpdate;
+
+//         // ================= STOP LOGIC ======================
+//         if (!vehicleState[imei]) {
+//             vehicleState[imei] = { isStopped: false, stopStartTime: null, totalStoppedSeconds: 0 };
+//         }
+
+//         let speed = liveData.speed || 0;
+
+//         if (speed === 0 && !vehicleState[imei].isStopped) {
+//             vehicleState[imei].isStopped = true;
+//             vehicleState[imei].stopStartTime = Date.now();
+//         }
+
+//         if (speed > 0 && vehicleState[imei].isStopped) {
+//             vehicleState[imei].isStopped = false;
+//             let stoppedFor = Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000);
+//             vehicleState[imei].totalStoppedSeconds += stoppedFor;
+//             vehicleState[imei].stopStartTime = null;
+//         }
+
+//         const dataAge = Date.now() - new Date(liveData.lastUpdate).getTime();
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live GPS data retrieved",
+//             VehicleType: matchedDevice.VehicleType || "Unknown",
+//             smoothPath,                    // smooth animation path
+//             interval: DEVICE_INTERVAL_MS,  // 5000ms
+//             animationSteps,                // 5 steps
+//             previousLocation,
+//             currentLocation,
+//             deviceInfo: {
+//                 deviceNo, imei,
+//                 vehicleName: matchedDevice.vehicleName || "Unknown",
+//                 status: dataAge < 15000 ? "online" : "stale"
+//             },
+//             location: {
+//                 latitude: lat,
+//                 longitude: lng,
+//                 speed: speed,
+//                 heading: liveData.heading
+//             },
+//             stopInfo: {
+//                 ...vehicleState[imei]
+//             },
+//             timestamp: liveData.lastUpdate,
+//             rawData: liveData
+//         });
+
+//     } catch (error) {
+//         console.error("❌ Controller Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while fetching live GPS data"
+//         });
+//     }
+// };
 
 
 
