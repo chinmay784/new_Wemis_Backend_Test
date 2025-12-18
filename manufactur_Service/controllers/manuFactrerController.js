@@ -4356,6 +4356,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Live GPS data retrieved",
+            VehicleType: matchedDevice.VehicleType || "Unknown",
             smoothPath,                    // smooth animation path
             interval: DEVICE_INTERVAL_MS,  // 5000ms
             animationSteps,                // 5 steps
