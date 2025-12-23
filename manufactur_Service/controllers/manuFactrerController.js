@@ -4878,6 +4878,157 @@ function calculateHeading(from, to) {
 
 
 
+// const RoutePlayback = require("../models/RouteHistory");
+
+// exports.fetchSingleRoutePlayback = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+//         if (!userId) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: "Unauthorized"
+//             });
+//         }
+
+//         const { deviceNo, startTime, endTime } = req.body;
+
+//         if (!deviceNo || !startTime || !endTime) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "deviceNo, startTime and endTime are required"
+//             });
+//         }
+
+//         // 🔍 Validate device
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Device not found"
+//             });
+//         }
+
+//         const imei = device.devicesOwened[0].deviceNo;
+
+//         const start = new Date(startTime);
+//         const end = new Date(endTime);
+
+//         // ======================================
+//         // MAIN DATA between start & end
+//         // ======================================
+//         const mainPoints = await RoutePlayback.find({
+//             imei,
+//             timestamp: { $gte: start, $lte: end }
+//         })
+//         .sort({ timestamp: 1 })
+//         .select("latitude longitude speed raw.headDegree timestamp");
+
+//         // ======================================
+//         // BEFORE startTime (nearest previous point)
+//         // ======================================
+//         const beforePoint = await RoutePlayback.findOne({
+//             imei,
+//             timestamp: { $lt: start }
+//         })
+//         .sort({ timestamp: -1 })
+//         .select("latitude longitude speed raw.headDegree timestamp");
+
+//         // ======================================
+//         // AFTER endTime (nearest next point)
+//         // ======================================
+//         const afterPoint = await RoutePlayback.findOne({
+//             imei,
+//             timestamp: { $gt: end }
+//         })
+//         .sort({ timestamp: 1 })
+//         .select("latitude longitude speed raw.headDegree timestamp");
+
+//         // If no main data, return empty
+//         if (!mainPoints.length && !beforePoint && !afterPoint) {
+//             return res.status(200).json({
+//                 success: true,
+//                 totalPoints: 0,
+//                 route: []
+//             });
+//         }
+
+//         // ======================================
+//         // COMBINE RESULT
+//         // ======================================
+
+//         let finalPoints = [];
+
+//         if (beforePoint) finalPoints.push(beforePoint);
+
+//         finalPoints = finalPoints.concat(mainPoints);
+
+//         if (afterPoint) finalPoints.push(afterPoint);
+
+//         // ======================================
+//         // HEADING PROCESSING
+//         // ======================================
+//         let lastHeading = 0;
+
+//         const route = finalPoints.map((p, index) => {
+//             let heading = lastHeading;
+
+//             if (p.raw?.headDegree) {
+//                 heading = parseFloat(p.raw.headDegree);
+//                 lastHeading = heading;
+//             }
+//             else if (index > 0) {
+//                 heading = calculateHeading(finalPoints[index - 1], p);
+//                 lastHeading = heading;
+//             }
+
+//             return {
+//                 latitude: p.latitude,
+//                 longitude: p.longitude,
+//                 speed: p.speed,
+//                 heading,
+//                 timestamp: p.timestamp
+//             };
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             deviceNo,
+//             totalPoints: route.length,
+//             route
+//         });
+
+//     } catch (error) {
+//         console.error("❌ Route Playback Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to fetch route playback"
+//         });
+//     }
+// };
+
+
+// // ===============================
+// // 🧭 HEADING CALCULATION
+// // ===============================
+// function calculateHeading(from, to) {
+//     const lat1 = from.latitude * Math.PI / 180;
+//     const lat2 = to.latitude * Math.PI / 180;
+//     const dLng = (to.longitude - from.longitude) * Math.PI / 180;
+
+//     const y = Math.sin(dLng) * Math.cos(lat2);
+//     const x =
+//         Math.cos(lat1) * Math.sin(lat2) -
+//         Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+
+//     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+// }
+
+
+
 
 
 // -----------------------------------------------//
@@ -6835,25 +6986,148 @@ exports.fetchdelerSubscriptionPlans = async (req, res) => {
 }
 
 
+const haversine = require("haversine-distance");
 
-exports.reportsApi = async (req, res) => {
+exports.fetchVehicleDistanceReport = async (req, res) => {
     try {
-        const userId = req.user.userId;
-
+        const userId = req.user?.userId;
         if (!userId) {
-            return res.status(200).json({
+            return res.status(401).json({
                 success: false,
-                message: "Please Provide UserId",
-            })
+                message: "Unauthorized"
+            });
         }
 
+        const { deviceNo, startTime, endTime } = req.body;
 
+        if (!deviceNo || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, startTime and endTime are required"
+            });
+        }
+
+        // 🔍 Validate Device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📍 Fetch Route Points
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: new Date(startTime),
+                $lte: new Date(endTime)
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude speed timestamp");
+
+        if (points.length < 2) {
+            return res.status(200).json({
+                success: true,
+                deviceNo,
+                message: "Not enough data",
+                totalDistanceKm: 0
+            });
+        }
+
+        // ================= CALCULATIONS =================
+        let totalDistanceMeters = 0;
+        let totalSpeed = 0;
+        let maxSpeed = 0;
+
+        let movingTimeSec = 0;
+        let idleTimeSec = 0;
+
+        for (let i = 1; i < points.length; i++) {
+            const prev = points[i - 1];
+            const curr = points[i];
+
+            const dist = haversine(
+                { latitude: prev.latitude, longitude: prev.longitude },
+                { latitude: curr.latitude, longitude: curr.longitude }
+            );
+
+            const timeDiff =
+                (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
+
+            // Ignore GPS noise
+            if (dist > 5) {
+                totalDistanceMeters += dist;
+                movingTimeSec += timeDiff;
+            } else {
+                idleTimeSec += timeDiff;
+            }
+
+            totalSpeed += curr.speed || 0;
+            maxSpeed = Math.max(maxSpeed, curr.speed || 0);
+        }
+
+        const totalTimeSec =
+            (new Date(endTime) - new Date(startTime)) / 1000;
+
+        const avgSpeed =
+            points.length > 0 ? (totalSpeed / points.length).toFixed(2) : 0;
+
+        const totalDistanceKm = (totalDistanceMeters / 1000).toFixed(2);
+
+        // 📍 Start & End Locations
+        const startLocation = {
+            latitude: points[0].latitude,
+            longitude: points[0].longitude,
+            timestamp: points[0].timestamp
+        };
+
+        const endLocation = {
+            latitude: points[points.length - 1].latitude,
+            longitude: points[points.length - 1].longitude,
+            timestamp: points[points.length - 1].timestamp
+        };
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportPeriod: {
+                startTime,
+                endTime
+            },
+            distance: {
+                totalKm: totalDistanceKm,
+                totalMeters: Math.round(totalDistanceMeters)
+            },
+            time: {
+                totalTimeMinutes: Math.floor(totalTimeSec / 60),
+                movingTimeMinutes: Math.floor(movingTimeSec / 60),
+                idleTimeMinutes: Math.floor(idleTimeSec / 60)
+            },
+            speed: {
+                averageSpeed: avgSpeed,
+                maxSpeed
+            },
+            startLocation,
+            endLocation,
+            totalPoints: points.length,
+            route: points // use this for map polyline
+        });
 
     } catch (error) {
-        console.log(error, error.message);
+        console.error("❌ Distance Report Error:", error);
         return res.status(500).json({
             success: false,
-            message: "Server Error in reportsApi"
-        })
+            message: "Failed to fetch distance report"
+        });
     }
-}
+};
