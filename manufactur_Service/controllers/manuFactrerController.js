@@ -5116,6 +5116,7 @@ exports.fetchAllCoustmerVechileNo = async (req, res) => {
         return res.status(200).json({
             sucess: true,
             vechileNumbers: coustmer.devicesOwened.map(device => device.vechileNo),
+            imeiNos:coustmer.devicesOwened.map(device => device.deviceNo),
             message: "Fecthed All Vechile Numbers SucessFully"
         })
 
@@ -7051,6 +7052,288 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Failed to fetch distance report"
+        });
+    }
+};
+
+
+
+exports.fetchStoppageReport = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { deviceNo, date, startTime, endTime } = req.body;
+
+        if (!deviceNo || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, date, startTime and endTime are required"
+            });
+        }
+
+        // 🕒 Build full datetime
+        const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+        const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+
+        // 🔍 Validate Device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📍 Fetch route points
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: startDateTime,
+                $lte: endDateTime
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude speed timestamp");
+
+        if (points.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No data found",
+                stoppages: []
+            });
+        }
+
+        // ================= STOPPAGE LOGIC =================
+        const MIN_STOP_SECONDS = 300; // 5 min
+        let stoppages = [];
+
+        let stopStart = null;
+        let stopLocation = null;
+
+        for (let i = 0; i < points.length; i++) {
+            const curr = points[i];
+
+            if (curr.speed === 0) {
+                if (!stopStart) {
+                    stopStart = curr.timestamp;
+                    stopLocation = {
+                        latitude: curr.latitude,
+                        longitude: curr.longitude
+                    };
+                }
+            } else {
+                if (stopStart) {
+                    const stopEnd = curr.timestamp;
+                    const durationSec =
+                        (new Date(stopEnd) - new Date(stopStart)) / 1000;
+
+                    if (durationSec >= MIN_STOP_SECONDS) {
+                        stoppages.push({
+                            startTime: stopStart,
+                            endTime: stopEnd,
+                            duration: {
+                                seconds: durationSec,
+                                minutes: Math.floor(durationSec / 60)
+                            },
+                            location: stopLocation
+                        });
+                    }
+
+                    stopStart = null;
+                    stopLocation = null;
+                }
+            }
+        }
+
+        // 🔚 Handle last stoppage
+        if (stopStart) {
+            const stopEnd = points[points.length - 1].timestamp;
+            const durationSec =
+                (new Date(stopEnd) - new Date(stopStart)) / 1000;
+
+            if (durationSec >= MIN_STOP_SECONDS) {
+                stoppages.push({
+                    startTime: stopStart,
+                    endTime: stopEnd,
+                    duration: {
+                        seconds: durationSec,
+                        minutes: Math.floor(durationSec / 60)
+                    },
+                    location: stopLocation
+                });
+            }
+        }
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportDate: date,
+            reportPeriod: {
+                startTime: startDateTime,
+                endTime: endDateTime
+            },
+            totalStoppages: stoppages.length,
+            stoppages
+        });
+
+    } catch (error) {
+        console.error("❌ fetchStoppageReport Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching stoppage report"
+        });
+    }
+};
+
+
+
+exports.fetchIgnitionReport = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { deviceNo, date, startTime, endTime } = req.body;
+
+        if (!deviceNo || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, date, startTime and endTime are required"
+            });
+        }
+
+        // 🕒 Build datetime range
+        const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+        const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+
+        // 🔍 Validate device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📍 Fetch route history
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: startDateTime,
+                $lte: endDateTime
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude timestamp raw.ignition");
+
+        if (points.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No ignition data found",
+                ignitionSessions: []
+            });
+        }
+
+        // ================= IGNITION LOGIC =================
+        let ignitionSessions = [];
+        let ignitionOnTime = null;
+        let startLocation = null;
+
+        for (let i = 0; i < points.length; i++) {
+            const curr = points[i];
+            const ignition = curr.raw?.ignition;
+
+            // 🔑 Ignition ON
+            if (ignition === "1" && !ignitionOnTime) {
+                ignitionOnTime = curr.timestamp;
+                startLocation = {
+                    latitude: curr.latitude,
+                    longitude: curr.longitude
+                };
+            }
+
+            // 🔒 Ignition OFF
+            if (ignition === "0" && ignitionOnTime) {
+                const ignitionOffTime = curr.timestamp;
+                const durationSec =
+                    (new Date(ignitionOffTime) - new Date(ignitionOnTime)) / 1000;
+
+                ignitionSessions.push({
+                    ignitionOnTime,
+                    ignitionOffTime,
+                    duration: {
+                        seconds: durationSec,
+                        minutes: Math.floor(durationSec / 60)
+                    },
+                    startLocation
+                });
+
+                ignitionOnTime = null;
+                startLocation = null;
+            }
+        }
+
+        // 🔚 Handle ignition still ON
+        if (ignitionOnTime) {
+            const ignitionOffTime = endDateTime;
+            const durationSec =
+                (new Date(ignitionOffTime) - new Date(ignitionOnTime)) / 1000;
+
+            ignitionSessions.push({
+                ignitionOnTime,
+                ignitionOffTime,
+                duration: {
+                    seconds: durationSec,
+                    minutes: Math.floor(durationSec / 60)
+                },
+                startLocation,
+                status: "Still ON"
+            });
+        }
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportDate: date,
+            reportPeriod: {
+                startTime: startDateTime,
+                endTime: endDateTime
+            },
+            totalIgnitionCycles: ignitionSessions.length,
+            ignitionSessions
+        });
+
+    } catch (error) {
+        console.error("❌ fetchIgnitionReport Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching ignition report"
         });
     }
 };
