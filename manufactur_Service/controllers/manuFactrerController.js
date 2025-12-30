@@ -5116,7 +5116,7 @@ exports.fetchAllCoustmerVechileNo = async (req, res) => {
         return res.status(200).json({
             sucess: true,
             vechileNumbers: coustmer.devicesOwened.map(device => device.vechileNo),
-            imeiNos:coustmer.devicesOwened.map(device => device.deviceNo),
+            imeiNos: coustmer.devicesOwened.map(device => device.deviceNo),
             message: "Fecthed All Vechile Numbers SucessFully"
         })
 
@@ -7337,3 +7337,104 @@ exports.fetchIgnitionReport = async (req, res) => {
         });
     }
 };
+
+
+
+exports.fetchMovingTimeReport = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+
+            });
+        }
+
+        const { deviceNo, date, startTime, endTime } = req.body;
+
+        if (!deviceNo || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, date, startTime and endTime are required"
+            });
+        }
+
+
+        // 🕒 Build datetime range
+
+        const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+        const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+        // 🔍 Validate device
+
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+        // 📍 Fetch route history
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: startDateTime,
+                $lte: endDateTime
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude speed timestamp");
+        if (points.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No data found",
+                movingTime: 0
+            });
+        }
+        // ================= MOVING TIME LOGIC =================
+        let movingTimeSec = 0;
+        for (let i = 1; i < points.length; i++) {
+            const prev = points[i - 1];
+            const curr = points[i];
+            const dist = haversine(
+                { latitude: prev.latitude, longitude: prev.longitude },
+                { latitude: curr.latitude, longitude: curr.longitude }
+            );
+            const timeDiff = (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
+            // Ignore GPS noise
+            if (dist > 5) {
+                movingTimeSec += timeDiff;
+            }
+
+        }
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportDate: date,
+            reportPeriod: {
+                startTime: startDateTime,
+                endTime: endDateTime
+            },
+            movingTime: {
+                seconds: movingTimeSec,
+                minutes: Math.floor(movingTimeSec / 60)
+            }
+        });
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            sucess: false,
+            message: "Server Error in fetchMovingTimeReport"
+        })
+    }
+}
