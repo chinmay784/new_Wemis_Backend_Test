@@ -7438,3 +7438,437 @@ exports.fetchMovingTimeReport = async (req, res) => {
         })
     }
 }
+
+
+// exports.fetchIdleTimeReport = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: "Unauthorized"
+//             });
+//         }
+
+//         const { deviceNo, date, startTime, endTime } = req.body;
+
+//         if (!deviceNo || !date || !startTime || !endTime) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "deviceNo, date, startTime and endTime are required"
+//             });
+//         }
+
+//         // 🕒 Build datetime range
+//         const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+//         const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+
+//         // 🔍 Validate device
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Device not found"
+//             });
+//         }
+
+//         const imei = device.devicesOwened[0].deviceNo;
+
+//         // 📍 Fetch route history
+//         const points = await RoutePlayback.find({
+//             imei,
+//             timestamp: {
+//                 $gte: startDateTime,
+//                 $lte: endDateTime
+//             }
+//         })
+//             .sort({ timestamp: 1 })
+
+//             .select("latitude longitude speed timestamp");
+
+//         if (points.length === 0) {
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "No data found",
+//                 idleTime: 0
+//             });
+//         }
+//         // ================= IDLE TIME LOGIC =================
+//         let idleTimeSec = 0;
+//         for (let i = 1; i < points.length; i++) {
+//             const prev = points[i - 1];
+//             const curr = points[i];
+//             const dist = haversine(
+//                 { latitude: prev.latitude, longitude: prev.longitude },
+//                 { latitude: curr.latitude, longitude: curr.longitude }
+//             );
+//             const timeDiff = (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
+//             // Ignore GPS noise
+//             if (dist <= 5) {
+//                 idleTimeSec += timeDiff;
+//             }
+//         }
+
+//         // ================= RESPONSE =================
+//         return res.status(200).json({
+//             success: true,
+//             deviceNo,
+//             imei,
+//             reportDate: date,
+//             reportPeriod: {
+//                 startTime: startDateTime,
+//                 endTime: endDateTime
+//             },
+//             idleTime: {
+//                 seconds: idleTimeSec,
+//                 minutes: Math.floor(idleTimeSec / 60)
+//             }
+//         });
+
+//     } catch (error) {
+//         console.log(error, error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in fetchIdleTimeReport"
+//         })
+//     }
+// }
+
+
+
+exports.fetchIdleTimeReport = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { deviceNo, date, startTime, endTime } = req.body;
+
+        if (!deviceNo || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, date, startTime and endTime are required"
+            });
+        }
+
+        // 🕒 Build datetime range (IST)
+        const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+        const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+
+        // 🔍 Validate device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📍 Fetch route history
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: startDateTime,
+                $lte: endDateTime
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude timestamp");
+
+        if (!points || points.length < 2) {
+            return res.status(200).json({
+                success: true,
+                totalIdleTime: { seconds: 0, minutes: 0 },
+                idleSessions: []
+            });
+        }
+
+        // ================= IDLE SESSION LOGIC =================
+        const idleSessions = [];
+
+        let idleStartTime = null;
+        let idleStartLocation = null;
+
+        for (let i = 1; i < points.length; i++) {
+            const prev = points[i - 1];
+            const curr = points[i];
+
+            const distance = haversine(
+                { latitude: prev.latitude, longitude: prev.longitude },
+                { latitude: curr.latitude, longitude: curr.longitude }
+            );
+
+            // 📌 Device idle if moved ≤ 5 meters
+            if (distance <= 5) {
+                if (!idleStartTime) {
+                    idleStartTime = prev.timestamp;
+                    idleStartLocation = {
+                        latitude: prev.latitude,
+                        longitude: prev.longitude
+                    };
+                }
+            } else {
+                // 🚗 Movement detected → close idle
+                if (idleStartTime) {
+                    const idleEndTime = prev.timestamp;
+                    const durationSec =
+                        (new Date(idleEndTime) - new Date(idleStartTime)) / 1000;
+
+                    // Ignore very small idle (< 2 min)
+                    if (durationSec >= 120) {
+                        idleSessions.push({
+                            location: idleStartLocation,
+                            startTime: idleStartTime,
+                            endTime: idleEndTime,
+                            duration: {
+                                seconds: Math.round(durationSec),
+                                minutes: Math.round(durationSec / 60)
+                            }
+                        });
+                    }
+
+                    idleStartTime = null;
+                    idleStartLocation = null;
+                }
+            }
+        }
+
+        // 🕒 Handle idle till last point
+        if (idleStartTime) {
+            const lastPoint = points[points.length - 1];
+            const durationSec =
+                (new Date(lastPoint.timestamp) - new Date(idleStartTime)) / 1000;
+
+            if (durationSec >= 120) {
+                idleSessions.push({
+                    location: idleStartLocation,
+                    startTime: idleStartTime,
+                    endTime: lastPoint.timestamp,
+                    duration: {
+                        seconds: Math.round(durationSec),
+                        minutes: Math.round(durationSec / 60)
+                    }
+                });
+            }
+        }
+
+        // ================= TOTAL IDLE TIME =================
+        const totalIdleSeconds = idleSessions.reduce(
+            (sum, s) => sum + s.duration.seconds,
+            0
+        );
+
+        const totalIdleTime = {
+            seconds: totalIdleSeconds,
+            minutes: Math.round(totalIdleSeconds / 60)
+        };
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportDate: date,
+            reportPeriod: {
+                startTime: startDateTime,
+                endTime: endDateTime
+            },
+            totalIdleTime,
+            idleSessions
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchIdleTimeReport"
+        });
+    }
+};
+
+
+
+exports.fetchParkingTimeReport = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { deviceNo, date, startTime, endTime } = req.body;
+
+        if (!deviceNo || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, date, startTime and endTime are required"
+            });
+        }
+
+        // 🕒 Build datetime range (IST)
+        const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+        const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+
+        if (endDateTime <= startDateTime) {
+            return res.status(400).json({
+                success: false,
+                message: "endTime must be greater than startTime"
+            });
+        }
+
+        // 🔍 Validate device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📍 Fetch route history
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: startDateTime,
+                $lte: endDateTime
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude speed timestamp");
+
+        if (points.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No data found",
+                totalParkingTime: 0,
+                parkingLocations: []
+            });
+        }
+
+        // ================= PARKING LOGIC =================
+        let totalParkingSec = 0;
+        let parkingSessions = [];
+
+        let parkingStartTime = null;
+        let parkingStartPoint = null;
+
+        for (let i = 1; i < points.length; i++) {
+            const prev = points[i - 1];
+            const curr = points[i];
+
+            const dist = haversine(
+                { latitude: prev.latitude, longitude: prev.longitude },
+                { latitude: curr.latitude, longitude: curr.longitude }
+            );
+
+            const timeDiff =
+                (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
+
+            // 🚗 PARKING CONDITION
+            if (dist < 3 && curr.speed <= 1) {
+
+                if (!parkingStartTime) {
+                    parkingStartTime = prev.timestamp;
+                    parkingStartPoint = {
+                        latitude: prev.latitude,
+                        longitude: prev.longitude
+                    };
+                }
+
+                totalParkingSec += timeDiff;
+
+            } else {
+                // End of parking session
+                if (parkingStartTime) {
+                    const parkingEndTime = prev.timestamp;
+                    const durationSec =
+                        (new Date(parkingEndTime) - new Date(parkingStartTime)) / 1000;
+
+                    // ⛔ Ignore GPS noise (< 2 minutes)
+                    if (durationSec >= 120) {
+                        parkingSessions.push({
+                            location: parkingStartPoint,
+                            startTime: parkingStartTime,
+                            endTime: parkingEndTime,
+                            duration: {
+                                seconds: durationSec,
+                                minutes: Math.floor(durationSec / 60)
+                            }
+                        });
+                    }
+
+                    parkingStartTime = null;
+                    parkingStartPoint = null;
+                }
+            }
+        }
+
+        // Handle parking till last point
+        if (parkingStartTime) {
+            const lastPoint = points[points.length - 1];
+            const durationSec =
+                (new Date(lastPoint.timestamp) - new Date(parkingStartTime)) / 1000;
+
+            if (durationSec >= 120) {
+                parkingSessions.push({
+                    location: parkingStartPoint,
+                    startTime: parkingStartTime,
+                    endTime: lastPoint.timestamp,
+                    duration: {
+                        seconds: durationSec,
+                        minutes: Math.floor(durationSec / 60)
+                    }
+                });
+            }
+        }
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportDate: date,
+            reportPeriod: {
+                startTime: startDateTime,
+                endTime: endDateTime
+            },
+            totalParkingTime: {
+                seconds: totalParkingSec,
+                minutes: Math.floor(totalParkingSec / 60)
+            },
+            parkingLocations: parkingSessions
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchParkingTimeReport"
+        });
+    }
+};
