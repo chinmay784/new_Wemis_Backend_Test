@@ -7872,3 +7872,138 @@ exports.fetchParkingTimeReport = async (req, res) => {
         });
     }
 };
+
+
+
+exports.fetchSOSReport = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { deviceNo, date, startTime, endTime } = req.body;
+
+        if (!deviceNo || !date || !startTime || !endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "deviceNo, date, startTime and endTime are required"
+            });
+        }
+
+        // 🕒 Build datetime range (IST)
+        const startDateTime = new Date(`${date}T${startTime}.000+05:30`);
+        const endDateTime = new Date(`${date}T${endTime}.000+05:30`);
+
+        // 🔍 Validate device
+        const device = await CoustmerDevice.findOne(
+            { "devicesOwened.deviceNo": deviceNo },
+            { "devicesOwened.$": 1 }
+        );
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        const imei = device.devicesOwened[0].deviceNo;
+
+        // 📍 Fetch route history (include sos status)
+        const points = await RoutePlayback.find({
+            imei,
+            timestamp: {
+                $gte: startDateTime,
+                $lte: endDateTime
+            }
+        })
+            .sort({ timestamp: 1 })
+            .select("latitude longitude timestamp raw.sosStatus");
+
+        if (!points || points.length === 0) {
+            return res.status(200).json({
+                success: true,
+                totalSOSEvents: 0,
+                sosSessions: []
+            });
+        }
+
+        // ================= SOS SESSION LOGIC =================
+        const sosSessions = [];
+        let sosActive = false;
+        let sosStart = null;
+
+        for (let i = 0; i < points.length; i++) {
+            const curr = points[i];
+            const sosStatus = curr.raw?.sosStatus;
+
+            // 🚨 SOS START (0 → 1)
+            if (!sosActive && sosStatus === "1") {
+                sosActive = true;
+                sosStart = {
+                    startTime: curr.timestamp,
+                    startLocation: {
+                        latitude: curr.latitude,
+                        longitude: curr.longitude
+                    }
+                };
+            }
+
+            // ✅ SOS END (1 → 0)
+            if (sosActive && sosStatus !== "1") {
+                sosSessions.push({
+                    startTime: sosStart.startTime,
+                    startLocation: sosStart.startLocation,
+                    endTime: curr.timestamp,
+                    endLocation: {
+                        latitude: curr.latitude,
+                        longitude: curr.longitude
+                    }
+                });
+
+                sosActive = false;
+                sosStart = null;
+            }
+        }
+
+        // 🕒 If SOS still active till last point
+        if (sosActive && sosStart) {
+            const lastPoint = points[points.length - 1];
+            sosSessions.push({
+                startTime: sosStart.startTime,
+                startLocation: sosStart.startLocation,
+                endTime: lastPoint.timestamp,
+                endLocation: {
+                    latitude: lastPoint.latitude,
+                    longitude: lastPoint.longitude
+                }
+            });
+        }
+
+        // ================= RESPONSE =================
+        return res.status(200).json({
+            success: true,
+            deviceNo,
+            imei,
+            reportDate: date,
+            reportPeriod: {
+                startTime: startDateTime,
+                endTime: endDateTime
+            },
+            totalSOSEvents: sosSessions.length,
+            sosSessions
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchSOSReport"
+        });
+    }
+};
