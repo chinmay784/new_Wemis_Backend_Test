@@ -7211,7 +7211,6 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             });
         }
 
-        // 🔍 Validate device
         const device = await CoustmerDevice.findOne(
             { "devicesOwened.deviceNo": deviceNo },
             { "devicesOwened.$": 1 }
@@ -7223,7 +7222,6 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
 
         const imei = device.devicesOwened[0].deviceNo;
 
-        // 📍 Fetch GPS points
         const points = await RoutePlayback.find({
             imei,
             timestamp: { $gte: new Date(startTime), $lte: new Date(endTime) }
@@ -7235,10 +7233,10 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             return res.json({ success: true, trips: [] });
         }
 
-        // ================= TRIP LOGIC =================
         let trips = [];
         let currentTrip = null;
         let idleTime = 0;
+        let overallMaxSpeed = 0;
 
         for (let i = 1; i < points.length; i++) {
             const prev = points[i - 1];
@@ -7252,9 +7250,10 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             const timeDiff =
                 (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
 
-            // 🚗 Moving
+            // 🚗 MOVING
             if (dist > 10) {
                 idleTime = 0;
+                overallMaxSpeed = Math.max(overallMaxSpeed, curr.speed || 0);
 
                 if (!currentTrip) {
                     currentTrip = {
@@ -7264,14 +7263,19 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
                             longitude: prev.longitude
                         },
                         distanceMeters: 0,
-                        durationSec: 0
+                        durationSec: 0,
+                        maxSpeed: curr.speed || 0
                     };
                 }
 
                 currentTrip.distanceMeters += dist;
                 currentTrip.durationSec += timeDiff;
+                currentTrip.maxSpeed = Math.max(
+                    currentTrip.maxSpeed,
+                    curr.speed || 0
+                );
             }
-            // 🛑 Idle
+            // 🛑 IDLE
             else if (currentTrip) {
                 idleTime += timeDiff;
 
@@ -7281,7 +7285,6 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
                         latitude: prev.latitude,
                         longitude: prev.longitude
                     };
-
                     trips.push(currentTrip);
                     currentTrip = null;
                     idleTime = 0;
@@ -7300,7 +7303,6 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             trips.push(currentTrip);
         }
 
-        // ================= FORMAT FOR UI =================
         const formattedTrips = trips.map(t => ({
             startTime: t.startTime,
             endTime: t.endTime,
@@ -7309,6 +7311,7 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
                 minutes: Math.floor(t.durationSec / 60),
                 seconds: Math.floor(t.durationSec % 60)
             },
+            maxSpeed: t.maxSpeed,
             startLocation: t.startLocation,
             endLocation: t.endLocation
         }));
@@ -7323,6 +7326,7 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             imei,
             reportPeriod: { startTime, endTime },
             totalDistanceKm,
+            overallMaxSpeed,
             totalTrips: formattedTrips.length,
             trips: formattedTrips
         });
@@ -7335,6 +7339,7 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
         });
     }
 };
+
 
 
 
