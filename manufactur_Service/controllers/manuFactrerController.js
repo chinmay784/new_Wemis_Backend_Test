@@ -6912,18 +6912,298 @@ exports.fetchdelerSubscriptionPlans = async (req, res) => {
 
 const haversine = require("haversine-distance");
 
+// exports.fetchVehicleDistanceReport = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+//         if (!userId) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: "Unauthorized"
+//             });
+//         }
+
+//         const { deviceNo, startTime, endTime } = req.body;
+
+//         if (!deviceNo || !startTime || !endTime) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "deviceNo, startTime and endTime are required"
+//             });
+//         }
+
+//         // 🔍 Validate Device
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Device not found"
+//             });
+//         }
+
+//         const imei = device.devicesOwened[0].deviceNo;
+
+//         // 📍 Fetch Route Points
+//         const points = await RoutePlayback.find({
+//             imei,
+//             timestamp: {
+//                 $gte: new Date(startTime),
+//                 $lte: new Date(endTime)
+//             }
+//         })
+//             .sort({ timestamp: 1 })
+//             .select("latitude longitude speed timestamp");
+
+//         if (points.length < 2) {
+//             return res.status(200).json({
+//                 success: true,
+//                 deviceNo,
+//                 message: "Not enough data",
+//                 totalDistanceKm: 0
+//             });
+//         }
+
+//         // ================= CALCULATIONS =================
+//         let totalDistanceMeters = 0;
+//         let totalSpeed = 0;
+//         let maxSpeed = 0;
+
+//         let movingTimeSec = 0;
+//         let idleTimeSec = 0;
+
+//         for (let i = 1; i < points.length; i++) {
+//             const prev = points[i - 1];
+//             const curr = points[i];
+
+//             const dist = haversine(
+//                 { latitude: prev.latitude, longitude: prev.longitude },
+//                 { latitude: curr.latitude, longitude: curr.longitude }
+//             );
+
+//             const timeDiff =
+//                 (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
+
+//             // Ignore GPS noise
+//             if (dist > 5) {
+//                 totalDistanceMeters += dist;
+//                 movingTimeSec += timeDiff;
+//             } else {
+//                 idleTimeSec += timeDiff;
+//             }
+
+//             totalSpeed += curr.speed || 0;
+//             maxSpeed = Math.max(maxSpeed, curr.speed || 0);
+//         }
+
+//         const totalTimeSec =
+//             (new Date(endTime) - new Date(startTime)) / 1000;
+
+//         const avgSpeed =
+//             points.length > 0 ? (totalSpeed / points.length).toFixed(2) : 0;
+
+//         const totalDistanceKm = (totalDistanceMeters / 1000).toFixed(2);
+
+//         // 📍 Start & End Locations
+//         const startLocation = {
+//             latitude: points[0].latitude,
+//             longitude: points[0].longitude,
+//             timestamp: points[0].timestamp
+//         };
+
+//         const endLocation = {
+//             latitude: points[points.length - 1].latitude,
+//             longitude: points[points.length - 1].longitude,
+//             timestamp: points[points.length - 1].timestamp
+//         };
+
+//         // ================= RESPONSE =================
+//         return res.status(200).json({
+//             success: true,
+//             deviceNo,
+//             imei,
+//             reportPeriod: {
+//                 startTime,
+//                 endTime
+//             },
+//             distance: {
+//                 totalKm: totalDistanceKm,
+//                 totalMeters: Math.round(totalDistanceMeters)
+//             },
+//             time: {
+//                 totalTimeMinutes: Math.floor(totalTimeSec / 60),
+//                 movingTimeMinutes: Math.floor(movingTimeSec / 60),
+//                 idleTimeMinutes: Math.floor(idleTimeSec / 60)
+//             },
+//             speed: {
+//                 averageSpeed: avgSpeed,
+//                 maxSpeed
+//             },
+//             startLocation,
+//             endLocation,
+//             totalPoints: points.length,
+//             route: points // use this for map polyline
+//         });
+
+//     } catch (error) {
+//         console.error("❌ Distance Report Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to fetch distance report"
+//         });
+//     }
+// };
+
+
+// exports.fetchVehicleDistanceReport = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+//         if (!userId) {
+//             return res.status(401).json({ success: false, message: "Unauthorized" });
+//         }
+
+//         const { deviceNo, startTime, endTime } = req.body;
+//         if (!deviceNo || !startTime || !endTime) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "deviceNo, startTime and endTime are required"
+//             });
+//         }
+
+//         // 🔍 Validate device
+//         const device = await CoustmerDevice.findOne(
+//             { "devicesOwened.deviceNo": deviceNo },
+//             { "devicesOwened.$": 1 }
+//         );
+
+//         if (!device) {
+//             return res.status(404).json({ success: false, message: "Device not found" });
+//         }
+
+//         const imei = device.devicesOwened[0].deviceNo;
+
+//         // 📍 Fetch route data
+//         const points = await RoutePlayback.find({
+//             imei,
+//             timestamp: { $gte: new Date(startTime), $lte: new Date(endTime) }
+//         })
+//             .sort({ timestamp: 1 })
+//             .select("latitude longitude speed timestamp");
+
+//         if (points.length < 2) {
+//             return res.json({ success: true, trips: [] });
+//         }
+
+//         // ================= TRIP LOGIC =================
+//         const trips = [];
+//         let currentTrip = null;
+//         let idleTime = 0;
+
+//         for (let i = 1; i < points.length; i++) {
+//             const prev = points[i - 1];
+//             const curr = points[i];
+
+//             const dist = haversine(
+//                 { latitude: prev.latitude, longitude: prev.longitude },
+//                 { latitude: curr.latitude, longitude: curr.longitude }
+//             );
+
+//             const timeDiff =
+//                 (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
+
+//             // 🚗 MOVING
+//             if (dist > 5) {
+//                 idleTime = 0;
+
+//                 if (!currentTrip) {
+//                     currentTrip = {
+//                         startTime: prev.timestamp,
+//                         startLocation: {
+//                             latitude: prev.latitude,
+//                             longitude: prev.longitude
+//                         },
+//                         distanceMeters: 0,
+//                         durationSec: 0
+//                     };
+//                 }
+
+//                 currentTrip.distanceMeters += dist;
+//                 currentTrip.durationSec += timeDiff;
+//             }
+//             // 🛑 IDLE
+//             else if (currentTrip) {
+//                 idleTime += timeDiff;
+
+//                 // End trip if idle > 5 minutes
+//                 if (idleTime >= 300) {
+//                     currentTrip.endTime = prev.timestamp;
+//                     currentTrip.endLocation = {
+//                         latitude: prev.latitude,
+//                         longitude: prev.longitude
+//                     };
+
+//                     trips.push(currentTrip);
+//                     currentTrip = null;
+//                     idleTime = 0;
+//                 }
+//             }
+//         }
+
+//         // 🧾 Push last trip
+//         if (currentTrip) {
+//             const last = points[points.length - 1];
+//             currentTrip.endTime = last.timestamp;
+//             currentTrip.endLocation = {
+//                 latitude: last.latitude,
+//                 longitude: last.longitude
+//             };
+//             trips.push(currentTrip);
+//         }
+
+//         // ================= FORMAT OUTPUT =================
+//         const formattedTrips = trips.map(t => ({
+//             startTime: t.startTime,
+//             endTime: t.endTime,
+//             startLocation: t.startLocation,
+//             endLocation: t.endLocation,
+//             distanceKm: (t.distanceMeters / 1000).toFixed(2),
+//             duration: {
+//                 minutes: Math.floor(t.durationSec / 60),
+//                 seconds: Math.floor(t.durationSec % 60)
+//             }
+//         }));
+
+//         return res.status(200).json({
+//             success: true,
+//             deviceNo,
+//             imei,
+//             totalTrips: formattedTrips.length,
+//             trips: formattedTrips
+//         });
+
+//     } catch (error) {
+//         console.error("Distance Report Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to generate distance report"
+//         });
+//     }
+// };
+
+
+
+
+
 exports.fetchVehicleDistanceReport = async (req, res) => {
     try {
         const userId = req.user?.userId;
         if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized"
-            });
+            return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
         const { deviceNo, startTime, endTime } = req.body;
-
         if (!deviceNo || !startTime || !endTime) {
             return res.status(400).json({
                 success: false,
@@ -6931,48 +7211,34 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             });
         }
 
-        // 🔍 Validate Device
+        // 🔍 Validate device
         const device = await CoustmerDevice.findOne(
             { "devicesOwened.deviceNo": deviceNo },
             { "devicesOwened.$": 1 }
         );
 
         if (!device) {
-            return res.status(404).json({
-                success: false,
-                message: "Device not found"
-            });
+            return res.status(404).json({ success: false, message: "Device not found" });
         }
 
         const imei = device.devicesOwened[0].deviceNo;
 
-        // 📍 Fetch Route Points
+        // 📍 Fetch GPS points
         const points = await RoutePlayback.find({
             imei,
-            timestamp: {
-                $gte: new Date(startTime),
-                $lte: new Date(endTime)
-            }
+            timestamp: { $gte: new Date(startTime), $lte: new Date(endTime) }
         })
             .sort({ timestamp: 1 })
             .select("latitude longitude speed timestamp");
 
         if (points.length < 2) {
-            return res.status(200).json({
-                success: true,
-                deviceNo,
-                message: "Not enough data",
-                totalDistanceKm: 0
-            });
+            return res.json({ success: true, trips: [] });
         }
 
-        // ================= CALCULATIONS =================
-        let totalDistanceMeters = 0;
-        let totalSpeed = 0;
-        let maxSpeed = 0;
-
-        let movingTimeSec = 0;
-        let idleTimeSec = 0;
+        // ================= TRIP LOGIC =================
+        let trips = [];
+        let currentTrip = null;
+        let idleTime = 0;
 
         for (let i = 1; i < points.length; i++) {
             const prev = points[i - 1];
@@ -6986,65 +7252,79 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
             const timeDiff =
                 (new Date(curr.timestamp) - new Date(prev.timestamp)) / 1000;
 
-            // Ignore GPS noise
-            if (dist > 5) {
-                totalDistanceMeters += dist;
-                movingTimeSec += timeDiff;
-            } else {
-                idleTimeSec += timeDiff;
-            }
+            // 🚗 Moving
+            if (dist > 10) {
+                idleTime = 0;
 
-            totalSpeed += curr.speed || 0;
-            maxSpeed = Math.max(maxSpeed, curr.speed || 0);
+                if (!currentTrip) {
+                    currentTrip = {
+                        startTime: prev.timestamp,
+                        startLocation: {
+                            latitude: prev.latitude,
+                            longitude: prev.longitude
+                        },
+                        distanceMeters: 0,
+                        durationSec: 0
+                    };
+                }
+
+                currentTrip.distanceMeters += dist;
+                currentTrip.durationSec += timeDiff;
+            }
+            // 🛑 Idle
+            else if (currentTrip) {
+                idleTime += timeDiff;
+
+                if (idleTime >= 300) {
+                    currentTrip.endTime = prev.timestamp;
+                    currentTrip.endLocation = {
+                        latitude: prev.latitude,
+                        longitude: prev.longitude
+                    };
+
+                    trips.push(currentTrip);
+                    currentTrip = null;
+                    idleTime = 0;
+                }
+            }
         }
 
-        const totalTimeSec =
-            (new Date(endTime) - new Date(startTime)) / 1000;
+        // Push last trip
+        if (currentTrip) {
+            const last = points[points.length - 1];
+            currentTrip.endTime = last.timestamp;
+            currentTrip.endLocation = {
+                latitude: last.latitude,
+                longitude: last.longitude
+            };
+            trips.push(currentTrip);
+        }
 
-        const avgSpeed =
-            points.length > 0 ? (totalSpeed / points.length).toFixed(2) : 0;
+        // ================= FORMAT FOR UI =================
+        const formattedTrips = trips.map(t => ({
+            startTime: t.startTime,
+            endTime: t.endTime,
+            distanceKm: (t.distanceMeters / 1000).toFixed(2),
+            duration: {
+                minutes: Math.floor(t.durationSec / 60),
+                seconds: Math.floor(t.durationSec % 60)
+            },
+            startLocation: t.startLocation,
+            endLocation: t.endLocation
+        }));
 
-        const totalDistanceKm = (totalDistanceMeters / 1000).toFixed(2);
+        const totalDistanceKm = formattedTrips
+            .reduce((sum, t) => sum + parseFloat(t.distanceKm), 0)
+            .toFixed(2);
 
-        // 📍 Start & End Locations
-        const startLocation = {
-            latitude: points[0].latitude,
-            longitude: points[0].longitude,
-            timestamp: points[0].timestamp
-        };
-
-        const endLocation = {
-            latitude: points[points.length - 1].latitude,
-            longitude: points[points.length - 1].longitude,
-            timestamp: points[points.length - 1].timestamp
-        };
-
-        // ================= RESPONSE =================
         return res.status(200).json({
             success: true,
             deviceNo,
             imei,
-            reportPeriod: {
-                startTime,
-                endTime
-            },
-            distance: {
-                totalKm: totalDistanceKm,
-                totalMeters: Math.round(totalDistanceMeters)
-            },
-            time: {
-                totalTimeMinutes: Math.floor(totalTimeSec / 60),
-                movingTimeMinutes: Math.floor(movingTimeSec / 60),
-                idleTimeMinutes: Math.floor(idleTimeSec / 60)
-            },
-            speed: {
-                averageSpeed: avgSpeed,
-                maxSpeed
-            },
-            startLocation,
-            endLocation,
-            totalPoints: points.length,
-            route: points // use this for map polyline
+            reportPeriod: { startTime, endTime },
+            totalDistanceKm,
+            totalTrips: formattedTrips.length,
+            trips: formattedTrips
         });
 
     } catch (error) {
@@ -7055,6 +7335,7 @@ exports.fetchVehicleDistanceReport = async (req, res) => {
         });
     }
 };
+
 
 
 
