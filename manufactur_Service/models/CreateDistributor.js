@@ -70,6 +70,21 @@ const distributorSchema = new mongoose.Schema({
         type: String,
         trim: true,
     },
+    // wallet logic Model reference
+    wallet: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        currency: {
+            type: String,
+            default: "INR"
+        },
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        }
+    },
     allocateBarcodes: [
         {
             manufacturId: {
@@ -89,7 +104,7 @@ const distributorSchema = new mongoose.Schema({
             barCodeNo: { type: String, trim: true },
             is_Renew: { type: String, trim: true },
             deviceSerialNo: { type: String, trim: true },
-            status:{type: String},
+            status: { type: String },
 
             simDetails: [
                 {

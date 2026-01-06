@@ -91,6 +91,21 @@ const createDelerUnderOems = new mongoose.Schema({
         type: String,
         trim: true,
     },
+    // wallet logic Model reference
+    wallet: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        currency: {
+            type: String,
+            default: "INR"
+        },
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        }
+    },
     allocateBarcodes: [
         {
             manufacturId: {

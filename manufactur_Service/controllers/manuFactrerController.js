@@ -18,7 +18,8 @@ const devices = require("../devicesStore");
 const TicketIssue = require("../models/TicketIssueModel");
 const ChatMessage = require("../models/ChatSchemaModel");
 const DistributorAllocateBarcode = require("../models/DistributorAllocatedBarcode");
-const DelerMapDevice = require('../models/DelerMapDevices')
+const DelerMapDevice = require('../models/DelerMapDevices');
+const WalletTransaction = require("../models/WalletTransaction")
 
 
 
@@ -8293,3 +8294,236 @@ exports.fetchSOSReport = async (req, res) => {
         });
     }
 };
+
+
+
+
+//😎😎🚀🚀😎😎 Work on Wallet System Logic Controller
+exports.addWalletBalance = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const { amount, reason, manufacturerId, distributorId, oemId, distributorDealerId, oemDealerId } = req.body;
+
+
+        if (!amount || !reason) {
+            return res.status(400).json({
+                success: false,
+                message: "amount and reason are required"
+            });
+        }
+
+        // Here I have to find the manufacturer and distributorId and oemId from the userId
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+
+        if (user?.role === "manufacturer") {
+            // Here add main logic
+            const manufacur = await ManuFactur.findById(user?.manufacturId);
+
+            if (!manufacur) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufacturer not found"
+                });
+            }
+
+
+            manufacur.wallet.balance += amount;
+
+            await manufacur.save();
+
+            // Here add wallet transaction logic
+            const walletTransaction = new WalletTransaction({
+                manufacturerId: manufacur._id,
+                type: "CREDIT",
+                amount,
+                balanceAfter: manufacur.wallet.balance,
+                reason
+            });
+            await walletTransaction.save();
+
+        }
+        // else if (user?.role === "distributor") {
+        //     // Add main Logic
+        //     const distributor = await Distributor.findById(user?.distributorId);
+
+        //     if (!distributor) {
+        //         return res.status(404).json({
+        //             success: false,
+        //             message: "Distributor not found"
+        //         });
+        //     }
+
+        //     distributor.wallet.balance += amount;
+        //     await distributor.save();
+
+        //     // Here add wallet transaction logic
+        //     const walletTransaction = new WalletTransaction({
+        //         distributorId: distributor._id,
+        //         type: "CREDIT",
+        //         amount,
+        //         balanceAfter: distributor.wallet.balance,
+        //         reason,
+        //     });
+        //     await walletTransaction.save();
+        // } else if (user?.role === "oem") {
+        //     // Add main Logic
+        //     const oem = await OemModelSchema.findById(user?.oemId);
+
+        //     if (!oem) {
+        //         return res.status(404).json({
+        //             success: false,
+        //             message: "OEM not found"
+        //         });
+        //     }
+
+
+        //     oem.wallet.balance += amount;
+        //     await oem.save();
+
+        //     // Here add wallet transaction logic
+        //     const walletTransaction = new WalletTransaction({
+        //         oemId: oem._id,
+        //         type: "CREDIT",
+        //         amount,
+        //         balanceAfter: oem.wallet.balance,
+        //         reason,
+        //     });
+        //     await walletTransaction.save();
+        // }
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Wallet balance added successfully",
+        });
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in addWalletBalance"
+        })
+    }
+}
+
+//fetch wallet balance api
+exports.fetchWalletBalance = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        // Here I have to find the manufacturer and distributorId and oemId from the userId
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+
+        if (user?.role === "manufacturer") {
+            const manufacur = await ManuFactur.findById(user?.manufacturId);
+
+            if (!manufacur) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufacturer not found"
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                message: "Wallet balance fetched successfully",
+                balance: manufacur.wallet.balance,
+            });
+
+        } else if (user?.role === "distributor") {
+            const distributor = await Distributor.findById(user?.distributorId);
+            if (!distributor) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Distributor not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Wallet balance fetched successfully",
+                balance: distributor.wallet.balance,
+            });
+        } else if (user?.role === "oem") {
+            const oem = await OemModelSchema.findById(user?.oemId);
+
+            if (!oem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "OEM not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Wallet balance fetched successfully",
+                balance: oem.wallet.balance,
+            });
+        } else if (user?.role === "dealer-distributor") {
+            const dealerDistributor = await CreateDelerUnderDistributor.findById(user?.distributorDelerId);
+            if (!dealerDistributor) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Dealer-Distributor not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Wallet balance fetched successfully",
+                balance: dealerDistributor.wallet.balance,
+            });
+        }
+        // some pending work is there
+        // else if (user?.role === "dealer-oem") {
+        //     const dealerOem = await CreateDelerUnderOems.findById(user?.dealerOemId);
+        //     if (!dealerOem) {
+        //         return res.status(404).json({
+        //             success: false,
+        //             message: "Dealer-OEM not found"
+        //         });
+        //     }
+
+        //     return res.status(200).json({
+        //         success: true,
+        //         message: "Wallet balance fetched successfully",
+        //         balance: dealerOem.wallet.balance,
+        //     });
+        // }
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchWalletBalance"
+        })
+    }
+}
