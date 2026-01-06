@@ -8466,7 +8466,6 @@ exports.fetchWalletBalance = async (req, res) => {
                     message: "Distributor not found"
                 });
             }
-
             return res.status(200).json({
                 success: true,
                 message: "Wallet balance fetched successfully",
