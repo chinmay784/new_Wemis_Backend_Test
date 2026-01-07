@@ -20,7 +20,7 @@ const ChatMessage = require("../models/ChatSchemaModel");
 const DistributorAllocateBarcode = require("../models/DistributorAllocatedBarcode");
 const DelerMapDevice = require('../models/DelerMapDevices');
 const WalletTransaction = require("../models/WalletTransaction");
-// const liveTrackingCache = require("../utils/cache");
+const liveTrackingCache = require("../utils/cache");
 
 
 
@@ -4303,443 +4303,6 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
 
 
-// const formatDateTime = (timestamp) => {
-//     if (!timestamp) return null;
-//     return new Date(timestamp).toLocaleString("en-IN", {
-//         day: "2-digit",
-//         month: "short",
-//         year: "numeric",
-//         hour: "2-digit",
-//         minute: "2-digit",
-//         second: "2-digit",
-//         hour12: true
-//     });
-// };
-
-// exports.liveTrackingAllDevices = async (req, res) => {
-//     try {
-//         const userId = req.user?.userId;
-
-//         if (!userId) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "User authentication required",
-//             });
-//         }
-
-//         const user = await User.findById(userId);
-//         if (!user || !user.coustmerId) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "No customer found for this user",
-//             });
-//         }
-
-//         const customer = await CoustmerDevice.findById(user.coustmerId);
-//         if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "No devices found for this customer",
-//             });
-//         }
-
-//         const devicesOwened = customer.devicesOwened;
-
-//         const finalDeviceList = devicesOwened.map((dev) => {
-//             const imei = dev.deviceNo;
-//             const liveData = devices[imei];
-
-//             let status = "offline";
-//             let formattedLat = null;
-//             let formattedLng = null;
-//             let speed = 0;
-//             let ignition = "0";
-//             let gpsFix = "0";
-//             let satellites = "0";
-//             let lastUpdate = null;
-//             let movementStatus = "stopped";
-
-//             // ================= LIVE DATA =================
-//             if (liveData) {
-//                 const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
-//                 status = diff <= 60000 ? "online" : "stale";
-
-//                 formattedLat = liveData.lat;
-//                 formattedLng = liveData.lng;
-//                 if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
-//                 if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
-
-//                 speed = liveData.speed || 0;
-//                 ignition = liveData.ignition || "0";
-//                 gpsFix = liveData.gpsFix || "0";
-//                 satellites = liveData.satellites || "0";
-//                 lastUpdate = liveData.lastUpdate;
-
-//                 if (speed > 5) movementStatus = "moving";
-//                 else if (speed > 0) movementStatus = "slow moving";
-//                 else movementStatus = "stopped";
-//             }
-
-//             // ================= STOP INFO LOGIC =================
-//             if (!vehicleState[imei]) {
-//                 vehicleState[imei] = {
-//                     isStopped: false,
-//                     stopStartTime: null,
-//                     totalStoppedSeconds: 0
-//                 };
-//             }
-
-//             if (speed === 0 && !vehicleState[imei].isStopped) {
-//                 vehicleState[imei].isStopped = true;
-//                 vehicleState[imei].stopStartTime = Date.now();
-//             }
-
-//             if (speed > 0 && vehicleState[imei].isStopped) {
-//                 vehicleState[imei].isStopped = false;
-//                 const stoppedFor = Math.floor(
-//                     (Date.now() - vehicleState[imei].stopStartTime) / 1000
-//                 );
-//                 vehicleState[imei].totalStoppedSeconds += stoppedFor;
-//                 vehicleState[imei].stopStartTime = null;
-//             }
-
-//             // ================= PARK INFO LOGIC =================
-//             if (!parkedState[imei]) {
-//                 parkedState[imei] = {
-//                     isParked: false,
-//                     parkStartTime: null,
-//                     totalParkedSeconds: 0
-//                 };
-//             }
-
-//             const ignitionOn =
-//                 ignition === "1" || ignition === 1 || ignition === true;
-
-//             if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
-//                 parkedState[imei].isParked = true;
-//                 parkedState[imei].parkStartTime = Date.now();
-//             }
-
-//             if (ignitionOn && parkedState[imei].isParked) {
-//                 parkedState[imei].isParked = false;
-//                 const parkedFor = Math.floor(
-//                     (Date.now() - parkedState[imei].parkStartTime) / 1000
-//                 );
-//                 parkedState[imei].totalParkedSeconds += parkedFor;
-//                 parkedState[imei].parkStartTime = null;
-//             }
-
-//             // ================= RESPONSE =================
-//             return {
-//                 dev,
-//                 deviceNo: dev.deviceNo,
-//                 deviceType: dev.deviceType,
-//                 RegistrationNo: dev.RegistrationNo,
-//                 MakeModel: dev.MakeModel,
-//                 ModelYear: dev.ModelYear,
-//                 batchNo: dev.batchNo,
-//                 date: dev.date,
-//                 simDetails: dev.simDetails || [],
-
-//                 liveTracking: liveData || null,
-
-//                 status,
-//                 lat: formattedLat,
-//                 lng: formattedLng,
-//                 speed,
-//                 ignition,
-//                 gpsFix,
-//                 satellites,
-//                 lastUpdate,
-//                 movementStatus,
-
-//                 // 🔥 STOP INFO (Formatted)
-//                 stopInfo: {
-//                     isStopped: vehicleState[imei].isStopped,
-//                     stopStartTime: vehicleState[imei].stopStartTime,
-//                     stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
-
-//                     totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
-//                     totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
-
-//                     currentStopSeconds: vehicleState[imei].isStopped
-//                         ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-//                         : 0,
-//                     currentStopTime: vehicleState[imei].isStopped
-//                         ? formatDuration(
-//                             Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-//                         )
-//                         : "0s"
-//                 },
-
-//                 // 🔥 PARK INFO (Formatted)
-//                 parkInfo: {
-//                     isParked: parkedState[imei].isParked,
-//                     parkStartTime: parkedState[imei].parkStartTime,
-//                     parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
-
-//                     totalParkedSeconds: parkedState[imei].totalParkedSeconds,
-//                     totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
-
-//                     currentParkedSeconds: parkedState[imei].isParked
-//                         ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-//                         : 0,
-//                     currentParkedTime: parkedState[imei].isParked
-//                         ? formatDuration(
-//                             Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-//                         )
-//                         : "0s"
-//                 }
-//             };
-//         });
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Live tracking data for all customer devices retrieved successfully",
-//             totalDevices: finalDeviceList.length,
-//             devices: finalDeviceList,
-//         });
-
-//     } catch (error) {
-//         console.error("❌ Controller Error (All Devices):", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Server error while fetching live tracking data for all devices",
-//             error: error.message,
-//         });
-//     }
-// };
-
-
-
-// const formatDateTime = (timestamp) => {
-//     if (!timestamp) return null;
-//     return new Date(timestamp).toLocaleString("en-IN", {
-//         day: "2-digit",
-//         month: "short",
-//         year: "numeric",
-//         hour: "2-digit",
-//         minute: "2-digit",
-//         second: "2-digit",
-//         hour12: true
-//     });
-// };
-
-// exports.liveTrackingAllDevices = async (req, res) => {
-//     try {
-//         const userId = req.user?.userId;
-
-//         if (!userId) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "User authentication required",
-//             });
-//         }
-
-//         // 🔥 CACHE KEY (per user)
-//         const cacheKey = `liveTrackingAllDevices:${userId}`;
-
-//         // 🔥 RETURN FROM CACHE
-//         const cachedResponse = liveTrackingCache.get(cacheKey);
-//         if (cachedResponse) {
-//             return res.status(200).json(cachedResponse);
-//         }
-
-//         const user = await User.findById(userId);
-//         if (!user || !user.coustmerId) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "No customer found for this user",
-//             });
-//         }
-
-//         const customer = await CoustmerDevice.findById(user.coustmerId);
-//         if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "No devices found for this customer",
-//             });
-//         }
-
-//         const devicesOwened = customer.devicesOwened;
-
-//         const finalDeviceList = devicesOwened.map((dev) => {
-//             const imei = dev.deviceNo;
-//             const liveData = devices[imei];
-
-//             let status = "offline";
-//             let formattedLat = null;
-//             let formattedLng = null;
-//             let speed = 0;
-//             let ignition = "0";
-//             let gpsFix = "0";
-//             let satellites = "0";
-//             let lastUpdate = null;
-//             let movementStatus = "stopped";
-
-//             // ================= LIVE DATA =================
-//             if (liveData) {
-//                 const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
-//                 status = diff <= 60000 ? "online" : "stale";
-
-//                 formattedLat = liveData.lat;
-//                 formattedLng = liveData.lng;
-//                 if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
-//                 if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
-
-//                 speed = liveData.speed || 0;
-//                 ignition = liveData.ignition || "0";
-//                 gpsFix = liveData.gpsFix || "0";
-//                 satellites = liveData.satellites || "0";
-//                 lastUpdate = liveData.lastUpdate;
-
-//                 if (speed > 5) movementStatus = "moving";
-//                 else if (speed > 0) movementStatus = "slow moving";
-//                 else movementStatus = "stopped";
-//             }
-
-//             // ================= STOP INFO =================
-//             if (!vehicleState[imei]) {
-//                 vehicleState[imei] = {
-//                     isStopped: false,
-//                     stopStartTime: null,
-//                     totalStoppedSeconds: 0
-//                 };
-//             }
-
-//             if (speed === 0 && !vehicleState[imei].isStopped) {
-//                 vehicleState[imei].isStopped = true;
-//                 vehicleState[imei].stopStartTime = Date.now();
-//             }
-
-//             if (speed > 0 && vehicleState[imei].isStopped) {
-//                 vehicleState[imei].isStopped = false;
-//                 const stoppedFor = Math.floor(
-//                     (Date.now() - vehicleState[imei].stopStartTime) / 1000
-//                 );
-//                 vehicleState[imei].totalStoppedSeconds += stoppedFor;
-//                 vehicleState[imei].stopStartTime = null;
-//             }
-
-//             // ================= PARK INFO =================
-//             if (!parkedState[imei]) {
-//                 parkedState[imei] = {
-//                     isParked: false,
-//                     parkStartTime: null,
-//                     totalParkedSeconds: 0
-//                 };
-//             }
-
-//             const ignitionOn =
-//                 ignition === "1" || ignition === 1 || ignition === true;
-
-//             if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
-//                 parkedState[imei].isParked = true;
-//                 parkedState[imei].parkStartTime = Date.now();
-//             }
-
-//             if (ignitionOn && parkedState[imei].isParked) {
-//                 parkedState[imei].isParked = false;
-//                 const parkedFor = Math.floor(
-//                     (Date.now() - parkedState[imei].parkStartTime) / 1000
-//                 );
-//                 parkedState[imei].totalParkedSeconds += parkedFor;
-//                 parkedState[imei].parkStartTime = null;
-//             }
-
-//             // ================= RESPONSE =================
-//             return {
-//                 dev,
-//                 deviceNo: dev.deviceNo,
-//                 deviceType: dev.deviceType,
-//                 RegistrationNo: dev.RegistrationNo,
-//                 MakeModel: dev.MakeModel,
-//                 ModelYear: dev.ModelYear,
-//                 batchNo: dev.batchNo,
-//                 date: dev.date,
-//                 simDetails: dev.simDetails || [],
-//                 liveTracking: liveData || null,
-//                 status,
-//                 lat: formattedLat,
-//                 lng: formattedLng,
-//                 speed,
-//                 ignition,
-//                 gpsFix,
-//                 satellites,
-//                 lastUpdate,
-//                 movementStatus,
-
-//                 stopInfo: {
-//                     isStopped: vehicleState[imei].isStopped,
-//                     stopStartTime: vehicleState[imei].stopStartTime,
-//                     stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
-//                     totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
-//                     totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
-//                     currentStopSeconds: vehicleState[imei].isStopped
-//                         ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-//                         : 0,
-//                     currentStopTime: vehicleState[imei].isStopped
-//                         ? formatDuration(
-//                             Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-//                         )
-//                         : "0s"
-//                 },
-
-//                 parkInfo: {
-//                     isParked: parkedState[imei].isParked,
-//                     parkStartTime: parkedState[imei].parkStartTime,
-//                     parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
-//                     totalParkedSeconds: parkedState[imei].totalParkedSeconds,
-//                     totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
-//                     currentParkedSeconds: parkedState[imei].isParked
-//                         ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-//                         : 0,
-//                     currentParkedTime: parkedState[imei].isParked
-//                         ? formatDuration(
-//                             Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-//                         )
-//                         : "0s"
-//                 }
-//             };
-//         });
-
-//         const responsePayload = {
-//             success: true,
-//             message: "Live tracking data for all customer devices retrieved successfully",
-//             totalDevices: finalDeviceList.length,
-//             devices: finalDeviceList,
-//         };
-
-//         // 🔥 SAVE TO CACHE
-//         liveTrackingCache.set(cacheKey, responsePayload);
-
-//         return res.status(200).json(responsePayload);
-
-//     } catch (error) {
-//         console.error("❌ Controller Error (All Devices):", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Server error while fetching live tracking data for all devices",
-//             error: error.message,
-//         });
-//     }
-// };
-
-
-const NodeCache = require("node-cache");
-
-// 🧠 In-memory cache (FAST)
-const liveTrackingCache = new NodeCache({
-    stdTTL: 10,        // cache valid for 10 seconds
-    checkperiod: 5,   // cleanup every 5 seconds
-    useClones: false  // better performance
-});
-
-// 🌍 Runtime states (NOT recreated)
-global.vehicleState ||= {};
-global.parkedState ||= {};
-
-// 🕒 Date formatter
 const formatDateTime = (timestamp) => {
     if (!timestamp) return null;
     return new Date(timestamp).toLocaleString("en-IN", {
@@ -4758,164 +4321,601 @@ exports.liveTrackingAllDevices = async (req, res) => {
         const userId = req.user?.userId;
 
         if (!userId) {
-            return res.status(401).json({
+            return res.status(400).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User authentication required",
             });
         }
 
-        // ================== CACHE CHECK ==================
-        // 🔑 One cache per user
-        const cacheKey = `liveTracking:${userId}`;
-
-        const cachedResponse = liveTrackingCache.get(cacheKey);
-        if (cachedResponse) {
-            // ⚡ FAST RESPONSE (no DB, no loop)
-            return res.json(cachedResponse);
-        }
-
-        const realUser = await User.findById(userId);
-        if (!realUser) {
+        const user = await User.findById(userId);
+        if (!user || !user.coustmerId) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "No customer found for this user",
             });
         }
 
-        // ================== DB QUERY ==================
-        // 🔒 User can see ONLY his own devices
-        const customer = await CoustmerDevice
-            .findById(realUser.coustmerId)
-            .select("devicesOwened")
-            .lean();
-
-        if (!customer?.devicesOwened?.length) {
-            return res.json({
-                success: true,
-                totalDevices: 0,
-                devices: []
+        const customer = await CoustmerDevice.findById(user.coustmerId);
+        if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No devices found for this customer",
             });
         }
 
-        const now = Date.now();
-        const finalDeviceList = [];
+        const devicesOwened = customer.devicesOwened;
 
-        // ================== DEVICE LOOP ==================
-        for (const dev of customer.devicesOwened) {
-
+        const finalDeviceList = devicesOwened.map((dev) => {
             const imei = dev.deviceNo;
-            const liveData = devices[imei]; // live TCP data
+            const liveData = devices[imei];
 
             let status = "offline";
-            let lat = null;
-            let lng = null;
+            let formattedLat = null;
+            let formattedLng = null;
             let speed = 0;
             let ignition = "0";
+            let gpsFix = "0";
+            let satellites = "0";
+            let lastUpdate = null;
             let movementStatus = "stopped";
 
-            // -------- LIVE GPS DATA --------
+            // ================= LIVE DATA =================
             if (liveData) {
-                const diff = now - new Date(liveData.lastUpdate).getTime();
+                const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
                 status = diff <= 60000 ? "online" : "stale";
 
-                lat = liveData.lat;
-                lng = liveData.lng;
-                if (liveData.latDir === "S" && lat > 0) lat = -lat;
-                if (liveData.lngDir === "W" && lng > 0) lng = -lng;
+                formattedLat = liveData.lat;
+                formattedLng = liveData.lng;
+                if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
+                if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
 
                 speed = liveData.speed || 0;
                 ignition = liveData.ignition || "0";
+                gpsFix = liveData.gpsFix || "0";
+                satellites = liveData.satellites || "0";
+                lastUpdate = liveData.lastUpdate;
 
                 if (speed > 5) movementStatus = "moving";
                 else if (speed > 0) movementStatus = "slow moving";
+                else movementStatus = "stopped";
             }
 
-            // -------- STOP STATE --------
-            vehicleState[imei] ||= {
-                isStopped: false,
-                stopStartTime: null
-            };
+            // ================= STOP INFO LOGIC =================
+            if (!vehicleState[imei]) {
+                vehicleState[imei] = {
+                    isStopped: false,
+                    stopStartTime: null,
+                    totalStoppedSeconds: 0
+                };
+            }
 
             if (speed === 0 && !vehicleState[imei].isStopped) {
                 vehicleState[imei].isStopped = true;
-                vehicleState[imei].stopStartTime = now;
+                vehicleState[imei].stopStartTime = Date.now();
             }
 
             if (speed > 0 && vehicleState[imei].isStopped) {
                 vehicleState[imei].isStopped = false;
+                const stoppedFor = Math.floor(
+                    (Date.now() - vehicleState[imei].stopStartTime) / 1000
+                );
+                vehicleState[imei].totalStoppedSeconds += stoppedFor;
                 vehicleState[imei].stopStartTime = null;
             }
 
-            // -------- PARK STATE --------
-            parkedState[imei] ||= {
-                isParked: false,
-                parkStartTime: null
-            };
+            // ================= PARK INFO LOGIC =================
+            if (!parkedState[imei]) {
+                parkedState[imei] = {
+                    isParked: false,
+                    parkStartTime: null,
+                    totalParkedSeconds: 0
+                };
+            }
 
             const ignitionOn =
                 ignition === "1" || ignition === 1 || ignition === true;
 
             if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
                 parkedState[imei].isParked = true;
-                parkedState[imei].parkStartTime = now;
+                parkedState[imei].parkStartTime = Date.now();
             }
 
             if (ignitionOn && parkedState[imei].isParked) {
                 parkedState[imei].isParked = false;
+                const parkedFor = Math.floor(
+                    (Date.now() - parkedState[imei].parkStartTime) / 1000
+                );
+                parkedState[imei].totalParkedSeconds += parkedFor;
                 parkedState[imei].parkStartTime = null;
             }
 
-            // -------- RESPONSE OBJECT --------
-            finalDeviceList.push({
+            // ================= RESPONSE =================
+            return {
+                dev,
                 deviceNo: dev.deviceNo,
                 deviceType: dev.deviceType,
                 RegistrationNo: dev.RegistrationNo,
                 MakeModel: dev.MakeModel,
+                ModelYear: dev.ModelYear,
+                batchNo: dev.batchNo,
+                date: dev.date,
+                simDetails: dev.simDetails || [],
+
+                liveTracking: liveData || null,
 
                 status,
-                lat,
-                lng,
+                lat: formattedLat,
+                lng: formattedLng,
                 speed,
                 ignition,
+                gpsFix,
+                satellites,
+                lastUpdate,
+                movementStatus,
+
+                // 🔥 STOP INFO (Formatted)
+                stopInfo: {
+                    isStopped: vehicleState[imei].isStopped,
+                    stopStartTime: vehicleState[imei].stopStartTime,
+                    stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
+
+                    totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+                    totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
+
+                    currentStopSeconds: vehicleState[imei].isStopped
+                        ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+                        : 0,
+                    currentStopTime: vehicleState[imei].isStopped
+                        ? formatDuration(
+                            Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+                        )
+                        : "0s"
+                },
+
+                // 🔥 PARK INFO (Formatted)
+                parkInfo: {
+                    isParked: parkedState[imei].isParked,
+                    parkStartTime: parkedState[imei].parkStartTime,
+                    parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
+
+                    totalParkedSeconds: parkedState[imei].totalParkedSeconds,
+                    totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
+
+                    currentParkedSeconds: parkedState[imei].isParked
+                        ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+                        : 0,
+                    currentParkedTime: parkedState[imei].isParked
+                        ? formatDuration(
+                            Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+                        )
+                        : "0s"
+                }
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Live tracking data for all customer devices retrieved successfully",
+            totalDevices: finalDeviceList.length,
+            devices: finalDeviceList,
+        });
+
+    } catch (error) {
+        console.error("❌ Controller Error (All Devices):", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error while fetching live tracking data for all devices",
+            error: error.message,
+        });
+    }
+};
+
+
+
+const formatDateTime = (timestamp) => {
+    if (!timestamp) return null;
+    return new Date(timestamp).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+    });
+};
+
+exports.liveTrackingAllDevices = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "User authentication required",
+            });
+        }
+
+        // 🔥 CACHE KEY (per user)
+        const cacheKey = `liveTrackingAllDevices:${userId}`;
+
+        // 🔥 RETURN FROM CACHE
+        const cachedResponse = liveTrackingCache.get(cacheKey);
+        if (cachedResponse) {
+            return res.status(200).json(cachedResponse);
+        }
+
+        const user = await User.findById(userId);
+        if (!user || !user.coustmerId) {
+            return res.status(404).json({
+                success: false,
+                message: "No customer found for this user",
+            });
+        }
+
+        const customer = await CoustmerDevice.findById(user.coustmerId);
+        if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No devices found for this customer",
+            });
+        }
+
+        const devicesOwened = customer.devicesOwened;
+
+        const finalDeviceList = devicesOwened.map((dev) => {
+            const imei = dev.deviceNo;
+            const liveData = devices[imei];
+
+            let status = "offline";
+            let formattedLat = null;
+            let formattedLng = null;
+            let speed = 0;
+            let ignition = "0";
+            let gpsFix = "0";
+            let satellites = "0";
+            let lastUpdate = null;
+            let movementStatus = "stopped";
+
+            // ================= LIVE DATA =================
+            if (liveData) {
+                const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
+                status = diff <= 60000 ? "online" : "stale";
+
+                formattedLat = liveData.lat;
+                formattedLng = liveData.lng;
+                if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
+                if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
+
+                speed = liveData.speed || 0;
+                ignition = liveData.ignition || "0";
+                gpsFix = liveData.gpsFix || "0";
+                satellites = liveData.satellites || "0";
+                lastUpdate = liveData.lastUpdate;
+
+                if (speed > 5) movementStatus = "moving";
+                else if (speed > 0) movementStatus = "slow moving";
+                else movementStatus = "stopped";
+            }
+
+            // ================= STOP INFO =================
+            if (!vehicleState[imei]) {
+                vehicleState[imei] = {
+                    isStopped: false,
+                    stopStartTime: null,
+                    totalStoppedSeconds: 0
+                };
+            }
+
+            if (speed === 0 && !vehicleState[imei].isStopped) {
+                vehicleState[imei].isStopped = true;
+                vehicleState[imei].stopStartTime = Date.now();
+            }
+
+            if (speed > 0 && vehicleState[imei].isStopped) {
+                vehicleState[imei].isStopped = false;
+                const stoppedFor = Math.floor(
+                    (Date.now() - vehicleState[imei].stopStartTime) / 1000
+                );
+                vehicleState[imei].totalStoppedSeconds += stoppedFor;
+                vehicleState[imei].stopStartTime = null;
+            }
+
+            // ================= PARK INFO =================
+            if (!parkedState[imei]) {
+                parkedState[imei] = {
+                    isParked: false,
+                    parkStartTime: null,
+                    totalParkedSeconds: 0
+                };
+            }
+
+            const ignitionOn =
+                ignition === "1" || ignition === 1 || ignition === true;
+
+            if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
+                parkedState[imei].isParked = true;
+                parkedState[imei].parkStartTime = Date.now();
+            }
+
+            if (ignitionOn && parkedState[imei].isParked) {
+                parkedState[imei].isParked = false;
+                const parkedFor = Math.floor(
+                    (Date.now() - parkedState[imei].parkStartTime) / 1000
+                );
+                parkedState[imei].totalParkedSeconds += parkedFor;
+                parkedState[imei].parkStartTime = null;
+            }
+
+            // ================= RESPONSE =================
+            return {
+                dev,
+                deviceNo: dev.deviceNo,
+                deviceType: dev.deviceType,
+                RegistrationNo: dev.RegistrationNo,
+                MakeModel: dev.MakeModel,
+                ModelYear: dev.ModelYear,
+                batchNo: dev.batchNo,
+                date: dev.date,
+                simDetails: dev.simDetails || [],
+                liveTracking: liveData || null,
+                status,
+                lat: formattedLat,
+                lng: formattedLng,
+                speed,
+                ignition,
+                gpsFix,
+                satellites,
+                lastUpdate,
                 movementStatus,
 
                 stopInfo: {
                     isStopped: vehicleState[imei].isStopped,
-                    stopStartTimeFormatted: formatDateTime(
-                        vehicleState[imei].stopStartTime
-                    )
+                    stopStartTime: vehicleState[imei].stopStartTime,
+                    stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
+                    totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+                    totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
+                    currentStopSeconds: vehicleState[imei].isStopped
+                        ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+                        : 0,
+                    currentStopTime: vehicleState[imei].isStopped
+                        ? formatDuration(
+                            Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+                        )
+                        : "0s"
                 },
 
                 parkInfo: {
                     isParked: parkedState[imei].isParked,
-                    parkStartTimeFormatted: formatDateTime(
-                        parkedState[imei].parkStartTime
-                    )
+                    parkStartTime: parkedState[imei].parkStartTime,
+                    parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
+                    totalParkedSeconds: parkedState[imei].totalParkedSeconds,
+                    totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
+                    currentParkedSeconds: parkedState[imei].isParked
+                        ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+                        : 0,
+                    currentParkedTime: parkedState[imei].isParked
+                        ? formatDuration(
+                            Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+                        )
+                        : "0s"
                 }
-            });
-        }
+            };
+        });
 
-        // ================== FINAL RESPONSE ==================
         const responsePayload = {
             success: true,
+            message: "Live tracking data for all customer devices retrieved successfully",
             totalDevices: finalDeviceList.length,
-            devices: finalDeviceList
+            devices: finalDeviceList,
         };
 
-        // 💾 SAVE TO CACHE (10 sec)
+        // 🔥 SAVE TO CACHE
         liveTrackingCache.set(cacheKey, responsePayload);
 
-        return res.json(responsePayload);
+        return res.status(200).json(responsePayload);
 
     } catch (error) {
-        console.error("❌ liveTrackingAllDevices Error:", error);
+        console.error("❌ Controller Error (All Devices):", error);
         return res.status(500).json({
             success: false,
-            message: "Server error",
-            error: error.message
+            message: "Server error while fetching live tracking data for all devices",
+            error: error.message,
         });
     }
 };
+
+
+// const NodeCache = require("node-cache");
+
+// // 🧠 In-memory cache (FAST)
+// const liveTrackingCache = new NodeCache({
+//     stdTTL: 10,        // cache valid for 10 seconds
+//     checkperiod: 5,   // cleanup every 5 seconds
+//     useClones: false  // better performance
+// });
+
+// // 🌍 Runtime states (NOT recreated)
+// global.vehicleState ||= {};
+// global.parkedState ||= {};
+
+// // 🕒 Date formatter
+// const formatDateTime = (timestamp) => {
+//     if (!timestamp) return null;
+//     return new Date(timestamp).toLocaleString("en-IN", {
+//         day: "2-digit",
+//         month: "short",
+//         year: "numeric",
+//         hour: "2-digit",
+//         minute: "2-digit",
+//         second: "2-digit",
+//         hour12: true
+//     });
+// };
+
+// exports.liveTrackingAllDevices = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
+
+//         if (!userId) {
+//             return res.status(401).json({
+//                 success: false,
+//                 message: "Unauthorized"
+//             });
+//         }
+
+//         // ================== CACHE CHECK ==================
+//         // 🔑 One cache per user
+//         const cacheKey = `liveTracking:${userId}`;
+
+//         const cachedResponse = liveTrackingCache.get(cacheKey);
+//         if (cachedResponse) {
+//             // ⚡ FAST RESPONSE (no DB, no loop)
+//             return res.json(cachedResponse);
+//         }
+
+//         const realUser = await User.findById(userId);
+//         if (!realUser) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "User not found"
+//             });
+//         }
+
+//         // ================== DB QUERY ==================
+//         // 🔒 User can see ONLY his own devices
+//         const customer = await CoustmerDevice
+//             .findById(realUser.coustmerId)
+//             .select("devicesOwened")
+//             .lean();
+
+//         if (!customer?.devicesOwened?.length) {
+//             return res.json({
+//                 success: true,
+//                 totalDevices: 0,
+//                 devices: []
+//             });
+//         }
+
+//         const now = Date.now();
+//         const finalDeviceList = [];
+
+//         // ================== DEVICE LOOP ==================
+//         for (const dev of customer.devicesOwened) {
+
+//             const imei = dev.deviceNo;
+//             const liveData = devices[imei]; // live TCP data
+
+//             let status = "offline";
+//             let lat = null;
+//             let lng = null;
+//             let speed = 0;
+//             let ignition = "0";
+//             let movementStatus = "stopped";
+
+//             // -------- LIVE GPS DATA --------
+//             if (liveData) {
+//                 const diff = now - new Date(liveData.lastUpdate).getTime();
+//                 status = diff <= 60000 ? "online" : "stale";
+
+//                 lat = liveData.lat;
+//                 lng = liveData.lng;
+//                 if (liveData.latDir === "S" && lat > 0) lat = -lat;
+//                 if (liveData.lngDir === "W" && lng > 0) lng = -lng;
+
+//                 speed = liveData.speed || 0;
+//                 ignition = liveData.ignition || "0";
+
+//                 if (speed > 5) movementStatus = "moving";
+//                 else if (speed > 0) movementStatus = "slow moving";
+//             }
+
+//             // -------- STOP STATE --------
+//             vehicleState[imei] ||= {
+//                 isStopped: false,
+//                 stopStartTime: null
+//             };
+
+//             if (speed === 0 && !vehicleState[imei].isStopped) {
+//                 vehicleState[imei].isStopped = true;
+//                 vehicleState[imei].stopStartTime = now;
+//             }
+
+//             if (speed > 0 && vehicleState[imei].isStopped) {
+//                 vehicleState[imei].isStopped = false;
+//                 vehicleState[imei].stopStartTime = null;
+//             }
+
+//             // -------- PARK STATE --------
+//             parkedState[imei] ||= {
+//                 isParked: false,
+//                 parkStartTime: null
+//             };
+
+//             const ignitionOn =
+//                 ignition === "1" || ignition === 1 || ignition === true;
+
+//             if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
+//                 parkedState[imei].isParked = true;
+//                 parkedState[imei].parkStartTime = now;
+//             }
+
+//             if (ignitionOn && parkedState[imei].isParked) {
+//                 parkedState[imei].isParked = false;
+//                 parkedState[imei].parkStartTime = null;
+//             }
+
+//             // -------- RESPONSE OBJECT --------
+//             finalDeviceList.push({
+//                 deviceNo: dev.deviceNo,
+//                 deviceType: dev.deviceType,
+//                 RegistrationNo: dev.RegistrationNo,
+//                 MakeModel: dev.MakeModel,
+
+//                 status,
+//                 lat,
+//                 lng,
+//                 speed,
+//                 ignition,
+//                 movementStatus,
+
+//                 stopInfo: {
+//                     isStopped: vehicleState[imei].isStopped,
+//                     stopStartTimeFormatted: formatDateTime(
+//                         vehicleState[imei].stopStartTime
+//                     )
+//                 },
+
+//                 parkInfo: {
+//                     isParked: parkedState[imei].isParked,
+//                     parkStartTimeFormatted: formatDateTime(
+//                         parkedState[imei].parkStartTime
+//                     )
+//                 }
+//             });
+//         }
+
+//         // ================== FINAL RESPONSE ==================
+//         const responsePayload = {
+//             success: true,
+//             totalDevices: finalDeviceList.length,
+//             devices: finalDeviceList
+//         };
+
+//         // 💾 SAVE TO CACHE (10 sec)
+//         liveTrackingCache.set(cacheKey, responsePayload);
+
+//         return res.json(responsePayload);
+
+//     } catch (error) {
+//         console.error("❌ liveTrackingAllDevices Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error",
+//             error: error.message
+//         });
+//     }
+// };
 
 
 
