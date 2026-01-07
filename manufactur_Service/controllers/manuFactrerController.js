@@ -4774,10 +4774,18 @@ exports.liveTrackingAllDevices = async (req, res) => {
             return res.json(cachedResponse);
         }
 
+        const realUser = await User.findById(userId);
+        if (!realUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
         // ================== DB QUERY ==================
         // 🔒 User can see ONLY his own devices
         const customer = await CoustmerDevice
-            .findById(userId)
+            .findById(realUser.coustmerId)
             .select("devicesOwened")
             .lean();
 
