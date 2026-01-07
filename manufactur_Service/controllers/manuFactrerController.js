@@ -19,7 +19,8 @@ const TicketIssue = require("../models/TicketIssueModel");
 const ChatMessage = require("../models/ChatSchemaModel");
 const DistributorAllocateBarcode = require("../models/DistributorAllocatedBarcode");
 const DelerMapDevice = require('../models/DelerMapDevices');
-const WalletTransaction = require("../models/WalletTransaction")
+const WalletTransaction = require("../models/WalletTransaction");
+const liveTrackingCache = require("../utils/cache");
 
 
 
@@ -4301,6 +4302,20 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 
 
 
+
+// const formatDateTime = (timestamp) => {
+//     if (!timestamp) return null;
+//     return new Date(timestamp).toLocaleString("en-IN", {
+//         day: "2-digit",
+//         month: "short",
+//         year: "numeric",
+//         hour: "2-digit",
+//         minute: "2-digit",
+//         second: "2-digit",
+//         hour12: true
+//     });
+// };
+
 // exports.liveTrackingAllDevices = async (req, res) => {
 //     try {
 //         const userId = req.user?.userId;
@@ -4365,7 +4380,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 //                 else movementStatus = "stopped";
 //             }
 
-//             // ================= 🔥 STOP INFO LOGIC =================
+//             // ================= STOP INFO LOGIC =================
 //             if (!vehicleState[imei]) {
 //                 vehicleState[imei] = {
 //                     isStopped: false,
@@ -4388,7 +4403,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 //                 vehicleState[imei].stopStartTime = null;
 //             }
 
-//             // ================= 🔥 PARK INFO LOGIC =================
+//             // ================= PARK INFO LOGIC =================
 //             if (!parkedState[imei]) {
 //                 parkedState[imei] = {
 //                     isParked: false,
@@ -4438,19 +4453,42 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 //                 lastUpdate,
 //                 movementStatus,
 
-//                 // 🔥 NEW ADDITIONS
+//                 // 🔥 STOP INFO (Formatted)
 //                 stopInfo: {
-//                     ...vehicleState[imei],
+//                     isStopped: vehicleState[imei].isStopped,
+//                     stopStartTime: vehicleState[imei].stopStartTime,
+//                     stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
+
+//                     totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+//                     totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
+
 //                     currentStopSeconds: vehicleState[imei].isStopped
 //                         ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-//                         : 0
+//                         : 0,
+//                     currentStopTime: vehicleState[imei].isStopped
+//                         ? formatDuration(
+//                             Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+//                         )
+//                         : "0s"
 //                 },
 
+//                 // 🔥 PARK INFO (Formatted)
 //                 parkInfo: {
-//                     ...parkedState[imei],
+//                     isParked: parkedState[imei].isParked,
+//                     parkStartTime: parkedState[imei].parkStartTime,
+//                     parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
+
+//                     totalParkedSeconds: parkedState[imei].totalParkedSeconds,
+//                     totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
+
 //                     currentParkedSeconds: parkedState[imei].isParked
 //                         ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-//                         : 0
+//                         : 0,
+//                     currentParkedTime: parkedState[imei].isParked
+//                         ? formatDuration(
+//                             Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+//                         )
+//                         : "0s"
 //                 }
 //             };
 //         });
@@ -4471,6 +4509,8 @@ exports.liveTrackingSingleDevice = async (req, res) => {
 //         });
 //     }
 // };
+
+
 
 const formatDateTime = (timestamp) => {
     if (!timestamp) return null;
@@ -4494,6 +4534,15 @@ exports.liveTrackingAllDevices = async (req, res) => {
                 success: false,
                 message: "User authentication required",
             });
+        }
+
+        // 🔥 CACHE KEY (per user)
+        const cacheKey = `liveTrackingAllDevices:${userId}`;
+
+        // 🔥 RETURN FROM CACHE
+        const cachedResponse = liveTrackingCache.get(cacheKey);
+        if (cachedResponse) {
+            return res.status(200).json(cachedResponse);
         }
 
         const user = await User.findById(userId);
@@ -4549,7 +4598,7 @@ exports.liveTrackingAllDevices = async (req, res) => {
                 else movementStatus = "stopped";
             }
 
-            // ================= STOP INFO LOGIC =================
+            // ================= STOP INFO =================
             if (!vehicleState[imei]) {
                 vehicleState[imei] = {
                     isStopped: false,
@@ -4572,7 +4621,7 @@ exports.liveTrackingAllDevices = async (req, res) => {
                 vehicleState[imei].stopStartTime = null;
             }
 
-            // ================= PARK INFO LOGIC =================
+            // ================= PARK INFO =================
             if (!parkedState[imei]) {
                 parkedState[imei] = {
                     isParked: false,
@@ -4609,9 +4658,7 @@ exports.liveTrackingAllDevices = async (req, res) => {
                 batchNo: dev.batchNo,
                 date: dev.date,
                 simDetails: dev.simDetails || [],
-
                 liveTracking: liveData || null,
-
                 status,
                 lat: formattedLat,
                 lng: formattedLng,
@@ -4622,15 +4669,12 @@ exports.liveTrackingAllDevices = async (req, res) => {
                 lastUpdate,
                 movementStatus,
 
-                // 🔥 STOP INFO (Formatted)
                 stopInfo: {
                     isStopped: vehicleState[imei].isStopped,
                     stopStartTime: vehicleState[imei].stopStartTime,
                     stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
-
                     totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
                     totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
-
                     currentStopSeconds: vehicleState[imei].isStopped
                         ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
                         : 0,
@@ -4641,15 +4685,12 @@ exports.liveTrackingAllDevices = async (req, res) => {
                         : "0s"
                 },
 
-                // 🔥 PARK INFO (Formatted)
                 parkInfo: {
                     isParked: parkedState[imei].isParked,
                     parkStartTime: parkedState[imei].parkStartTime,
                     parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
-
                     totalParkedSeconds: parkedState[imei].totalParkedSeconds,
                     totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
-
                     currentParkedSeconds: parkedState[imei].isParked
                         ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
                         : 0,
@@ -4662,12 +4703,17 @@ exports.liveTrackingAllDevices = async (req, res) => {
             };
         });
 
-        return res.status(200).json({
+        const responsePayload = {
             success: true,
             message: "Live tracking data for all customer devices retrieved successfully",
             totalDevices: finalDeviceList.length,
             devices: finalDeviceList,
-        });
+        };
+
+        // 🔥 SAVE TO CACHE
+        liveTrackingCache.set(cacheKey, responsePayload);
+
+        return res.status(200).json(responsePayload);
 
     } catch (error) {
         console.error("❌ Controller Error (All Devices):", error);
@@ -6912,6 +6958,7 @@ exports.fetchdelerSubscriptionPlans = async (req, res) => {
 
 
 const haversine = require("haversine-distance");
+
 
 // exports.fetchVehicleDistanceReport = async (req, res) => {
 //     try {
