@@ -341,6 +341,8 @@ const tcpServer = net.createServer(socket => {
       const packet = buffer.slice(start, end).trim();
 
       console.log("📥 RAW PACKET:", packet);
+      console.log("Time -", new Date().toLocaleString());
+
 
       const parsed = parsePvtPacket(packet);
 
@@ -351,6 +353,8 @@ const tcpServer = net.createServer(socket => {
 
         // 🔥 AUTO SAVE TO DB FOR ROUTE PLAYBACK
         saveToRouteHistory(parsed);
+        console.log("Time -", new Date().toLocaleString());
+
       }
 
       // ✅ Remove processed packet from buffer
