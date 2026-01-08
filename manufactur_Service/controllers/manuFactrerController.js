@@ -8595,54 +8595,96 @@ exports.addWalletBalance = async (req, res) => {
             await walletTransaction.save();
 
         }
-        // else if (user?.role === "distributor") {
-        //     // Add main Logic
-        //     const distributor = await Distributor.findById(user?.distributorId);
+        else if (user?.role === "distributor") {
+            // Add main Logic
+            const distributor = await Distributor.findById(user?.distributorId);
 
-        //     if (!distributor) {
-        //         return res.status(404).json({
-        //             success: false,
-        //             message: "Distributor not found"
-        //         });
-        //     }
+            if (!distributor) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Distributor not found"
+                });
+            }
 
-        //     distributor.wallet.balance += amount;
-        //     await distributor.save();
+            distributor.wallet.balance += amount;
+            await distributor.save();
 
-        //     // Here add wallet transaction logic
-        //     const walletTransaction = new WalletTransaction({
-        //         distributorId: distributor._id,
-        //         type: "CREDIT",
-        //         amount,
-        //         balanceAfter: distributor.wallet.balance,
-        //         reason,
-        //     });
-        //     await walletTransaction.save();
-        // } else if (user?.role === "oem") {
-        //     // Add main Logic
-        //     const oem = await OemModelSchema.findById(user?.oemId);
+            // Here add wallet transaction logic
+            const walletTransaction = new WalletTransaction({
+                distributorId: distributor._id,
+                type: "CREDIT",
+                amount,
+                balanceAfter: distributor.wallet.balance,
+                reason,
+            });
+            await walletTransaction.save();
+        } else if (user?.role === "oem") {
+            // Add main Logic
+            const oem = await OemModelSchema.findById(user?.oemId);
 
-        //     if (!oem) {
-        //         return res.status(404).json({
-        //             success: false,
-        //             message: "OEM not found"
-        //         });
-        //     }
+            if (!oem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "OEM not found"
+                });
+            }
 
 
-        //     oem.wallet.balance += amount;
-        //     await oem.save();
+            oem.wallet.balance += amount;
+            await oem.save();
 
-        //     // Here add wallet transaction logic
-        //     const walletTransaction = new WalletTransaction({
-        //         oemId: oem._id,
-        //         type: "CREDIT",
-        //         amount,
-        //         balanceAfter: oem.wallet.balance,
-        //         reason,
-        //     });
-        //     await walletTransaction.save();
-        // }
+            // Here add wallet transaction logic
+            const walletTransaction = new WalletTransaction({
+                oemId: oem._id,
+                type: "CREDIT",
+                amount,
+                balanceAfter: oem.wallet.balance,
+                reason,
+            });
+            await walletTransaction.save();
+        } else if (user?.role === "dealer-distributor") {
+            const dealerDistributor = await CreateDelerUnderDistributor.findById(user?.distributorDelerId);
+            if (!dealerDistributor) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Dealer-Distributor not found"
+                });
+            }
+
+            dealerDistributor.wallet.balance += amount;
+            await dealerDistributor.save();
+            // Here add wallet transaction logic
+            const walletTransaction = new WalletTransaction({
+                distributorDealerId: dealerDistributor._id,
+                type: "CREDIT",
+                amount,
+                balanceAfter: dealerDistributor.wallet.balance,
+                reason,
+            });
+
+            await walletTransaction.save();
+        } else {
+            const dealerOem = await CreateDelerUnderOems.findById(user?.dealerOemId);
+            if (!dealerOem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Dealer-OEM not found"
+                });
+            }
+
+            dealerOem.wallet.balance += amount;
+            await dealerOem.save();
+            // Here add wallet transaction logic
+            const walletTransaction = new WalletTransaction({
+                oemDealerId: dealerOem._id,
+                type: "CREDIT",
+                amount,
+                balanceAfter: dealerOem.wallet.balance,
+                reason,
+            });
+            await walletTransaction.save();
+
+        }
 
 
         return res.status(200).json({
