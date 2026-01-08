@@ -8595,7 +8595,7 @@ exports.addWalletBalance = async (req, res) => {
             await walletTransaction.save();
 
         }
-        else if (user?.role === "distributor") {
+        else if (user?.role === "distibutor") {
             // Add main Logic
             const distributor = await Distributor.findById(user?.distributorId);
 
