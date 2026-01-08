@@ -8764,3 +8764,68 @@ exports.fetchWalletBalance = async (req, res) => {
         })
     }
 }
+
+
+exports.fetchManufacturPaymentHistory = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        if (user?.role !== "manufacturer") {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden: Access is allowed only for manufacturers"
+            });
+        }
+
+        const manufacur = await ManuFactur.findById(user?.manufacturId);
+
+        if (!manufacur) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found"
+            });
+        }
+
+        const transactions = await WalletTransaction
+            .find({ manufacturerId: manufacur._id })
+            .select("reason type amount balanceAfter createdAt -_id")
+            .sort({ createdAt: -1 })
+            .lean();
+
+
+        if (!transactions || transactions.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No transactions found",
+                transactions: [],
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment history fetched successfully",
+            transactions,
+        });
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchPaymentHistory"
+        })
+    }
+}
