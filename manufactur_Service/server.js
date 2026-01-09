@@ -235,7 +235,7 @@ const httpServer = http.createServer(app);
 const { Server } = require("socket.io");
 
 const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { origin:  ["https://websave.in", "http://localhost:5173"], methods: ["GET", "POST"], credentials: true },
 });
 
 io.on("connection", (socket) => {
