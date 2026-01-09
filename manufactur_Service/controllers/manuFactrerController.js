@@ -4316,199 +4316,199 @@ const formatDateTime = (timestamp) => {
     });
 };
 
-exports.liveTrackingAllDevices = async (req, res) => {
-    try {
-        const userId = req.user?.userId;
+// exports.liveTrackingAllDevices = async (req, res) => {
+//     try {
+//         const userId = req.user?.userId;
 
-        if (!userId) {
-            return res.status(400).json({
-                success: false,
-                message: "User authentication required",
-            });
-        }
+//         if (!userId) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "User authentication required",
+//             });
+//         }
 
-        const user = await User.findById(userId);
-        if (!user || !user.coustmerId) {
-            return res.status(404).json({
-                success: false,
-                message: "No customer found for this user",
-            });
-        }
+//         const user = await User.findById(userId);
+//         if (!user || !user.coustmerId) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "No customer found for this user",
+//             });
+//         }
 
-        const customer = await CoustmerDevice.findById(user.coustmerId);
-        if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No devices found for this customer",
-            });
-        }
+//         const customer = await CoustmerDevice.findById(user.coustmerId);
+//         if (!customer || !customer.devicesOwened || customer.devicesOwened.length === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "No devices found for this customer",
+//             });
+//         }
 
-        const devicesOwened = customer.devicesOwened;
+//         const devicesOwened = customer.devicesOwened;
 
-        const finalDeviceList = devicesOwened.map((dev) => {
-            const imei = dev.deviceNo;
-            const liveData = devices[imei];
+//         const finalDeviceList = devicesOwened.map((dev) => {
+//             const imei = dev.deviceNo;
+//             const liveData = devices[imei];
 
-            let status = "offline";
-            let formattedLat = null;
-            let formattedLng = null;
-            let speed = 0;
-            let ignition = "0";
-            let gpsFix = "0";
-            let satellites = "0";
-            let lastUpdate = null;
-            let movementStatus = "stopped";
+//             let status = "offline";
+//             let formattedLat = null;
+//             let formattedLng = null;
+//             let speed = 0;
+//             let ignition = "0";
+//             let gpsFix = "0";
+//             let satellites = "0";
+//             let lastUpdate = null;
+//             let movementStatus = "stopped";
 
-            // ================= LIVE DATA =================
-            if (liveData) {
-                const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
-                status = diff <= 60000 ? "online" : "stale";
+//             // ================= LIVE DATA =================
+//             if (liveData) {
+//                 const diff = Date.now() - new Date(liveData.lastUpdate).getTime();
+//                 status = diff <= 60000 ? "online" : "stale";
 
-                formattedLat = liveData.lat;
-                formattedLng = liveData.lng;
-                if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
-                if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
+//                 formattedLat = liveData.lat;
+//                 formattedLng = liveData.lng;
+//                 if (liveData.latDir === "S" && formattedLat > 0) formattedLat = -formattedLat;
+//                 if (liveData.lngDir === "W" && formattedLng > 0) formattedLng = -formattedLng;
 
-                speed = liveData.speed || 0;
-                ignition = liveData.ignition || "0";
-                gpsFix = liveData.gpsFix || "0";
-                satellites = liveData.satellites || "0";
-                lastUpdate = liveData.lastUpdate;
+//                 speed = liveData.speed || 0;
+//                 ignition = liveData.ignition || "0";
+//                 gpsFix = liveData.gpsFix || "0";
+//                 satellites = liveData.satellites || "0";
+//                 lastUpdate = liveData.lastUpdate;
 
-                if (speed > 5) movementStatus = "moving";
-                else if (speed > 0) movementStatus = "slow moving";
-                else movementStatus = "stopped";
-            }
+//                 if (speed > 5) movementStatus = "moving";
+//                 else if (speed > 0) movementStatus = "slow moving";
+//                 else movementStatus = "stopped";
+//             }
 
-            // ================= STOP INFO LOGIC =================
-            if (!vehicleState[imei]) {
-                vehicleState[imei] = {
-                    isStopped: false,
-                    stopStartTime: null,
-                    totalStoppedSeconds: 0
-                };
-            }
+//             // ================= STOP INFO LOGIC =================
+//             if (!vehicleState[imei]) {
+//                 vehicleState[imei] = {
+//                     isStopped: false,
+//                     stopStartTime: null,
+//                     totalStoppedSeconds: 0
+//                 };
+//             }
 
-            if (speed === 0 && !vehicleState[imei].isStopped) {
-                vehicleState[imei].isStopped = true;
-                vehicleState[imei].stopStartTime = Date.now();
-            }
+//             if (speed === 0 && !vehicleState[imei].isStopped) {
+//                 vehicleState[imei].isStopped = true;
+//                 vehicleState[imei].stopStartTime = Date.now();
+//             }
 
-            if (speed > 0 && vehicleState[imei].isStopped) {
-                vehicleState[imei].isStopped = false;
-                const stoppedFor = Math.floor(
-                    (Date.now() - vehicleState[imei].stopStartTime) / 1000
-                );
-                vehicleState[imei].totalStoppedSeconds += stoppedFor;
-                vehicleState[imei].stopStartTime = null;
-            }
+//             if (speed > 0 && vehicleState[imei].isStopped) {
+//                 vehicleState[imei].isStopped = false;
+//                 const stoppedFor = Math.floor(
+//                     (Date.now() - vehicleState[imei].stopStartTime) / 1000
+//                 );
+//                 vehicleState[imei].totalStoppedSeconds += stoppedFor;
+//                 vehicleState[imei].stopStartTime = null;
+//             }
 
-            // ================= PARK INFO LOGIC =================
-            if (!parkedState[imei]) {
-                parkedState[imei] = {
-                    isParked: false,
-                    parkStartTime: null,
-                    totalParkedSeconds: 0
-                };
-            }
+//             // ================= PARK INFO LOGIC =================
+//             if (!parkedState[imei]) {
+//                 parkedState[imei] = {
+//                     isParked: false,
+//                     parkStartTime: null,
+//                     totalParkedSeconds: 0
+//                 };
+//             }
 
-            const ignitionOn =
-                ignition === "1" || ignition === 1 || ignition === true;
+//             const ignitionOn =
+//                 ignition === "1" || ignition === 1 || ignition === true;
 
-            if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
-                parkedState[imei].isParked = true;
-                parkedState[imei].parkStartTime = Date.now();
-            }
+//             if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
+//                 parkedState[imei].isParked = true;
+//                 parkedState[imei].parkStartTime = Date.now();
+//             }
 
-            if (ignitionOn && parkedState[imei].isParked) {
-                parkedState[imei].isParked = false;
-                const parkedFor = Math.floor(
-                    (Date.now() - parkedState[imei].parkStartTime) / 1000
-                );
-                parkedState[imei].totalParkedSeconds += parkedFor;
-                parkedState[imei].parkStartTime = null;
-            }
+//             if (ignitionOn && parkedState[imei].isParked) {
+//                 parkedState[imei].isParked = false;
+//                 const parkedFor = Math.floor(
+//                     (Date.now() - parkedState[imei].parkStartTime) / 1000
+//                 );
+//                 parkedState[imei].totalParkedSeconds += parkedFor;
+//                 parkedState[imei].parkStartTime = null;
+//             }
 
-            // ================= RESPONSE =================
-            return {
-                dev,
-                deviceNo: dev.deviceNo,
-                deviceType: dev.deviceType,
-                RegistrationNo: dev.RegistrationNo,
-                MakeModel: dev.MakeModel,
-                ModelYear: dev.ModelYear,
-                batchNo: dev.batchNo,
-                date: dev.date,
-                simDetails: dev.simDetails || [],
+//             // ================= RESPONSE =================
+//             return {
+//                 dev,
+//                 deviceNo: dev.deviceNo,
+//                 deviceType: dev.deviceType,
+//                 RegistrationNo: dev.RegistrationNo,
+//                 MakeModel: dev.MakeModel,
+//                 ModelYear: dev.ModelYear,
+//                 batchNo: dev.batchNo,
+//                 date: dev.date,
+//                 simDetails: dev.simDetails || [],
 
-                liveTracking: liveData || null,
+//                 liveTracking: liveData || null,
 
-                status,
-                lat: formattedLat,
-                lng: formattedLng,
-                speed,
-                ignition,
-                gpsFix,
-                satellites,
-                lastUpdate,
-                movementStatus,
+//                 status,
+//                 lat: formattedLat,
+//                 lng: formattedLng,
+//                 speed,
+//                 ignition,
+//                 gpsFix,
+//                 satellites,
+//                 lastUpdate,
+//                 movementStatus,
 
-                // 🔥 STOP INFO (Formatted)
-                stopInfo: {
-                    isStopped: vehicleState[imei].isStopped,
-                    stopStartTime: vehicleState[imei].stopStartTime,
-                    stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
+//                 // 🔥 STOP INFO (Formatted)
+//                 stopInfo: {
+//                     isStopped: vehicleState[imei].isStopped,
+//                     stopStartTime: vehicleState[imei].stopStartTime,
+//                     stopStartTimeFormatted: formatDateTime(vehicleState[imei].stopStartTime),
 
-                    totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
-                    totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
+//                     totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+//                     totalStoppedTime: formatDuration(vehicleState[imei].totalStoppedSeconds),
 
-                    currentStopSeconds: vehicleState[imei].isStopped
-                        ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-                        : 0,
-                    currentStopTime: vehicleState[imei].isStopped
-                        ? formatDuration(
-                            Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
-                        )
-                        : "0s"
-                },
+//                     currentStopSeconds: vehicleState[imei].isStopped
+//                         ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+//                         : 0,
+//                     currentStopTime: vehicleState[imei].isStopped
+//                         ? formatDuration(
+//                             Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+//                         )
+//                         : "0s"
+//                 },
 
-                // 🔥 PARK INFO (Formatted)
-                parkInfo: {
-                    isParked: parkedState[imei].isParked,
-                    parkStartTime: parkedState[imei].parkStartTime,
-                    parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
+//                 // 🔥 PARK INFO (Formatted)
+//                 parkInfo: {
+//                     isParked: parkedState[imei].isParked,
+//                     parkStartTime: parkedState[imei].parkStartTime,
+//                     parkStartTimeFormatted: formatDateTime(parkedState[imei].parkStartTime),
 
-                    totalParkedSeconds: parkedState[imei].totalParkedSeconds,
-                    totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
+//                     totalParkedSeconds: parkedState[imei].totalParkedSeconds,
+//                     totalParkedTime: formatDuration(parkedState[imei].totalParkedSeconds),
 
-                    currentParkedSeconds: parkedState[imei].isParked
-                        ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-                        : 0,
-                    currentParkedTime: parkedState[imei].isParked
-                        ? formatDuration(
-                            Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
-                        )
-                        : "0s"
-                }
-            };
-        });
+//                     currentParkedSeconds: parkedState[imei].isParked
+//                         ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+//                         : 0,
+//                     currentParkedTime: parkedState[imei].isParked
+//                         ? formatDuration(
+//                             Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+//                         )
+//                         : "0s"
+//                 }
+//             };
+//         });
 
-        return res.status(200).json({
-            success: true,
-            message: "Live tracking data for all customer devices retrieved successfully",
-            totalDevices: finalDeviceList.length,
-            devices: finalDeviceList,
-        });
+//         return res.status(200).json({
+//             success: true,
+//             message: "Live tracking data for all customer devices retrieved successfully",
+//             totalDevices: finalDeviceList.length,
+//             devices: finalDeviceList,
+//         });
 
-    } catch (error) {
-        console.error("❌ Controller Error (All Devices):", error);
-        return res.status(500).json({
-            success: false,
-            message: "Server error while fetching live tracking data for all devices",
-            error: error.message,
-        });
-    }
-};
+//     } catch (error) {
+//         console.error("❌ Controller Error (All Devices):", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server error while fetching live tracking data for all devices",
+//             error: error.message,
+//         });
+//     }
+// };
 
 
 
@@ -8701,7 +8701,7 @@ exports.addWalletBalance = async (req, res) => {
     }
 }
 
-//fetch wallet balance api
+//fetch wallet balance api will pending
 exports.fetchWalletBalance = async (req, res) => {
     try {
         const userId = req.user?.userId;
@@ -8738,7 +8738,7 @@ exports.fetchWalletBalance = async (req, res) => {
                 balance: manufacur.wallet.balance,
             });
 
-        } else if (user?.role === "distributor") {
+        } else if (user?.role === "distibutor") {
             const distributor = await Distributor.findById(user?.distributorId);
             if (!distributor) {
                 return res.status(404).json({
@@ -8868,6 +8868,109 @@ exports.fetchManufacturPaymentHistory = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server Error in fetchPaymentHistory"
+        })
+    }
+}
+
+
+exports.fetchDistributorPaymentHistory = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        };
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        if (user?.role !== "distibutor") {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden: Access is allowed only for distributors"
+            });
+        }
+
+        const distributor = await Distributor.findById(user?.distributorId);
+
+        if (!distributor) {
+            return res.status(404).json({
+                success: false,
+                message: "Distributor not found"
+            });
+        }
+
+        const transactions = await WalletTransaction
+            .find({ distributorId: distributor._id })
+            .select("reason type amount balanceAfter createdAt -_id")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (!transactions || transactions.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No transactions found",
+                transactions: [],
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment history fetched successfully",
+            transactions,
+        });
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchDistributorPaymentHistory"
+        })
+    }
+}
+
+
+exports.fetchOemPaymentHistory = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "please Provide UserId",
+            })
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+        if (user?.role !== "oem") {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden: Access is allowed only for oem"
+            })
+        }
+
+        const oem = await CreateOemModel.findById()
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchOemPaymentHistory"
         })
     }
 }

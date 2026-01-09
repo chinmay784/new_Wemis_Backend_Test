@@ -1,423 +1,280 @@
-// const express = require('express');
-// const { connectToDatabase } = require('./dataBase/db');
 
-// const app = express();
-// const port = 4004;
-// const manufacturerRouter = require('./routes/manuFacturRoute');
-// const SuperAdminRouter = require('./routes/superAdminRoute');
+// // ============================================
+// // 📁 server.js (Main Entry Point)
+// /// File: server.js
 
-// // ✅ Increase request body size limit (VERY IMPORTANT FOR AWS)
-// app.use(express.json({ limit: "100mb" }));
-// app.use(express.urlencoded({ extended: true, limit: "100mb" }));;
-// app.use('/', manufacturerRouter, SuperAdminRouter);
-
-
-// connectToDatabase();
-// app.listen(port, "0.0.0.0", () => {
-//   console.log(`Manufacturer Service is running on port ${port} and url http://localhost:${port}`);
-// });
-
-
-
-
+// // manufacturer/server.js
 
 // const express = require("express");
 // const net = require("net");
 // const { connectToDatabase } = require("./dataBase/db");
+// const { connectProducer, sendRoutePoint } = require("./KAFKA/producer")
 
+// // ✅ Shared In-Memory Store
+// const devices = require("./devicesStore");
+
+// // Routers
 // const manufacturerRouter = require("./routes/manuFacturRoute");
-// const SuperAdminRouter = require("./routes/superAdminRoute");
-// const { devices } = require("./devicesStore");
+// const superAdminRouter = require("./routes/superAdminRoute");
+
+// // Mongo Model for Route Playback
+// const RouteHistory = require("./models/RouteHistory");
 
 
 // const app = express();
 // const HTTP_PORT = 4004;
-// const TCP_PORT = 5000;
+// const TCP_PORT = 4005;
 
-// // ✅ Increase request body size limit (VERY IMPORTANT FOR AWS)
 // app.use(express.json({ limit: "100mb" }));
 // app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
-// // Combine Existing Routes
-// app.use("/", manufacturerRouter, SuperAdminRouter);
+// app.use("/", manufacturerRouter, superAdminRouter);
 
-// // ===============================
-// // ✅ In-Memory Devices Store
-// // ===============================
-// // let devices = {};
+// let buffer = ""; // global streaming buffer
 
-// // ===============================
-// // ✅ TCP SERVER (GPS Devices)
-// // ===============================
+
+// // ================================
+// //  AUTO SAVE ROUTE HISTORY FUNCTION
+// // ================================
+// async function saveToRouteHistory(parsed) {
+//   try {
+//     if (!parsed || !parsed.deviceId) return;
+
+//     await RouteHistory.create({
+//       imei: parsed.deviceId,
+//       latitude: parsed.lat,
+//       longitude: parsed.lng,
+//       speed: parsed.speed,
+//       raw: parsed,
+//       timestamp: parsed.lastUpdate || new Date()
+//     });
+
+//     console.log(`📍 Route point saved for IMEI: ${parsed.deviceId}`);
+//   } catch (err) {
+//     console.log("❌ Route Save Error:", err.message);
+//   }
+// }
+
+// // (async () => {
+// //   await connectProducer();
+// // })();
+
+// // =========================================
+// // ✅ TCP SERVER (Traxo GPS Devices)
+// // =========================================
 // const tcpServer = net.createServer(socket => {
-//   console.log("📡 GPS Device Connected:", socket.remoteAddress);
-
-//   let buffer = "";
+//   console.log("📡 Device Connected:", socket.remoteAddress);
 
 //   socket.on("data", (data) => {
+//     const ascii = data.toString("utf8");
+
+//     console.log("====================================");
 //     console.log("📥 RAW ASCII:", data.toString("utf8"));
-//     console.log("📥 RAW HEX:", data.toString("hex"));
-//     buffer += data.toString();
+//     console.log("📥 RAW HEX:", data.toString("hex").toUpperCase());
+//     console.log("📥 BUFFER LENGTH:", data.length);
+//     console.log("====================================");
 
-//     let messages = buffer.split(/\r?\n/);
-//     buffer = messages.pop(); // Handle incomplete buffer
+//     // 🔥 BLOCK HTTP SCANNERS
+//     if (ascii.includes("GET") || ascii.includes("HTTP")) {
+//       console.log("❌ HTTP Scanner Blocked");
+//       return socket.destroy();
+//     }
 
-//     for (const msg of messages) {
-//       if (!msg.trim()) continue;
+//     // ✅ Append to buffer (device sends without newline)
+//     buffer += ascii;
 
-//       console.log("📥 RAW PACKET:", msg);
+//     // ✅ Check if buffer contains a PVT packet
+//     if (buffer.includes("$PVT")) {
+//       const start = buffer.indexOf("$PVT");
+//       let end = buffer.indexOf("\n", start);
 
-//       const parsed = parseTraxoPacket(msg);
+//       if (end === -1) {
+//         // No newline — maybe single full packet
+//         end = buffer.length;
+//       }
+
+//       const packet = buffer.slice(start, end).trim();
+
+//       console.log("📥 RAW PACKET:", packet);
+//       console.log("Time -", new Date().toLocaleString());
+
+
+//       const parsed = parsePvtPacket(packet);
 
 //       if (parsed && parsed.deviceId) {
 //         devices[parsed.deviceId] = parsed;
-//         console.log("✅ Parsed Device:", parsed);
-//       } else {
-//         console.log("⚠️ Failed to parse packet:", msg);
+//         console.log("✅ UPDATED DEVICE:", parsed.deviceId);
+
+
+//         // 🔥 AUTO SAVE TO DB FOR ROUTE PLAYBACK
+//         saveToRouteHistory(parsed);
+//         // sendRoutePoint(parsed);
+//         console.log("Time -", new Date().toLocaleString());
+
 //       }
+
+//       // ✅ Remove processed packet from buffer
+//       buffer = buffer.slice(end);
 //     }
+
+//     // ✅ Prevent buffer overflow
+//     if (buffer.length > 5000) buffer = "";
 //   });
 
-//   socket.on("end", () => {
-//     console.log("❌ Device Disconnected:", socket.remoteAddress);
-//   });
-
-//   socket.on("error", (err) => {
-//     console.error("🚨 TCP Socket Error:", err.message);
-//   });
+//   socket.on("end", () => console.log("❌ Device Disconnected"));
+//   socket.on("error", (err) => console.log("🚨 TCP ERROR:", err.message));
 // });
 
-// // Start TCP Server
-// tcpServer.listen(TCP_PORT, "0.0.0.0", () => {
-//   console.log(`🚀 GPS TCP Server running on port ${TCP_PORT}`);
+// tcpServer.listen(TCP_PORT, () => {
+//   console.log(`🚀 TCP Server running on port ${TCP_PORT}`);
 // });
 
-// // ===============================
-// // ✅ HTTP Routes for Device Data
-// // ===============================
-
-
-// // Start Express HTTP Server
 // app.listen(HTTP_PORT, () => {
-//   console.log(`🌍 ManuFactur Server running on port ${HTTP_PORT} http://localhost:${HTTP_PORT}`);
+//   console.log(`🌍 HTTP Server running on port ${HTTP_PORT}`);
 // });
 
-// // Connect DB
 // connectToDatabase();
 
-
-// // ===============================
-// // ✅ GPS Packet Parser Function
-// // ===============================
-// function parseTraxoPacket(msg) {
-//   const parts = msg.trim().split(/[,\s]+/);
-//   console.log("📦 Packet Parts:", parts);
-
+// // =========================================
+// // ✅ PARSER FOR ASCII PVT PACKET
+// // =========================================
+// function parsePvtPacket(packet) {
 //   try {
+//     const parts = packet.split(",");
+
+//     if (parts.length < 10) return null; // not enough fields
+//     console.log("speed For Normal", parseFloat(parts[15]) || 0);
+//     console.log("speed for Trunc", Math.trunc(parseFloat(parts[15])) || 0);
+
 //     return {
-//       deviceId: parts[6] || null,
-//       packetHeader: parts[0],
-//       vendorId: parts[1],
-//       firmware: parts[2],
-//       packetType: parts[3],
-//       alertId: parts[4],
-//       packetStatus: parts[5],
-//       imei: parts[6],
-//       vehicleNo: parts[7],
-//       gpsFix: parts[8],
-//       date: parts[9],
-//       time: parts[10],
+//       deviceId: parts[6] || "unknown",     // IMEI
+//       packetHeader: parts[0] || null,
+//       vendorId: parts[1] || null,
+//       firmware: parts[2] || null,
+//       packetType: parts[3] || null,
+//       alertId: parts[4] || null,
+//       packetStatus: parts[5] || null,
+//       imei: parts[6] || null,
+//       vehicleNo: parts[7] || null,
+//       gpsFix: parts[8] || null,
+//       date: parts[9] || null,
+//       time: parts[10] || null,
 //       lat: parseFloat(parts[11]) || null,
-//       latDir: parts[12],
+//       latDir: parts[12] || null,
 //       lng: parseFloat(parts[13]) || null,
-//       lngDir: parts[14],
-//       speed: parseFloat(parts[15]) || 0,
-//       satellites: parts[17],
-//       batteryVoltage: parts[25],
-//       gsmSignal: parts[28],
-//       timestamp: new Date().toISOString()
+//       lngDir: parts[14] || null,
+//       speed: Math.trunc(parseFloat(parts[15])) || 0,
+//       headDegree: parts[16] || null,
+//       satellites: parts[17] || null,
+//       altitude: parts[18] || null,
+//       pdop: parts[19] || null,
+//       hdop: parts[20] || null,
+//       networkOperator: parts[21] || null,
+//       ignition: parts[22] || null,
+//       mainsPowerStatus: parts[23] || null,
+//       mainsVoltage: parts[24] || null,
+//       batteryVoltage: parts[25] || null,
+//       sosStatus: parts[26] || null,
+//       tamperAlert: parts[27] || null,
+//       gsmSignal: parts[28] || null,
+//       mcc: parts[29] || null,
+//       mnc: parts[30] || null,
+//       lac: parts[31] || null,
+//       cellId: parts[32] || null,
+//       // add more indexes if your packet has them
+//       timestamp: new Date().toISOString(),
+//       lastUpdate: new Date()
 //     };
-//   } catch (err) {
-//     console.error("❌ Parsing Error:", err.message);
+//   } catch (e) {
+//     console.log("❌ PVT Parse Error:", e.message);
 //     return null;
 //   }
 // }
 
 
 
-// server.js
-// const express = require("express");
-// const net = require("net");
-// const { connectToDatabase } = require("./dataBase/db");
-
-// const manufacturerRouter = require("./routes/manuFacturRoute");
-// const SuperAdminRouter = require("./routes/superAdminRoute");
-
-// // ✅ Shared memory object
-// const devices = require("./devicesStore");
-
-// const app = express();
-// const HTTP_PORT = 4004;
-// const TCP_PORT = 5000;
-
-// app.use(express.json({ limit: "100mb" }));
-// app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
-// app.use("/", manufacturerRouter, SuperAdminRouter);
-
-// // ✅ TCP Server
-// const tcpServer = net.createServer(socket => {
-//   console.log("📡 GPS Device Connected:", socket.remoteAddress);
-
-//   socket.on("data", (data) => {
-
-//     const ascii = data.toString("utf8");
-//     const hex = data.toString("hex").toUpperCase();
-
-//     console.log("📥 RAW ASCII:", ascii);
-//     console.log("📥 RAW HEX:", hex);
-
-//     // ✅ Block HTTP scanners
-//     if (ascii.startsWith("GET") || ascii.startsWith("POST") || ascii.includes("HTTP")) {
-//       console.log("❌ HTTP scanner blocked");
-//       return socket.destroy();
-//     }
-
-//     if (data.length < 10) {
-//       console.log("❌ Invalid short packet blocked");
-//       return;
-//     }
-
-//     // ✅ Parse ASCII + Binary packets
-//     const parsed = parseTraxoPacket(data);
-
-//     if (parsed && parsed.deviceId) {
-//       devices[parsed.deviceId] = { ...parsed, lastUpdate: new Date() };
-//       console.log("✅ Device Updated:", parsed.deviceId);
-//     } else {
-//       console.log("⚠️ Unrecognized GPS packet");
-//     }
-//   });
-
-//   socket.on("end", () => {
-//     console.log("❌ Device Disconnected:", socket.remoteAddress);
-//   });
-
-//   socket.on("error", (err) => {
-//     console.error("🚨 TCP Socket Error:", err.message);
-//   });
-// });
-
-// tcpServer.listen(TCP_PORT, "0.0.0.0", () => {
-//   console.log(`🚀 GPS TCP Server running on port ${TCP_PORT}`);
-// });
-
-// app.listen(HTTP_PORT, () => {
-//   console.log(`🌍 ManuFactur HTTP Server running on port ${HTTP_PORT}`);
-// });
-
-// connectToDatabase();
-
-
-// // ✅ PARSER (ASCII + binary fallback)
-// function parseTraxoPacket(data) {
-//   const ascii = data.toString("utf8").trim();
-
-//   // ✅ If ASCII packet ($PVT)
-//   if (ascii.startsWith("$PVT")) {
-//     const parts = ascii.split(",");
-
-//     return {
-//       deviceId: parts[6],
-//       imei: parts[6],
-//       packetType: "ASCII",
-//       raw: ascii
-//     };
-//   }
-
-//   // ✅ Otherwise treat as binary — IMEI needed
-//   const hex = data.toString("hex").toUpperCase();
-
-//   // ❌ TEMPORARY until you give full packet
-//   return {
-//     deviceId: null,   // must be extracted
-//     packetType: "BINARY",
-//     rawHex: hex
-//   };
-// }
-
-
-
 
 // ============================================
-// 📁 server.js (Main Entry Point)
-/// File: server.js
+// 📁 server.js (Updated for per-user live tracking)
+// ============================================
 
-// manufacturer/server.js
+// ============================================
+// SERVER.JS - LIVE GPS TRACKING
+// ============================================
 
 const express = require("express");
+const http = require("http");
 const net = require("net");
 const { connectToDatabase } = require("./dataBase/db");
-
-// ✅ Shared In-Memory Store
-const devices = require("./devicesStore");
-
-// Routers
-const manufacturerRouter = require("./routes/manuFacturRoute");
-const superAdminRouter = require("./routes/superAdminRoute");
-
-// Mongo Model for Route Playback
 const RouteHistory = require("./models/RouteHistory");
-
+const User = require("./models/UserModel");
+const CoustmerDevice = require("./models/coustmerDeviceModel");
+const devicesStore = require("./devicesStore"); // in-memory store
 
 const app = express();
 const HTTP_PORT = 4004;
 const TCP_PORT = 4005;
 
+// ================= IN-MEMORY STORES =================
+const devices = devicesStore; // deviceId -> latest parsed packet
+const vehicleState = {};      // deviceId -> stop info
+const parkedState = {};       // deviceId -> park info
+let userDeviceMap = {};       // userId -> [deviceId, deviceId, ...]
+
+// ================= EXPRESS SETUP =================
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
+// Routers
+const manufacturerRouter = require("./routes/manuFacturRoute");
+const superAdminRouter = require("./routes/superAdminRoute");
 app.use("/", manufacturerRouter, superAdminRouter);
 
-let buffer = ""; // global streaming buffer
+// ================= SOCKET.IO SETUP =================
+const httpServer = http.createServer(app);
+const { Server } = require("socket.io");
 
+const io = new Server(httpServer, {
+  cors: { origin: "*", methods: ["GET", "POST"] },
+});
 
-// ================================
-//  AUTO SAVE ROUTE HISTORY FUNCTION
-// ================================
-async function saveToRouteHistory(parsed) {
-  try {
-    if (!parsed || !parsed.deviceId) return;
+io.on("connection", (socket) => {
+  const userId = socket.handshake.query.userId;
+  if (!userId) return socket.disconnect();
 
-    await RouteHistory.create({
-      imei: parsed.deviceId,
-      latitude: parsed.lat,
-      longitude: parsed.lng,
-      speed: parsed.speed,
-      raw: parsed,
-      timestamp: parsed.lastUpdate || new Date()
-    });
+  console.log(`🟢 User connected: ${userId} | socket: ${socket.id}`);
+  socket.join(userId);
 
-    console.log(`📍 Route point saved for IMEI: ${parsed.deviceId}`);
-  } catch (err) {
-    console.log("❌ Route Save Error:", err.message);
-  }
-}
-
-// =========================================
-// ✅ TCP SERVER (Traxo GPS Devices)
-// =========================================
-const tcpServer = net.createServer(socket => {
-  console.log("📡 Device Connected:", socket.remoteAddress);
-
-  socket.on("data", (data) => {
-    const ascii = data.toString("utf8");
-
-    console.log("====================================");
-    console.log("📥 RAW ASCII:", data.toString("utf8"));
-    console.log("📥 RAW HEX:", data.toString("hex").toUpperCase());
-    console.log("📥 BUFFER LENGTH:", data.length);
-    console.log("====================================");
-
-    // 🔥 BLOCK HTTP SCANNERS
-    if (ascii.includes("GET") || ascii.includes("HTTP")) {
-      console.log("❌ HTTP Scanner Blocked");
-      return socket.destroy();
-    }
-
-    // ✅ Append to buffer (device sends without newline)
-    buffer += ascii;
-
-    // ✅ Check if buffer contains a PVT packet
-    if (buffer.includes("$PVT")) {
-      const start = buffer.indexOf("$PVT");
-      let end = buffer.indexOf("\n", start);
-
-      if (end === -1) {
-        // No newline — maybe single full packet
-        end = buffer.length;
-      }
-
-      const packet = buffer.slice(start, end).trim();
-
-      console.log("📥 RAW PACKET:", packet);
-      console.log("Time -", new Date().toLocaleString());
-
-
-      const parsed = parsePvtPacket(packet);
-
-      if (parsed && parsed.deviceId) {
-        devices[parsed.deviceId] = parsed;
-        console.log("✅ UPDATED DEVICE:", parsed.deviceId);
-
-
-        // 🔥 AUTO SAVE TO DB FOR ROUTE PLAYBACK
-        saveToRouteHistory(parsed);
-        console.log("Time -", new Date().toLocaleString());
-
-      }
-
-      // ✅ Remove processed packet from buffer
-      buffer = buffer.slice(end);
-    }
-
-    // ✅ Prevent buffer overflow
-    if (buffer.length > 5000) buffer = "";
+  socket.on("disconnect", () => {
+    console.log(`🔴 User disconnected: ${userId}`);
   });
-
-  socket.on("end", () => console.log("❌ Device Disconnected"));
-  socket.on("error", (err) => console.log("🚨 TCP ERROR:", err.message));
 });
 
-tcpServer.listen(TCP_PORT, () => {
-  console.log(`🚀 TCP Server running on port ${TCP_PORT}`);
-});
+// ================= INITIALIZE USER-DEVICE MAPPING =================
+const initializeUserDeviceMap = async () => {
+  try {
+    const users = await User.find().populate("coustmerId");
+    userDeviceMap = {};
+    users.forEach((user) => {
+      if (user.coustmerId && user.coustmerId.devicesOwened) {
+        userDeviceMap[user._id] = user.coustmerId.devicesOwened.map(d => d.deviceNo);
+      }
+    });
+    console.log("✅ User-Device Map initialized:", userDeviceMap);
+  } catch (err) {
+    console.log("❌ Error initializing user-device map:", err.message);
+  }
+};
+initializeUserDeviceMap();
 
-app.listen(HTTP_PORT, () => {
-  console.log(`🌍 HTTP Server running on port ${HTTP_PORT}`);
-});
-
-connectToDatabase();
-
-// =========================================
-// ✅ PARSER FOR ASCII PVT PACKET
-// =========================================
+// ================= PARSE $PVT PACKET =================
 function parsePvtPacket(packet) {
   try {
     const parts = packet.split(",");
-
-    if (parts.length < 10) return null; // not enough fields
-    console.log("speed For Normal", parseFloat(parts[15]) || 0);
-    console.log("speed for Trunc", Math.trunc(parseFloat(parts[15])) || 0);
-    // return {
-    //   deviceId: parts[6],       // IMEI
-    //   imei: parts[6],
-    //   packetHeader: parts[0],
-    //   vendorId: parts[1],
-    //   firmware: parts[2],
-    //   packetType: parts[3],
-    //   alertId: parts[4],
-    //   packetStatus: parts[5],
-    //   vehicleNo: parts[7],
-    //   gpsFix: parts[8],
-    //   date: parts[9],
-    //   time: parts[10],
-    //   lat: parseFloat(parts[11]) || null,
-    //   latDir: parts[12],
-    //   lng: parseFloat(parts[13]) || null,
-    //   lngDir: parts[14],
-    //   // speed: parseFloat(parts[15]) || 0,
-    //   speed: Math.trunc(parseFloat(parts[15])) || 0,
-    //   satellites: parts[17] || "",
-    //   batteryVoltage: parts[25] || "",
-    //   gsmSignal: parts[28] || "",
-    //   timestamp: new Date().toISOString(),
-    //   lastUpdate: new Date()
-    // };
-
+    if (parts.length < 10) return null;
 
     return {
-      deviceId: parts[6] || "unknown",     // IMEI
+      deviceId: parts[6] || "unknown",
       packetHeader: parts[0] || null,
       vendorId: parts[1] || null,
       firmware: parts[2] || null,
@@ -451,7 +308,6 @@ function parsePvtPacket(packet) {
       mnc: parts[30] || null,
       lac: parts[31] || null,
       cellId: parts[32] || null,
-      // add more indexes if your packet has them
       timestamp: new Date().toISOString(),
       lastUpdate: new Date()
     };
@@ -460,3 +316,176 @@ function parsePvtPacket(packet) {
     return null;
   }
 }
+
+// ================= BUILD LIVE TRACKING OBJECT =================
+function buildLiveTrackingObject(parsed, dev) {
+  const imei = parsed.deviceId;
+
+  if (!vehicleState[imei]) vehicleState[imei] = { isStopped: false, stopStartTime: null, totalStoppedSeconds: 0 };
+  if (!parkedState[imei]) parkedState[imei] = { isParked: false, parkStartTime: null, totalParkedSeconds: 0 };
+
+  // Movement
+  let movementStatus = "stopped";
+  const speed = parsed.speed || 0;
+  const ignition = parsed.ignition || "0";
+  if (speed > 5) movementStatus = "moving";
+  else if (speed > 0) movementStatus = "slow moving";
+
+  // Stop info
+  if (speed === 0 && !vehicleState[imei].isStopped) {
+    vehicleState[imei].isStopped = true;
+    vehicleState[imei].stopStartTime = Date.now();
+  }
+  if (speed > 0 && vehicleState[imei].isStopped) {
+    vehicleState[imei].isStopped = false;
+    vehicleState[imei].totalStoppedSeconds += Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000);
+    vehicleState[imei].stopStartTime = null;
+  }
+
+  // Park info
+  const ignitionOn = ignition === "1" || ignition === 1 || ignition === true;
+  if (!ignitionOn && speed === 0 && !parkedState[imei].isParked) {
+    parkedState[imei].isParked = true;
+    parkedState[imei].parkStartTime = Date.now();
+  }
+  if (ignitionOn && parkedState[imei].isParked) {
+    parkedState[imei].isParked = false;
+    parkedState[imei].totalParkedSeconds += Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000);
+    parkedState[imei].parkStartTime = null;
+  }
+
+  // Format lat/lng
+  let lat = parsed.lat;
+  let lng = parsed.lng;
+  if (parsed.latDir === "S" && lat > 0) lat = -lat;
+  if (parsed.lngDir === "W" && lng > 0) lng = -lng;
+
+  return {
+    dev,
+    deviceNo: dev.deviceNo,
+    deviceType: dev.deviceType,
+    RegistrationNo: dev.RegistrationNo,
+    MakeModel: dev.MakeModel,
+    ModelYear: dev.ModelYear,
+    batchNo: dev.batchNo,
+    date: dev.date,
+    simDetails: dev.simDetails || [],
+    liveTracking: parsed || null,
+    status: speed > 0 ? "online" : "offline",
+    lat,
+    lng,
+    speed,
+    ignition,
+    gpsFix: parsed.gpsFix,
+    satellites: parsed.satellites,
+    lastUpdate: parsed.lastUpdate,
+    movementStatus,
+    stopInfo: {
+      isStopped: vehicleState[imei].isStopped,
+      stopStartTime: vehicleState[imei].stopStartTime,
+      totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+      currentStopSeconds: vehicleState[imei].isStopped
+        ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+        : 0
+    },
+    parkInfo: {
+      isParked: parkedState[imei].isParked,
+      parkStartTime: parkedState[imei].parkStartTime,
+      totalParkedSeconds: parkedState[imei].totalParkedSeconds,
+      currentParkedSeconds: parkedState[imei].isParked
+        ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+        : 0
+    }
+  };
+}
+
+// ================= TCP SERVER =================
+let buffer = "";
+const tcpServer = net.createServer((socket) => {
+  console.log("📡 Device Connected:", socket.remoteAddress);
+
+  socket.on("data", async (data) => {
+    const ascii = data.toString("utf8");
+    if (ascii.includes("GET") || ascii.includes("HTTP")) return socket.destroy();
+
+    buffer += ascii;
+
+    while (buffer.includes("$PVT")) {
+      const start = buffer.indexOf("$PVT");
+      let end = buffer.indexOf("\n", start);
+      if (end === -1) end = buffer.length;
+
+      const packet = buffer.slice(start, end).trim();
+      const parsed = parsePvtPacket(packet);
+
+      if (parsed && parsed.deviceId) {
+        devices[parsed.deviceId] = parsed;
+
+        // Save to DB
+        saveToRouteHistory(parsed);
+
+        // Push live to relevant users
+        for (const [userId, deviceIds] of Object.entries(userDeviceMap)) {
+          if (deviceIds.includes(parsed.deviceId)) {
+
+            // Get device metadata from CoustmerDevice
+            const userDevices = getDevicesForUser(userId);
+            const dev = userDevices.find(d => d.deviceNo === parsed.deviceId);
+
+            if (dev) {
+              const enrichedData = buildLiveTrackingObject(parsed, dev);
+              io.to(userId).emit("gps-update", enrichedData);
+              console.log(`📡 Sent enriched GPS of ${parsed.deviceId} to user ${userId}`);
+            }
+          }
+        }
+      }
+
+      buffer = buffer.slice(end);
+    }
+
+    if (buffer.length > 5000) buffer = ""; // prevent overflow
+  });
+
+  socket.on("end", () => console.log("❌ Device Disconnected"));
+  socket.on("error", (err) => console.log("🚨 TCP ERROR:", err.message));
+});
+
+tcpServer.listen(TCP_PORT, () => console.log(`🚀 TCP Server running on port ${TCP_PORT}`));
+
+// ================= HELPER: GET USER DEVICES =================
+function getDevicesForUser(userId) {
+  const userDevices = [];
+  const deviceNos = userDeviceMap[userId] || [];
+  deviceNos.forEach(imei => {
+    // You could fetch full metadata from DB if needed
+    const dev = devices[imei]; // in-memory metadata
+    if (dev) userDevices.push(dev);
+  });
+  return userDevices;
+}
+
+// ================= SAVE ROUTE HISTORY =================
+async function saveToRouteHistory(parsed) {
+  try {
+    if (!parsed || !parsed.deviceId) return;
+    await RouteHistory.create({
+      imei: parsed.deviceId,
+      latitude: parsed.lat,
+      longitude: parsed.lng,
+      speed: parsed.speed,
+      raw: parsed,
+      timestamp: parsed.lastUpdate || new Date(),
+    });
+    console.log(`📍 Route point saved for IMEI: ${parsed.deviceId}`);
+  } catch (err) {
+    console.log("❌ Route Save Error:", err.message);
+  }
+}
+
+// ================= START SERVER =================
+httpServer.listen(HTTP_PORT, () => {
+  console.log(`🌍 HTTP + Socket.IO Server running on port ${HTTP_PORT}`);
+});
+
+connectToDatabase();
