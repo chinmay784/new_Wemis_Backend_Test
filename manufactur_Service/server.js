@@ -235,7 +235,7 @@ const httpServer = http.createServer(app);
 const { Server } = require("socket.io");
 
 const io = new Server(httpServer, {
-  cors: { origin:  ["https://websave.in", "http://localhost:5173"], methods: ["GET", "POST"], credentials: true },
+  cors: { origin: ["https://websave.in", "http://localhost:5173"], methods: ["GET", "POST"], credentials: true },
 });
 
 io.on("connection", (socket) => {
@@ -424,6 +424,8 @@ const tcpServer = net.createServer((socket) => {
         // Save to DB
         saveToRouteHistory(parsed);
 
+
+        console.log("Before Push Live datanto relevant user:")
         // Push live to relevant users
         for (const [userId, deviceIds] of Object.entries(userDeviceMap)) {
           if (deviceIds.includes(parsed.deviceId)) {
@@ -439,6 +441,7 @@ const tcpServer = net.createServer((socket) => {
             }
           }
         }
+        console.log("After Push Live datanto relevant user:")
       }
 
       buffer = buffer.slice(end);
