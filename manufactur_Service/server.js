@@ -512,6 +512,7 @@ const RouteHistory = require("./models/RouteHistory");
 const User = require("./models/UserModel");
 const CoustmerDevice = require("./models/coustmerDeviceModel");
 const devicesStore = require("./devicesStore"); // in-memory store
+const { connectProducer, sendRoutePoint } = require("./KAFKA/producer")
 
 const app = express();
 const HTTP_PORT = 4004;
@@ -537,11 +538,11 @@ const httpServer = http.createServer(app);
 const { Server } = require("socket.io");
 
 const io = new Server(httpServer, {
-  cors: { 
+  cors: {
     // Allow both your domain and localhost
-    origin: ["https://websave.in", "https://api.websave.in", "http://localhost:5173"], 
-    methods: ["GET", "POST"], 
-    credentials: true 
+    origin: ["https://websave.in", "https://api.websave.in", "http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
@@ -584,10 +585,10 @@ function parsePvtPacket(packet) {
 
     return {
       deviceId: parts[6] || "unknown",
-      
+
       // 👇 CRITICAL FIX: Added deviceNo so your loop can match it
-      deviceNo: parts[6] || "unknown", 
-      
+      deviceNo: parts[6] || "unknown",
+
       packetHeader: parts[0] || null,
       vendorId: parts[1] || null,
       firmware: parts[2] || null,
@@ -676,7 +677,7 @@ function buildLiveTrackingObject(parsed, dev) {
   // Safe Fallback if 'dev' is missing (prevents crashes)
   const safeDev = dev || { deviceNo: parsed.deviceId, deviceType: "Unknown", RegistrationNo: "Unknown" };
 
-  return {
+  const metaData = {
     dev: safeDev,
     deviceNo: safeDev.deviceNo,
     deviceType: safeDev.deviceType,
@@ -712,6 +713,12 @@ function buildLiveTrackingObject(parsed, dev) {
         ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
         : 0
     }
+  }
+
+  console.log(metaData);
+
+  return {
+    ...metaData
   };
 }
 
@@ -723,7 +730,7 @@ const tcpServer = net.createServer((socket) => {
   socket.on("data", async (data) => {
     const ascii = data.toString("utf8");
     if (ascii.includes("GET") || ascii.includes("HTTP")) {
-        return socket.destroy();
+      return socket.destroy();
     }
 
     buffer += ascii;
@@ -740,11 +747,18 @@ const tcpServer = net.createServer((socket) => {
         // Update global store
         devices[parsed.deviceId] = parsed;
 
-        // Save to DB
+        // // Save to DB
         saveToRouteHistory(parsed);
 
+        // Send to Kafka (No DB write here)
+        // try {
+        //   await sendRoutePoint(parsed);
+        // } catch (error) {
+        //   console.log("❌ Kafka Send Error:", error.message);
+        // }
+
         console.log("Before Push Live datanto relevant user:");
-        
+
         // Push live to relevant users
         for (const [userId, deviceIds] of Object.entries(userDeviceMap)) {
           if (deviceIds.includes(parsed.deviceId)) {
@@ -758,15 +772,15 @@ const tcpServer = net.createServer((socket) => {
               io.to(userId).emit("gps-update", enrichedData);
               console.log(`📡 Sent enriched GPS of ${parsed.deviceId} to user ${userId}`);
             } else {
-               // Send minimal data if device details aren't loaded yet
-               const enrichedData = buildLiveTrackingObject(parsed, parsed);
-               io.to(userId).emit("gps-update", enrichedData);
-               console.log(`📡 Sent BASIC GPS of ${parsed.deviceId} to user ${userId}`);
+              // Send minimal data if device details aren't loaded yet
+              const enrichedData = buildLiveTrackingObject(parsed, parsed);
+              io.to(userId).emit("gps-update", enrichedData);
+              console.log(`📡 Sent BASIC GPS of ${parsed.deviceId} to user ${userId}`);
             }
           }
         }
         console.log("After Push Live datanto relevant user:");
-      }
+      } m
 
       buffer = buffer.slice(end);
     }
@@ -815,3 +829,12 @@ httpServer.listen(HTTP_PORT, () => {
 });
 
 connectToDatabase();
+// // ================= START SERVER =================
+// (async () => {
+//   await connectToDatabase();
+//   await connectProducer();
+
+//   httpServer.listen(HTTP_PORT, () => {
+//     console.log(`🌍 HTTP + Socket.IO running on ${HTTP_PORT}`);
+//   });
+// })();

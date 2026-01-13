@@ -4525,7 +4525,7 @@ const formatDateTime = (timestamp) => {
 //     });
 // };
 
-exports.liveTrackingAllDevices = async (req, res) => {
+exports.liveTrackingAllDevices = async (req, res) => { 
     try {
         const userId = req.user?.userId;
 
