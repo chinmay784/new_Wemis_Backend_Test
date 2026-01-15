@@ -770,6 +770,7 @@ const tcpServer = net.createServer((socket) => {
             if (dev) {
               const enrichedData = buildLiveTrackingObject(parsed, dev);
               io.to(userId).emit("gps-update", enrichedData);
+              console.log(enrichedData)
               console.log(`📡 Sent enriched GPS of ${parsed.deviceId} to user ${userId}`);
             } else {
               // Send minimal data if device details aren't loaded yet
