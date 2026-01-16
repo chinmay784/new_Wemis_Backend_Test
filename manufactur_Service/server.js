@@ -553,6 +553,27 @@ io.on("connection", (socket) => {
   console.log(`🟢 User connected: ${userId} | socket: ${socket.id}`);
   socket.join(userId);
 
+
+  // ✅ LOG & SEND LAST GPS DATA ON SOCKET CONNECT
+  const deviceIds = userDeviceMap[userId] || [];
+
+  deviceIds.forEach((deviceId) => {
+    const parsed = devices[deviceId]; // last GPS stored in memory
+
+    if (parsed) {
+      const enrichedData = buildLiveTrackingObject(parsed, parsed);
+
+      // 🔥 CONSOLE LOG GPS RESPONSE
+      console.log("📡 GPS DATA ON SOCKET CONNECT:");
+      console.log(enrichedData);
+
+      // 🔥 SEND TO FRONTEND
+      socket.emit("gps-update", enrichedData);
+    } else {
+      console.log(`⚠️ No GPS data yet for device: ${deviceId}`);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`🔴 User disconnected: ${userId}`);
   });
