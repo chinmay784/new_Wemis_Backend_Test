@@ -565,7 +565,10 @@ io.on("connection", (socket) => {
 
       // 🔥 CONSOLE LOG GPS RESPONSE
       console.log("📡 GPS DATA ON SOCKET CONNECT:");
-      console.log(enrichedData);
+      console.log(
+        "📦 ENRICHED GPS DATA:\n",
+        JSON.stringify(enrichedData, null, 2)
+      );
 
       // 🔥 SEND TO FRONTEND
       socket.emit("gps-update", enrichedData);
@@ -791,7 +794,10 @@ const tcpServer = net.createServer((socket) => {
             if (dev) {
               const enrichedData = buildLiveTrackingObject(parsed, dev);
               io.to(userId).emit("gps-update", enrichedData);
-              console.log(enrichedData)
+              console.log(
+                "📦 ENRICHED GPS DATA:\n",
+                JSON.stringify(enrichedData, null, 2)
+              );
               console.log(`📡 Sent enriched GPS of ${parsed.deviceId} to user ${userId}`);
             } else {
               // Send minimal data if device details aren't loaded yet
