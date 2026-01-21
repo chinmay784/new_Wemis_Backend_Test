@@ -8,6 +8,18 @@ const createSubscription = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ManuFactur',
     },
+    wlpId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Wlp',
+    },
+    elementName: {
+        type: String,
+        trim: true,
+    },
+    elementNameId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AddCopNo"
+    },
     packageType: {
         type: String,
         trim: true,
@@ -30,7 +42,7 @@ const createSubscription = new mongoose.Schema({
     },
     renewal: {
         type: String,
-        trim:true,
+        trim: true,
     },
     createdAt: {
         type: Date,

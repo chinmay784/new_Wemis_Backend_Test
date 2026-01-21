@@ -21,6 +21,7 @@ const DistributorAllocateBarcode = require("../models/DistributorAllocatedBarcod
 const DelerMapDevice = require('../models/DelerMapDevices');
 const WalletTransaction = require("../models/WalletTransaction");
 const liveTrackingCache = require("../utils/cache");
+const WlpModel = require("../models/WlpModel");
 
 
 
@@ -2282,7 +2283,7 @@ exports.createNewSubscription = async (req, res) => {
             })
         }
 
-        const { packageType, packageName, billingCycle, price, description, renewal } = req.body;
+        const { elementName, packageType, packageName, billingCycle, price, description, renewal } = req.body;
 
         // createSubscription
 
@@ -2324,8 +2325,34 @@ exports.createNewSubscription = async (req, res) => {
             })
         }
 
+
+        // some changes here
+        const elementNameId = await User.findById(userId).select("wlpId");
+
+        // find in wlp schema or model 
+        const wlpData = await WlpModel.findById(elementNameId.wlpId).select("assign_element_list");
+
+
+        const matchedElement = wlpData.assign_element_list.find(
+            (item) => item.elementName === elementName
+        );
+
+        if (!matchedElement) {
+            return res.status(400).json({
+                success: false,
+                message: "Element not found for given elementName"
+            });
+        }
+
+        const checkelementId = matchedElement._id; // ObjectId
+    
+
+
         const newSubscription = new createSubscription({
-            manuFacturId: userId,
+           // manuFacturId: userId,
+           wlpId: userId,
+            elementName,
+            elementNameId: checkelementId,
             packageType,
             packageName,
             billingCycle,
@@ -2366,7 +2393,9 @@ exports.fetchAllSubscriptionPlans = async (req, res) => {
         }
 
         // Fetch AllSubscriptionPlans on The Basis of ManufacturerId
-        const allSubscription = await createSubscription.find({ manuFacturId: userId });
+        // const allSubscription = await createSubscription.find({ manuFacturId: userId });
+
+        const allSubscription = await createSubscription.find({ wlpId: userId });
 
         if (!allSubscription) {
             return res.status(200).json({
