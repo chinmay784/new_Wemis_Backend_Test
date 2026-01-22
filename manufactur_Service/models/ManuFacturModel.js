@@ -95,6 +95,14 @@ const ManuFacturSchema = new mongoose.Schema({
         }
     },
 
+    // Activation Wallet reference
+    activationWallets: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "ActivationWallet",
+        }
+    ],
+
     // ✅ Add ticket issues here
     ticketIssues: [
         {

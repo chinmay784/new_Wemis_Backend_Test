@@ -22,6 +22,8 @@ const DelerMapDevice = require('../models/DelerMapDevices');
 const WalletTransaction = require("../models/WalletTransaction");
 const liveTrackingCache = require("../utils/cache");
 const WlpModel = require("../models/WlpModel");
+const wlpActivation = require("../models/wlpActivationModel");
+const sendActivationWalletToManuFacturer = require("../models/sendActivationWalletToManuFacturerModel")
 
 
 
@@ -2345,12 +2347,12 @@ exports.createNewSubscription = async (req, res) => {
         }
 
         const checkelementId = matchedElement._id; // ObjectId
-    
+
 
 
         const newSubscription = new createSubscription({
-           // manuFacturId: userId,
-           wlpId: userId,
+            // manuFacturId: userId,
+            wlpId: userId,
             elementName,
             elementNameId: checkelementId,
             packageType,
@@ -2532,6 +2534,166 @@ exports.editSubscriptionById = async (req, res) => {
 }
 
 
+
+// Activation code logic 
+exports.addActivationLogic = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        const { elementName, packageName, packageType, billingCycle, price, description } = req.body;
+
+        if (!elementName || !packageName || !packageType || !billingCycle || !price || !description) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide All Fields"
+            })
+        }
+
+        const newActivation = new wlpActivation({
+            wlpCreatorId: userId,
+            elementName,
+            packageName,
+            packageType,
+            billingCycle,
+            price,
+            description
+        });
+
+        await newActivation.save();
+
+        // return response
+        return res.status(200).json({
+            success: true,
+            message: "Activation Created SuccessFully!"
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in addActivationLogic"
+        })
+    }
+}
+
+exports.fetchAllActivationPlans = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        const allActivationPlans = await wlpActivation.find({ wlpCreatorId: userId });
+
+        if (!allActivationPlans || allActivationPlans.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "No Data Found in wlpActivation Collections"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            count:allActivationPlans.length,
+            data: allActivationPlans,
+            message: "Fetched SuccessFully"
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchAllActivationPlans"
+        })
+    }
+}
+
+// Here i have to do Assign ActivationWallet to Manufacturer logic
+exports.fetchManufacturerOnBasisOsState = async (req, res) =>{
+    try{
+        const userId = req.user.userId;
+
+        if(!userId){
+            return res.status(200).json({
+                success:false,
+                message:"Please Provide UserId "
+            })
+        }
+
+        const {state} = req.body;
+        if(!state){
+            return res.status(200).json({
+                success:false,
+                message:"Please Provide State "
+            })
+        }
+
+    }catch(error){
+        console.log(error,error.message);
+        return res.status(500).json({
+            success:false,
+            message:"Server Error in "
+        })
+    }
+}
+
+exports.ActivationWalletToManufactur = async (req, res) => {
+    try{
+        const userId = req.user.userId;
+
+        if(!userId){
+            return res.status(200).json({
+                success:false,
+                message:"Please Provide UserId "
+            })
+        }
+
+        const {state , manufacturer ,elementType , element, noOfActivationWallets, activationWallet} = req.body;
+
+        if(!state || !manufacturer || !elementType || !element || !noOfActivationWallets || !activationWallet){
+            return res.status(200).json({
+                success:false,
+                message:"Please Provide All Fields"
+            })
+        }
+
+        // save in sendActivationWalletToManuFacturer collections
+        const saveDbActivationWaaletManufacturer = await sendActivationWalletToManuFacturer.create({
+            state,
+            manufacturer,
+            elementType,
+            element,
+            noOfActivationWallets,
+            activationWallet
+        });
+
+        // Also push to manufacture activationWallets array (Not Complete)
+
+
+        return res.status(200).json({
+            success:true,
+            message:"Activation Wallet Assigned to Manufacturer Successfully"
+        })
+
+    }catch(error){
+        console.log(error,error.message);
+        return res.status(500).json({
+            success:false,
+            message:"Server Error in ActivationWalletToManufactur"
+        })
+    }
+}
 
 
 // exports.manuFacturMAPaDevice = async (req, res) => {
