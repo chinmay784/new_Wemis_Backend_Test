@@ -2605,7 +2605,7 @@ exports.fetchAllActivationPlans = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            count:allActivationPlans.length,
+            count: allActivationPlans.length,
             data: allActivationPlans,
             message: "Fetched SuccessFully"
         })
@@ -2620,51 +2620,72 @@ exports.fetchAllActivationPlans = async (req, res) => {
 }
 
 // Here i have to do Assign ActivationWallet to Manufacturer logic
-exports.fetchManufacturerOnBasisOsState = async (req, res) =>{
-    try{
+exports.fetchManufacturerOnBasisOsState = async (req, res) => {
+    try {
         const userId = req.user.userId;
 
-        if(!userId){
-            return res.status(200).json({
-                success:false,
-                message:"Please Provide UserId "
-            })
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
         }
 
-        const {state} = req.body;
-        if(!state){
-            return res.status(200).json({
-                success:false,
-                message:"Please Provide State "
-            })
+        const { state } = req.body;
+
+        if (!state) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide State"
+            });
         }
 
-    }catch(error){
-        console.log(error,error.message);
+        const manufactur = await ManuFactur.find(
+            { wlpId: userId, city: state },
+            //{ business_Name: 1, manufacturer_Name: 1 } // projection
+            { business_Name: 1 }
+        );
+
+        if (manufactur.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No Manufacturer Found for this State"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Manufacturer Fetched Successfully",
+            data: manufactur
+        });
+
+    } catch (error) {
+        console.error(error);
         return res.status(500).json({
-            success:false,
-            message:"Server Error in "
-        })
+            success: false,
+            message: "Server Error"
+        });
     }
-}
+};
+
 
 exports.ActivationWalletToManufactur = async (req, res) => {
-    try{
+    try {
         const userId = req.user.userId;
 
-        if(!userId){
+        if (!userId) {
             return res.status(200).json({
-                success:false,
-                message:"Please Provide UserId "
+                success: false,
+                message: "Please Provide UserId "
             })
         }
 
-        const {state , manufacturer ,elementType , element, noOfActivationWallets, activationWallet} = req.body;
+        const { state, manufacturer, elementType, element, noOfActivationWallets, activationWallet } = req.body;
 
-        if(!state || !manufacturer || !elementType || !element || !noOfActivationWallets || !activationWallet){
+        if (!state || !manufacturer || !elementType || !element || !noOfActivationWallets || !activationWallet) {
             return res.status(200).json({
-                success:false,
-                message:"Please Provide All Fields"
+                success: false,
+                message: "Please Provide All Fields"
             })
         }
 
@@ -2679,21 +2700,75 @@ exports.ActivationWalletToManufactur = async (req, res) => {
         });
 
         // Also push to manufacture activationWallets array (Not Complete)
+        const realManufacturer = await ManuFactur.findOne({ business_Name: manufacturer });
 
+        if (!realManufacturer) {
+            return res.status(200).json({
+                success: false,
+                message: "No Manufacturer Found in ManuFactur Collections"
+            })
+        }
+
+        // Push to activationWallets array
+        realManufacturer.activationWallets.push(activationWallet);
+
+        await realManufacturer.save();
 
         return res.status(200).json({
-            success:true,
-            message:"Activation Wallet Assigned to Manufacturer Successfully"
+            success: true,
+            message: "Activation Wallet Assigned to Manufacturer Successfully"
         })
 
-    }catch(error){
-        console.log(error,error.message);
+    } catch (error) {
+        console.log(error, error.message);
         return res.status(500).json({
-            success:false,
-            message:"Server Error in ActivationWalletToManufactur"
+            success: false,
+            message: "Server Error in ActivationWalletToManufactur"
         })
     }
 }
+
+exports.fetchAssignActivationWallet = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        // some work will be here updated
+        const fetchAssignActivation = await sendActivationWalletToManuFacturer
+            .find({})
+            // .populate({
+            //     path: "wlpActivation",
+            //     select: "elementName packageName packageType billingCycle price activationStatus"
+            // });
+
+        if (!fetchAssignActivation || fetchAssignActivation.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No Data Found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetch Assign Activation Wallet Successfully",
+            fetchAssignActivation
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchAssignActivationWallet"
+        });
+    }
+};
+
 
 
 // exports.manuFacturMAPaDevice = async (req, res) => {
