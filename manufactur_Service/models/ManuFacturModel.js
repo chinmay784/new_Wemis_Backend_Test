@@ -99,7 +99,7 @@ const ManuFacturSchema = new mongoose.Schema({
     activationWallets: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "ActivationWallet",
+            ref: "wlpActivation",
         }
     ],
 

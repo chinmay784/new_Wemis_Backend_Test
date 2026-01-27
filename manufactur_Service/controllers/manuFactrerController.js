@@ -2742,10 +2742,10 @@ exports.fetchAssignActivationWallet = async (req, res) => {
         // some work will be here updated
         const fetchAssignActivation = await sendActivationWalletToManuFacturer
             .find({})
-            // .populate({
-            //     path: "wlpActivation",
-            //     select: "elementName packageName packageType billingCycle price activationStatus"
-            // });
+        // .populate({
+        //     path: "wlpActivation",
+        //     select: "elementName packageName packageType billingCycle price activationStatus"
+        // });
 
         if (!fetchAssignActivation || fetchAssignActivation.length === 0) {
             return res.status(404).json({
@@ -2768,6 +2768,56 @@ exports.fetchAssignActivationWallet = async (req, res) => {
         });
     }
 };
+
+exports.fetchManufacturActivatioWallet = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        // Find manufacturer user
+        const manufacturUser = await User.findById(userId);
+        if (!manufacturUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer user not found",
+            });
+        }
+
+        // Find manufacturer and populate activation wallets
+        const manuf = await ManuFactur.findById(manufacturUser.manufacturId)
+            .populate({
+                path: "wlpActivation",
+                options: { sort: { createdAt: -1 } } // optional
+            });
+
+        if (!manuf) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Activation wallets fetched successfully",
+            activationWallets: manuf.activationWallets,
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchManufacturActivatioWallet",
+        });
+    }
+};
+
 
 
 
