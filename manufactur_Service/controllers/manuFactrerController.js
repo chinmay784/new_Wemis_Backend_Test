@@ -2780,7 +2780,7 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
             });
         }
 
-        // Find manufacturer user
+        // Manufacturer user
         const manufacturUser = await User.findById(userId);
         if (!manufacturUser) {
             return res.status(404).json({
@@ -2789,13 +2789,8 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
             });
         }
 
-        // Find manufacturer and populate activation wallets
-        const manuf = await ManuFactur.findById(manufacturUser.manufacturId)
-            .populate({
-                path: "wlpActivation",
-                options: { sort: { createdAt: -1 } } // optional
-            });
-
+        // Manufacturer
+        const manuf = await ManuFactur.findById(manufacturUser.manufacturId);
         if (!manuf) {
             return res.status(404).json({
                 success: false,
@@ -2803,10 +2798,45 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
             });
         }
 
+        // 🔥 Aggregation
+        const activationWallets = await wlpActivation.aggregate([
+            {
+                $match: {
+                    _id: { $in: manuf.activationWallets }
+                }
+            },
+            {
+                $lookup: {
+                    from: "sendactivationwallettomanufacturers", // collection name
+                    localField: "_id",
+                    foreignField: "activationWallet",
+                    as: "assignment"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$assignment",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    noOfActivationWallets: {
+                        $ifNull: ["$assignment.noOfActivationWallets", 0]
+                    }
+                }
+            },
+            {
+                $project: {
+                    assignment: 0
+                }
+            }
+        ]);
+
         return res.status(200).json({
             success: true,
             message: "Activation wallets fetched successfully",
-            activationWallets: manuf.activationWallets,
+            activationWallets
         });
 
     } catch (error) {
@@ -2817,6 +2847,8 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
         });
     }
 };
+
+
 
 
 
