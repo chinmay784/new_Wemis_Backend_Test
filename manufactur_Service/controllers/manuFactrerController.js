@@ -2547,9 +2547,9 @@ exports.addActivationLogic = async (req, res) => {
             });
         }
 
-        const { elementName, packageName, packageType, billingCycle, price, description } = req.body;
+        const { elementName, packageName, packageType, billingCycle, description } = req.body;
 
-        if (!elementName || !packageName || !packageType || !billingCycle || !price || !description) {
+        if (!elementName || !packageName || !packageType || !billingCycle || !description) {
             return res.status(200).json({
                 success: false,
                 message: "Please Provide All Fields"
@@ -2562,7 +2562,6 @@ exports.addActivationLogic = async (req, res) => {
             packageName,
             packageType,
             billingCycle,
-            price,
             description
         });
 
@@ -2680,9 +2679,9 @@ exports.ActivationWalletToManufactur = async (req, res) => {
             })
         }
 
-        const { state, manufacturer, elementType, element, noOfActivationWallets, activationWallet } = req.body;
+        const { state, manufacturer, elementType, element, activationWallet } = req.body;
 
-        if (!state || !manufacturer || !elementType || !element || !noOfActivationWallets || !activationWallet) {
+        if (!state || !manufacturer || !elementType || !element || !activationWallet) {
             return res.status(200).json({
                 success: false,
                 message: "Please Provide All Fields"
@@ -2695,7 +2694,6 @@ exports.ActivationWalletToManufactur = async (req, res) => {
             manufacturer,
             elementType,
             element,
-            noOfActivationWallets,
             activationWallet
         });
 
@@ -2848,6 +2846,72 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
     }
 };
 
+
+exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        const { price, noOfActivationWallets, activationId } = req.body;
+
+        if (!userId || !activationId) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
+        }
+
+        const manufacturUser = await User.findById(userId);
+        if (!manufacturUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const manuf = await ManuFactur.findById(manufacturUser.manufacturId);
+        if (!manuf) {
+            return res.status(404).json({ success: false, message: "Manufacturer record not found" });
+        }
+
+        // ✅ Improved Security Check (Handles ObjectId vs String comparison)
+        const isAssigned = manuf.activationWallets.some(id => id.toString() === activationId.toString());
+        if (!isAssigned) {
+            return res.status(403).json({
+                success: false,
+                message: "Activation wallet not assigned to this manufacturer"
+            });
+        }
+
+        // ✅ Update 1: WLP Activation
+        const updatedActivation = await wlpActivation.findByIdAndUpdate(
+            activationId,
+            { price },
+            { new: true }
+        );
+
+        if (!updatedActivation) {
+            return res.status(404).json({ success: false, message: "Activation wallet doc not found" });
+        }
+
+        // ✅ Update 2: Manufacturer's Send Collection
+        const sendActivation = await sendActivationWalletToManuFacturer.findOneAndUpdate(
+            { activationWallet: activationId },
+            { noOfActivationWallets: noOfActivationWallets },
+            { new: true }
+        );
+
+        // Optional: Check if Update 2 actually found a record
+        if (!sendActivation) {
+            console.warn(`⚠️ Price updated, but sendActivation record for ${activationId} not found.`);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Price and wallet count updated successfully",
+            data: { updatedActivation, sendActivation } // Good practice to return the updated data
+        });
+
+    } catch (error) {
+        console.error("Error in manufacturCanAddPriceAndNoOfWallet:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+};
 
 
 
