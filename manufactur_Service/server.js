@@ -557,11 +557,12 @@ io.on("connection", (socket) => {
   // ✅ LOG & SEND LAST GPS DATA ON SOCKET CONNECT
   const deviceIds = userDeviceMap[userId] || [];
 
-  deviceIds.forEach((deviceId) => {
+  deviceIds.forEach((deviceObj) => {
+    const deviceId = deviceObj.deviceNo;
     const parsed = devices[deviceId]; // last GPS stored in memory
 
     if (parsed) {
-      const enrichedData = buildLiveTrackingObject(parsed, parsed);
+      const enrichedData = buildLiveTrackingObject(parsed, deviceObj);
 
       // 🔥 CONSOLE LOG GPS RESPONSE
       console.log("📡 GPS DATA ON SOCKET CONNECT:");
@@ -573,7 +574,7 @@ io.on("connection", (socket) => {
       // 🔥 SEND TO FRONTEND
       socket.emit("gps-update", enrichedData);
     } else {
-      console.log(`⚠️ No GPS data yet for device: ${deviceId}`);
+      console.log(`⚠️ No GPS data yet for device: `);
     }
   });
 
@@ -589,7 +590,18 @@ const initializeUserDeviceMap = async () => {
     userDeviceMap = {};
     users.forEach((user) => {
       if (user.coustmerId && user.coustmerId.devicesOwened) {
-        userDeviceMap[user._id] = user.coustmerId.devicesOwened.map(d => d.deviceNo);
+        // userDeviceMap[user._id] = user.coustmerId.devicesOwened.map(d => d.deviceNo);
+
+        // Map over the devices array to store the full details we need
+        userDeviceMap[user._id] = user.coustmerId.devicesOwened.map(d => ({
+          deviceNo: d.deviceNo,
+          vechileNo: d.vechileNo,     // Match your DB spelling 'vechile'
+          VehicleType: d.VehicleType, // Match your DB spelling 'VehicleType'
+          RegistrationNo: d.RegistrationNo,
+          MakeModel: d.MakeModel,
+          ModelYear: d.ModelYear,
+          batchNo: d.batchNo
+        }));
       }
     });
     console.log("✅ User-Device Map initialized:", userDeviceMap);
@@ -703,14 +715,14 @@ function buildLiveTrackingObject(parsed, dev) {
 
   const metaData = {
     dev: safeDev,
-    deviceNo: safeDev.deviceNo,
-    deviceType: safeDev.deviceType,
-    RegistrationNo: safeDev.RegistrationNo,
-    MakeModel: safeDev.MakeModel,
-    ModelYear: safeDev.ModelYear,
-    batchNo: safeDev.batchNo,
-    date: safeDev.date,
-    simDetails: safeDev.simDetails || [],
+    // deviceNo: safeDev.deviceNo,
+    // deviceType: safeDev.deviceType,
+    // RegistrationNo: safeDev.RegistrationNo,
+    // MakeModel: safeDev.MakeModel,
+    // ModelYear: safeDev.ModelYear,
+    // batchNo: safeDev.batchNo,
+    // date: safeDev.date,
+    // simDetails: safeDev.simDetails || [],
     liveTracking: parsed || null,
     status: speed > 0 ? "online" : "offline",
     lat,
@@ -876,12 +888,3 @@ httpServer.listen(HTTP_PORT, () => {
 });
 
 connectToDatabase();
-// // ================= START SERVER =================
-// (async () => {
-//   await connectToDatabase();
-//   await connectProducer();
-
-//   httpServer.listen(HTTP_PORT, () => {
-//     console.log(`🌍 HTTP + Socket.IO running on ${HTTP_PORT}`);
-//   });
-// })();
