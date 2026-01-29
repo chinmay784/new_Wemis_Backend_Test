@@ -815,30 +815,47 @@ const tcpServer = net.createServer((socket) => {
         console.log("Before Push Live datanto relevant user:");
 
         // Push live to relevant users
-        for (const [userId, deviceIds] of Object.entries(userDeviceMap)) {
-          if (deviceIds.includes(parsed.deviceId)) {
+        // for (const [userId, deviceIds] of Object.entries(userDeviceMap)) {
+        //   if (deviceIds.includes(parsed.deviceId)) {
 
-            const userDevices = getDevicesForUser(userId);
-            // This FIND works now because 'parsed' has 'deviceNo'
-            const dev = userDevices.find(d => d.deviceNo === parsed.deviceId);
+        //     const userDevices = getDevicesForUser(userId);
+        //     // This FIND works now because 'parsed' has 'deviceNo'
+        //     const dev = userDevices.find(d => d.deviceNo === parsed.deviceId);
 
-            if (dev) {
-              const enrichedData = buildLiveTrackingObject(parsed, dev);
-              io.to(userId).emit("gps-update", enrichedData);
-              console.log(
-                "📦 ENRICHED GPS DATA:\n",
-                JSON.stringify(enrichedData, null, 2)
-              );
-              console.log(`📡 Sent enriched GPS of ${parsed.deviceId} to user ${userId}`);
-            } else {
-              // Send minimal data if device details aren't loaded yet
-              const enrichedData = buildLiveTrackingObject(parsed, parsed);
-              io.to(userId).emit("gps-update", enrichedData);
-              console.log(`📡 Sent BASIC GPS of ${parsed.deviceId} to user ${userId}`);
-            }
+        //     if (dev) {
+        //       const enrichedData = buildLiveTrackingObject(parsed, dev);
+        //       io.to(userId).emit("gps-update", enrichedData);
+        //       console.log(
+        //         "📦 ENRICHED GPS DATA:\n",
+        //         JSON.stringify(enrichedData, null, 2)
+        //       );
+        //       console.log(`📡 Sent enriched GPS of ${parsed.deviceId} to user ${userId}`);
+        //     } else {
+        //       // Send minimal data if device details aren't loaded yet
+        //       const enrichedData = buildLiveTrackingObject(parsed, parsed);
+        //       io.to(userId).emit("gps-update", enrichedData);
+        //       console.log(`📡 Sent BASIC GPS of ${parsed.deviceId} to user ${userId}`);
+        //     }
+        //   }
+        // }
+        // console.log("After Push Live datanto relevant user:");
+
+        // 3. Updated Loop: Iterate through the new object-based userDeviceMap
+        for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
+
+          // Use .find() because deviceObjects is now [{deviceNo, vechileNo, ...}]
+          const devMetadata = deviceObjects.find(d => d.deviceNo === parsed.deviceId);
+
+          if (devMetadata) {
+            // ✅ SUCCESS: Pass the real metadata (including VehicleType and vechileNo)
+            const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
+
+            io.to(userId).emit("gps-update", enrichedData);
+
+            console.log(`📡 Sent enriched GPS for ${devMetadata.vechileNo} to user ${userId}`);
           }
         }
-        console.log("After Push Live datanto relevant user:");
+
       }
 
       buffer = buffer.slice(end);
