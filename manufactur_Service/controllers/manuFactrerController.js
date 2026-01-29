@@ -2797,6 +2797,41 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
         }
 
         // 🔥 Aggregation
+        // const activationWallets = await wlpActivation.aggregate([
+        //     {
+        //         $match: {
+        //             _id: { $in: manuf.activationWallets }
+        //         }
+        //     },
+        //     {
+        //         $lookup: {
+        //             from: "sendactivationwallettomanufacturers", // collection name
+        //             localField: "_id",
+        //             foreignField: "activationWallet",
+        //             as: "assignment"
+        //         }
+        //     },
+        //     {
+        //         $unwind: {
+        //             path: "$assignment",
+        //             preserveNullAndEmptyArrays: true
+        //         }
+        //     },
+        //     {
+        //         $addFields: {
+        //             noOfActivationWallets: {
+        //                 $ifNull: ["$assignment.noOfActivationWallets", 0]
+        //             }
+        //         }
+        //     },
+        //     {
+        //         $project: {
+        //             assignment: 0
+        //         }
+        //     }
+        // ]);
+
+        // 🔥 Aggregation
         const activationWallets = await wlpActivation.aggregate([
             {
                 $match: {
@@ -2805,7 +2840,7 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "sendactivationwallettomanufacturers", // collection name
+                    from: "sendactivationwallettomanufacturers",
                     localField: "_id",
                     foreignField: "activationWallet",
                     as: "assignment"
@@ -2819,14 +2854,19 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
             },
             {
                 $addFields: {
+                    // Pulls the count from the assignment collection
                     noOfActivationWallets: {
                         $ifNull: ["$assignment.noOfActivationWallets", 0]
+                    },
+                    // 👇 This pulls the actual assignment/wallet ID you requested
+                    activationWallet: {
+                        $ifNull: ["$assignment.activationWallet", null]
                     }
                 }
             },
             {
                 $project: {
-                    assignment: 0
+                    assignment: 0 // Remove the raw joined object to keep response clean
                 }
             }
         ]);
