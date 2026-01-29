@@ -721,22 +721,41 @@ function buildLiveTrackingObject(parsed, dev) {
     satellites: parsed.satellites,
     lastUpdate: parsed.lastUpdate,
     movementStatus,
+    // stopInfo: {
+    //   isStopped: vehicleState[imei].isStopped,
+    //   stopStartTime: vehicleState[imei].stopStartTime,
+    //   totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
+    //   currentStopSeconds: vehicleState[imei].isStopped
+    //     ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+    //     : 0
+    // },
+    // parkInfo: {
+    //   isParked: parkedState[imei].isParked,
+    //   parkStartTime: parkedState[imei].parkStartTime,
+    //   totalParkedSeconds: parkedState[imei].totalParkedSeconds,
+    //   currentParkedSeconds: parkedState[imei].isParked
+    //     ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+    //     : 0
+    // }
+
     stopInfo: {
       isStopped: vehicleState[imei].isStopped,
       stopStartTime: vehicleState[imei].stopStartTime,
-      totalStoppedSeconds: vehicleState[imei].totalStoppedSeconds,
-      currentStopSeconds: vehicleState[imei].isStopped
-        ? Math.floor((Date.now() - vehicleState[imei].stopStartTime) / 1000)
+      totalStoppedMinutes: Math.floor(vehicleState[imei].totalStoppedSeconds / 60),
+      currentStopMinutes: vehicleState[imei].isStopped
+        ? Number(((Date.now() - vehicleState[imei].stopStartTime) / 1000 / 60).toFixed(2))
         : 0
     },
+
     parkInfo: {
       isParked: parkedState[imei].isParked,
       parkStartTime: parkedState[imei].parkStartTime,
-      totalParkedSeconds: parkedState[imei].totalParkedSeconds,
-      currentParkedSeconds: parkedState[imei].isParked
-        ? Math.floor((Date.now() - parkedState[imei].parkStartTime) / 1000)
+      totalParkedMinutes: Math.floor(parkedState[imei].totalParkedSeconds / 60),
+      currentParkedMinutes: parkedState[imei].isParked
+        ? Math.floor(((Date.now() - parkedState[imei].parkStartTime) / 1000 / 60).toFixed(2))
         : 0
     }
+
   }
 
   console.log(metaData);
@@ -808,7 +827,7 @@ const tcpServer = net.createServer((socket) => {
           }
         }
         console.log("After Push Live datanto relevant user:");
-      } 
+      }
 
       buffer = buffer.slice(end);
     }
