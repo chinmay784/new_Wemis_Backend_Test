@@ -2738,14 +2738,14 @@ exports.ActivationWalletToManufactur = async (req, res) => {
 
 exports.fetchAssignActivationWallet = async (req, res) => {
     try {
-        // const userId = req.user.userId;
+        const userId = req.user.userId;
 
-        // if (!userId) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: "Please Provide UserId"
-        //     });
-        // }
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
 
         // some work will be here updated
         const fetchAssignActivation = await sendActivationWalletToManuFacturer
@@ -2975,6 +2975,42 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
 };
 
 
+exports.plansShowOEMandDistributor = async (req, res) => {
+  try {
+    const plans = await sendActivationWalletToManuFacturer
+      .find({})
+      .populate({
+        path: "activationWallet",
+        select: `
+          elementName
+          packageName
+          packageType
+          billingCycle
+          description
+        `
+      })
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "OEM & Distributor plans fetched successfully",
+      total: plans.length,
+      data: plans
+    });
+
+  } catch (error) {
+    console.error("plansShowOEMandDistributor error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error in plansShowOEMandDistributor"
+    });
+  }
+};
+
+
+
+
+// // // // // // // // // // // //    //  //  // /  /
 exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
     try {
         const userId = req.user?.userId;
