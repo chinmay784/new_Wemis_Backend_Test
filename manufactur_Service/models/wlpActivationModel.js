@@ -29,6 +29,15 @@ const wlpActivationSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // Some Changes On price related fields
+    distributorAndOemMarginPrice:{
+        type: Number,
+        default: 0
+    },
+    delerMarginPrice:{
+        type: Number,
+        default: 0
+    },
     description: {
         type: String,
         trim: true,

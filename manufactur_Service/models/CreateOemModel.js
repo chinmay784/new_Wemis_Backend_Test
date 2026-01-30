@@ -115,7 +115,33 @@ const OemModelSchema = new mongoose.Schema({
                 }
             ]
         }
-    ]
+    ],
+    assign_Activation_Packages: [
+        {
+            activationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "wlpActivation"
+            },
+            assigned_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
+    walletforActivation: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        availableStock: {
+            type: Number,
+            default: 0
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }
 });
 
 

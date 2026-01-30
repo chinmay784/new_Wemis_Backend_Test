@@ -23,7 +23,8 @@ const WalletTransaction = require("../models/WalletTransaction");
 const liveTrackingCache = require("../utils/cache");
 const WlpModel = require("../models/WlpModel");
 const wlpActivation = require("../models/wlpActivationModel");
-const sendActivationWalletToManuFacturer = require("../models/sendActivationWalletToManuFacturerModel")
+const sendActivationWalletToManuFacturer = require("../models/sendActivationWalletToManuFacturerModel");
+const sendActivationWalletToDistributorOrOem = require("../models/sendActivationWalletToDistributorOrOem")
 
 
 
@@ -2556,6 +2557,15 @@ exports.addActivationLogic = async (req, res) => {
             })
         }
 
+        const checkExistingActivation = await wlpActivation.findOne({ packageName });
+
+        if (checkExistingActivation) {
+            return res.status(200).json({
+                success: false,
+                message: "Activation with this Package Name already exists"
+            })
+        }
+
         const newActivation = new wlpActivation({
             wlpCreatorId: userId,
             elementName,
@@ -2728,14 +2738,14 @@ exports.ActivationWalletToManufactur = async (req, res) => {
 
 exports.fetchAssignActivationWallet = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        // const userId = req.user.userId;
 
-        if (!userId) {
-            return res.status(400).json({
-                success: false,
-                message: "Please Provide UserId"
-            });
-        }
+        // if (!userId) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Please Provide UserId"
+        //     });
+        // }
 
         // some work will be here updated
         const fetchAssignActivation = await sendActivationWalletToManuFacturer
@@ -2890,7 +2900,7 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
 exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { price, noOfActivationWallets, activationId } = req.body;
+        const { price, distributorAndOemMarginPrice, delerMarginPrice, noOfActivationWallets, activationId } = req.body;
 
         if (!userId || !activationId) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -2918,7 +2928,7 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
         // ✅ Update 1: WLP Activation
         const updatedActivation = await wlpActivation.findByIdAndUpdate(
             activationId,
-            { price },
+            { price, distributorAndOemMarginPrice, delerMarginPrice },
             { new: true }
         );
 
@@ -2938,6 +2948,17 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
             console.warn(`⚠️ Price updated, but sendActivation record for ${activationId} not found.`);
         }
 
+
+
+        // Here Add wallet count logic to Manufacturer collection (Not Complete)
+        // manuf.walletPriceForActivation.avaliableStock += noOfActivationWallets;
+        manuf.walletPriceForActivation.avaliableStock += noOfActivationWallets;
+        await manuf.save(); // Save the updated manufacturer document
+        // also for balance
+        manuf.walletPriceForActivation.balance = manuf.walletPriceForActivation.avaliableStock * price;
+        await manuf.save(); // Save the updated manufacturer document
+
+
         return res.status(200).json({
             success: true,
             message: "Price and wallet count updated successfully",
@@ -2954,6 +2975,116 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
 };
 
 
+exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        const { state, partnerName, distributorId, oemId, activationPlanId, sentWalletAmount, sentStockQuantity } = req.body;
+
+        if (!userId || !state || !partnerName || !activationPlanId || !sentWalletAmount || !sentStockQuantity) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
+        }
+
+        // check already sended or not
+        const alreadySent = await sendActivationWalletToDistributorOrOem.findOne({
+            partnerName,
+            activationPlanId
+        });
+
+        if (alreadySent) {
+            return res.status(400).json({ success: false, message: "Activation wallet already sent to this partner" });
+        }
+
+        // some work pending  complete in wallet
+        // deduct from manufactur walletPriceForActivation
+        const manufacturUser = await User.findById(userId);
+        const manuf = await ManuFactur.findById(manufacturUser.manufacturId);
+
+        if (manuf.walletPriceForActivation.avaliableStock >= sentStockQuantity) {
+            manuf.walletPriceForActivation.avaliableStock -= sentStockQuantity;
+            await manuf.save();
+            manuf.walletPriceForActivation.balance = manuf.walletPriceForActivation.avaliableStock * (
+                manuf.walletPriceForActivation.balance / manuf.walletPriceForActivation.avaliableStock
+            );
+            await manuf.save();
+        } else {
+            return res.status(400).json({ success: false, message: "Insufficient stock in manufacturer's wallet" });
+        }
+
+
+        const newSendActivation = new sendActivationWalletToDistributorOrOem({
+            manufaturId: userId,
+            state,
+            partnerName,
+            distributorId,
+            oemId,
+            activationPlanId,
+            sentWalletAmount,
+            sentStockQuantity
+        });
+
+        await newSendActivation.save();
+
+        // Also add from distributor or oem collections
+        // also push to distributor or oem collections (Not Complete)
+        if (distributorId) {
+            const distributor = await Distributor.findById(distributorId);
+            if (distributor) {
+                distributor.activationWallets.push(activationPlanId);
+
+                // also add distributor.walletforActivation.availableStock
+                distributor.walletforActivation.availableStock += sentStockQuantity;
+                await distributor.save();
+                // also for balance
+                distributor.walletforActivation.balance = distributor.walletforActivation.availableStock * (
+                    distributor.walletforActivation.balance / distributor.walletforActivation.availableStock
+                );
+                await distributor.save();
+            }
+        }
+        if (oemId) {
+            const oem = await OemModelSchema.findById(oemId);
+            if (oem) {
+                oem.activationWallets.push(activationPlanId);
+                // also add oem.walletforActivation.availableStock
+                oem.walletforActivation.availableStock += sentStockQuantity;
+
+                await oem.save();
+                // also for balance
+                oem.walletforActivation.balance = oem.walletforActivation.availableStock * (
+                    oem.walletforActivation.balance / oem.walletforActivation.availableStock
+                );
+                await oem.save();
+            }
+        }
+
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Activation wallet sent to distributor or OEM successfully",
+            data: newSendActivation
+        });
+    } catch (error) {
+        console.error("Error in sendActivationWalletToDistributorOrOem:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+}
+
+exports.fetchManufacturSentActivationWallets = async (req, res) => {
+    try {
+        
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:"Server Error in fetchManufacturSentActivationWallets"
+        })
+    }
+}
 
 
 

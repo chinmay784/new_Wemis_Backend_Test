@@ -80,15 +80,15 @@ const ManuFacturSchema = new mongoose.Schema({
         default: []
     },
     // wallet logic Model reference
-    wallet: {
+    walletPriceForActivation: {
         balance: {
             type: Number,
             default: 0
         },
-        currency: {
-            type: String,
-            default: "INR"
-        },
+        avaliableStock: {
+            type: Number,
+            default: 0
+        }, 
         lastUpdated: {
             type: Date,
             default: Date.now
