@@ -88,7 +88,7 @@ const ManuFacturSchema = new mongoose.Schema({
         avaliableStock: {
             type: Number,
             default: 0
-        }, 
+        },
         lastUpdated: {
             type: Date,
             default: Date.now
@@ -108,6 +108,19 @@ const ManuFacturSchema = new mongoose.Schema({
         {
             type: mongoose.Schema.Types.ObjectId,
             ref: "TicketIssue",
+        }
+    ],
+
+    requestForActivationWallets: [
+        {
+            requestActivationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "requestForActivationWallet"
+            },
+            requested_Date: {
+                type: Date,
+                default: Date.now
+            },
         }
     ],
 });

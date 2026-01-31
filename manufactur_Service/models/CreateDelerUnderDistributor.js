@@ -143,6 +143,19 @@ const CreateDelerUnderDistributor = new mongoose.Schema({
             ref: "TicketIssue",
         }
     ],
+
+    requestForActivationWallets: [
+        {
+            requestActivationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "requestForActivationWallet"
+            },
+            requested_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
 });
 
 

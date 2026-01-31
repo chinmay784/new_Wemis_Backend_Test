@@ -25,6 +25,7 @@ const WlpModel = require("../models/WlpModel");
 const wlpActivation = require("../models/wlpActivationModel");
 const sendActivationWalletToManuFacturer = require("../models/sendActivationWalletToManuFacturerModel");
 const sendActivationWalletToDistributorOrOem = require("../models/sendActivationWalletToDistributorOrOem")
+const requestForActivationWallet = require("../models/requestForActivationWallet")
 
 
 
@@ -2976,37 +2977,199 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
 
 
 exports.plansShowOEMandDistributor = async (req, res) => {
-  try {
-    const plans = await sendActivationWalletToManuFacturer
-      .find({})
-      .populate({
-        path: "activationWallet",
-        select: `
+    try {
+        const plans = await sendActivationWalletToManuFacturer
+            .find({})
+            .populate({
+                path: "activationWallet",
+                select: `
           elementName
           packageName
           packageType
           billingCycle
           description
         `
-      })
-      .sort({ createdAt: -1 });
+            })
+            .sort({ createdAt: -1 });
 
-    return res.status(200).json({
-      success: true,
-      message: "OEM & Distributor plans fetched successfully",
-      total: plans.length,
-      data: plans
-    });
+        return res.status(200).json({
+            success: true,
+            message: "OEM & Distributor plans fetched successfully",
+            total: plans.length,
+            data: plans
+        });
 
-  } catch (error) {
-    console.error("plansShowOEMandDistributor error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error in plansShowOEMandDistributor"
-    });
-  }
+    } catch (error) {
+        console.error("plansShowOEMandDistributor error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in plansShowOEMandDistributor"
+        });
+    }
 };
 
+exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const { activationPlanId, requestedWalletCount } = req.body;
+
+        if (!activationPlanId || !requestedWalletCount ) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide all required fields",
+            });
+        }
+
+        const roleBaseUser = await User.findById(userId);
+        if (!roleBaseUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        // start logic
+        if (roleBaseUser.role === "distibutor") {
+            const distributor = await Distributor.findById(roleBaseUser.distributorId);
+            if (!distributor) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Distributor not found",
+                });
+            }
+            const newRequest = new requestForActivationWallet({
+                manufaturId: distributor.manufacturId,
+                distributorId: userId,
+                requestedWalletCount,
+                activationPlanId
+            });
+
+            await newRequest.save();
+            distributor.requestForActivationWallets.push(newRequest._id);
+            await distributor.save();
+
+
+            // also push in manufactur
+            const manufactur = await ManuFactur.findById(distributor.manufacturId);
+            if (!manufactur) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufactur Not Found"
+                })
+            }
+            manufactur.requestForActivationWallets.push(newRequest._id);
+            await manufactur.save();
+
+
+            // send response
+            return res.status(200).json({
+                success: true,
+                message: "Request for activation wallet sent successfully"
+            })
+
+        } else if (roleBaseUser.role === "oem") {
+            const oem = await OemModelSchema.findById(roleBaseUser.oemId);
+            if (!oem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "OEM not found",
+                });
+            }
+
+            const newRequest = new requestForActivationWallet({
+                manufaturId: oem.manufacturId,
+                oemId: userId,
+                requestedWalletCount,
+                activationPlanId
+            });
+
+            await newRequest.save();
+            oem.requestForActivationWallets.push(newRequest._id);
+            await oem.save();
+
+
+            // also push in manufactur
+            const manufactur = await ManuFactur.findById(oem.manufacturId);
+            if (!manufactur) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufactur Not Found"
+                })
+            }
+            manufactur.requestForActivationWallets.push(newRequest._id);
+            await manufactur.save();
+
+
+            // send response
+            return res.status(200).json({
+                success: true,
+                message: "Request for activation wallet sent successfully"
+            })
+
+        } else if (roleBaseUser.role === "dealer-distributor") {
+            const dealerDist = await CreateDelerUnderDistributor.findById(roleBaseUser.distributorDelerId);
+            if (!dealerDist) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Dealer under Distributor not found",
+                });
+            }
+
+            const newRequest = new requestForActivationWallet({
+                distributorId: dealerDist.distributorId,
+                distributordelerId: userId,
+                requestedWalletCount,
+                activationPlanId
+            })
+
+            await newRequest.save();
+
+            dealerDist.requestForActivationWallets.push(newRequest._id);
+            await dealerDist.save();
+
+            // also push in distributor
+            const distributor = await Distributor.findById(dealerDist.distributorId);
+            if (!distributor) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Distributor Not Found"
+                })
+            }
+
+            distributor.requestForActivationWallets.push(newRequest._id);
+            await distributor.save();
+
+
+            // send response
+            return res.status(200).json({
+                success: true,
+                message: "Request for activation wallet sent successfully"
+            })
+        } else {
+            // send response
+            return res.status(200).json({
+                success: true,
+                message: "Request for activation wallet sent successfully from deler-oem to oem"
+            })
+        }
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in distributorAndOemRequestForActivationWallet"
+        })
+    }
+}
 
 
 
@@ -3112,12 +3275,12 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
 
 exports.fetchManufacturSentActivationWallets = async (req, res) => {
     try {
-        
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({
-            success:false,
-            message:"Server Error in fetchManufacturSentActivationWallets"
+            success: false,
+            message: "Server Error in fetchManufacturSentActivationWallets"
         })
     }
 }

@@ -136,7 +136,21 @@ const createDelerUnderOems = new mongoose.Schema({
                 }
             ]
         }
-    ]
+    ],
+
+
+    requestForActivationWallets: [
+        {
+            requestActivationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "requestForActivationWallet"
+            },
+            requested_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
 });
 
 

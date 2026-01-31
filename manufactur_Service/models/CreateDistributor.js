@@ -1,4 +1,5 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+const requestForActivationWallet = require("./requestForActivationWallet");
 
 
 const distributorSchema = new mongoose.Schema({
@@ -141,7 +142,20 @@ const distributorSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }
+    },
+
+    requestForActivationWallets: [
+        {
+            requestActivationId:{
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "requestForActivationWallet"
+            },
+            requested_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
 });
 
 

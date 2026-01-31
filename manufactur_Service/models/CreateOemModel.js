@@ -141,7 +141,20 @@ const OemModelSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }
+    },
+
+    requestForActivationWallets: [
+            {
+                requestActivationId:{
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "requestForActivationWallet"
+                },
+                requested_Date: {
+                    type: Date,
+                    default: Date.now
+                },
+            }
+        ],
 });
 
 
