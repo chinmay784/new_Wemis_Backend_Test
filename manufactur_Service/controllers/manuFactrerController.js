@@ -3021,7 +3021,7 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
 
         const { activationPlanId, requestedWalletCount } = req.body;
 
-        if (!activationPlanId || !requestedWalletCount ) {
+        if (!activationPlanId || !requestedWalletCount) {
             return res.status(400).json({
                 success: false,
                 message: "Please provide all required fields",
@@ -3175,7 +3175,7 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
 }
 
 
-exports.manufacturCanSeeRequestwallets = async(req, res) =>{
+exports.manufacturCanSeeRequestwallets = async (req, res) => {
     try {
         const userId = req.user?.userId;
 
@@ -3186,8 +3186,16 @@ exports.manufacturCanSeeRequestwallets = async(req, res) =>{
             });
         }
 
+        // 1️⃣ Get logged-in user
         const manufacturUser = await User.findById(userId);
+        if (!manufacturUser || !manufacturUser.manufacturId) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not linked with user",
+            });
+        }
 
+        // 2️⃣ (Optional safety check)
         const manufactur = await ManuFactur.findById(manufacturUser.manufacturId);
         if (!manufactur) {
             return res.status(404).json({
@@ -3196,26 +3204,57 @@ exports.manufacturCanSeeRequestwallets = async(req, res) =>{
             });
         }
 
-        // want also to populate all the things here
-        const requests = await requestForActivationWallet.find({ manufaturId: manufacturUser.manufacturId }).populate("distributorId").populate("oemId").populate("activationPlanId");
+        // ✅ 3️⃣ IMPORTANT FIX: use manufacturUser.manufacturId
+        const requests = await requestForActivationWallet.find({ manufaturId: userId })
+
+        // In this i want distributorId and Oem Id and activation Id
+
+        let result = [];
+        for (const request of requests) {
+            const dist = await User.findById(request.distributorId);
+            const oem = await User.findById(request.oemId);
+            const activationPlan = await wlpActivation.findById(request.activationPlanId);
+
+            // find in every collections
+            const realDist = await Distributor.findById(dist?.distributorId);
+            const realOem = await OemModelSchema.findById(oem?.oemId);
+
+            const requestDetails = {
+                ...request.toObject(),
+                distributorName: realDist ? realDist.business_Name : null,
+                oemName: realOem ? realOem.business_Name : null,
+                activationPlanDetails: activationPlan || null
+            };
+
+            result.push(requestDetails);
+        };
+
+        if (!requests || requests.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No Requests found",
+            });
+        }
 
         return res.status(200).json({
             success: true,
             message: "Requests fetched successfully",
-            requests
+            length: result.length,
+            result,
         });
 
-
     } catch (error) {
-        console.log(error,error.message);
+        console.error(error);
         return res.status(500).json({
             success: false,
-            message: "Server Error in manufacturCanSeeRequestwallets"
-        })
+            message: "Server Error in manufacturCanSeeRequestwallets",
+        });
     }
-}
+};
 
-exports.distributor_OrOem_OrdelerDistributor_OrdelerOem = async (req, res) =>{
+
+
+exports.distributor_OrOem_OrdelerDistributor_OrdelerOem = async (req, res) => {
     try {
         const userId = req.user?.userId;
 
@@ -3226,45 +3265,96 @@ exports.distributor_OrOem_OrdelerDistributor_OrdelerOem = async (req, res) =>{
             });
         }
 
-        // want also to populate all the things here
+        // 1️⃣ Logged-in user
         const user = await User.findById(userId);
-        
-        if(!user){
+        if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "User not found",
             });
         }
 
-        let requests;
-        if(user.role === "distibutor"){
-            requests = await requestForActivationWallet.find({ distributorId: userId }).populate("manufaturId").populate("activationPlanId");
-        } else if(user.role === "oem"){
-            requests = await requestForActivationWallet.find({ oemId: userId }).populate("manufaturId").populate("activationPlanId");
-        } else if(user.role === "dealer-distributor"){
-            requests = await requestForActivationWallet.find({ distributordelerId: userId }).populate("distributorId").populate("activationPlanId");
+        // 2️⃣ Build query based on role
+        let filter = {};
+        if (user.role === "distibutor") {
+            filter = { distributorId: userId };
+        } else if (user.role === "oem") {
+            filter = { oemId: userId };
+        } else if (user.role === "dealer-distributor") {
+            filter = { DistributordelerId: userId };
+        } else if (user.role === "dealer-oem") {
+            filter = { oemDelerId: userId };
         } else {
             return res.status(400).json({
                 success: false,
                 message: "Invalid user role for this operation",
             });
+        }
 
+        // 3️⃣ Fetch requests
+        const requests = await requestForActivationWallet.find(filter);
+
+        if (!requests.length) {
+            return res.status(404).json({
+                success: false,
+                message: "No Requests found",
+            });
+        }
+
+        // 4️⃣ Enrich response (manufacturer + activation + names)
+        const result = [];
+
+        for (const request of requests) {
+            // Manufacturer
+            const manufacturerUser = await User.findById(request.manufaturId);
+            const manufacturer = await ManuFactur.findById(manufacturerUser?.manufacturId);
+
+            // Distributor
+            let distributorName = null;
+            if (request.distributorId) {
+                const distUser = await User.findById(request.distributorId);
+                const realDist = await Distributor.findById(distUser?.distributorId);
+                distributorName = realDist?.business_Name || null;
+            }
+
+            // OEM
+            let oemName = null;
+            if (request.oemId) {
+                const oemUser = await User.findById(request.oemId);
+                const realOem = await OemModelSchema.findById(oemUser?.oemId);
+                oemName = realOem?.business_Name || null;
+            }
+
+            // Activation Plan
+            const activationPlan = await wlpActivation.findById(
+                request.activationPlanId
+            );
+
+            result.push({
+                ...request.toObject(),
+                manufacturerName: manufacturer?.business_Name || null,
+                distributorName,
+                oemName,
+                activationPlanDetails: activationPlan || null,
+            });
         }
 
         return res.status(200).json({
             success: true,
             message: "Requests fetched successfully",
-            requests
+            length: result.length,
+            requests: result,
         });
 
     } catch (error) {
-        console.log(error,error.message);
+        console.error(error);
         return res.status(500).json({
             success: false,
-            message: "Server Error in distributor_OrOem_OrdelerDistributor_OrdelerOem"
-        })
+            message: "Server Error in distributor_OrOem_OrdelerDistributor_OrdelerOem",
+        });
     }
-}
+};
+
 
 
 // // // // // // // // // // // //    //  //  // /  /
