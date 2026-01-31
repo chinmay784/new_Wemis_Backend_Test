@@ -3175,6 +3175,97 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
 }
 
 
+exports.manufacturCanSeeRequestwallets = async(req, res) =>{
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const manufacturUser = await User.findById(userId);
+
+        const manufactur = await ManuFactur.findById(manufacturUser.manufacturId);
+        if (!manufactur) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found",
+            });
+        }
+
+        // want also to populate all the things here
+        const requests = await requestForActivationWallet.find({ manufaturId: manufacturUser.manufacturId }).populate("distributorId").populate("oemId").populate("activationPlanId");
+
+        return res.status(200).json({
+            success: true,
+            message: "Requests fetched successfully",
+            requests
+        });
+
+
+    } catch (error) {
+        console.log(error,error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in manufacturCanSeeRequestwallets"
+        })
+    }
+}
+
+exports.distributor_OrOem_OrdelerDistributor_OrdelerOem = async (req, res) =>{
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        // want also to populate all the things here
+        const user = await User.findById(userId);
+        
+        if(!user){
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        let requests;
+        if(user.role === "distibutor"){
+            requests = await requestForActivationWallet.find({ distributorId: userId }).populate("manufaturId").populate("activationPlanId");
+        } else if(user.role === "oem"){
+            requests = await requestForActivationWallet.find({ oemId: userId }).populate("manufaturId").populate("activationPlanId");
+        } else if(user.role === "dealer-distributor"){
+            requests = await requestForActivationWallet.find({ distributordelerId: userId }).populate("distributorId").populate("activationPlanId");
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user role for this operation",
+            });
+
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Requests fetched successfully",
+            requests
+        });
+
+    } catch (error) {
+        console.log(error,error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in distributor_OrOem_OrdelerDistributor_OrdelerOem"
+        })
+    }
+}
+
 
 // // // // // // // // // // // //    //  //  // /  /
 exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
@@ -7934,6 +8025,7 @@ exports.fetchdelerSubscriptionPlans = async (req, res) => {
 
 
 const haversine = require("haversine-distance");
+const { EventEmitterAsyncResource } = require("node-cache");
 
 
 // exports.fetchVehicleDistanceReport = async (req, res) => {
