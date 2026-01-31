@@ -3058,7 +3058,8 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
 
 
             // also push in manufactur
-            const manufactur = await ManuFactur.findById(distributor.manufacturId);
+            const userManf = await User.findById(distributor.manufacturId);
+            const manufactur = await ManuFactur.findById(userManf.manufacturId);
             if (!manufactur) {
                 return res.status(404).json({
                     success: false,
@@ -3097,7 +3098,8 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
 
 
             // also push in manufactur
-            const manufactur = await ManuFactur.findById(oem.manufacturId);
+            const userOem = await User.findById(oem.manufacturId);
+            const manufactur = await ManuFactur.findById(userOem.manufacturId);
             if (!manufactur) {
                 return res.status(404).json({
                     success: false,
@@ -3136,7 +3138,8 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
             await dealerDist.save();
 
             // also push in distributor
-            const distributor = await Distributor.findById(dealerDist.distributorId);
+            const userdist = await User.findById(dealerDist.distributorId);
+            const distributor = await Distributor.findById(userdist.distributorId);
             if (!distributor) {
                 return res.status(404).json({
                     success: false,
