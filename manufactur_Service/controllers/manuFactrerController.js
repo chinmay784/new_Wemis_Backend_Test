@@ -3412,8 +3412,9 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
         // also push to distributor or oem collections (Not Complete)
         if (distributorId) {
             const distributor = await Distributor.findById(distributorId);
+            console.log(distributor)
             if (distributor) {
-                distributor.activationWallets.push(activationPlanId);
+                distributor.assign_Activation_Packages.push(activationPlanId);
 
                 // also add distributor.walletforActivation.availableStock
                 distributor.walletforActivation.availableStock += sentStockQuantity;
@@ -3428,7 +3429,7 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
         if (oemId) {
             const oem = await OemModelSchema.findById(oemId);
             if (oem) {
-                oem.activationWallets.push(activationPlanId);
+                oem.assign_Activation_Packages.push(activationPlanId);
                 // also add oem.walletforActivation.availableStock
                 oem.walletforActivation.availableStock += sentStockQuantity;
 
@@ -3459,6 +3460,29 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
 
 exports.fetchManufacturSentActivationWallets = async (req, res) => {
     try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const sentWallets = await sendActivationWalletToDistributorOrOem.find({ manufaturId: userId }).populate("activationPlanId");
+        if (!sentWallets || sentWallets.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No Sent Wallets found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Sent wallets fetched successfully",
+            length: sentWallets.length,
+            sentWallets,
+        });
 
     } catch (error) {
         console.log(error);
