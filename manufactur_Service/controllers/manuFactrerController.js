@@ -3428,6 +3428,22 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
 
         await manuf.save();
 
+
+        // also do one thing here deduct noOfActivationWallets in sendActivationWalletToManuFacturer collections
+        const sendActivationToManu = await sendActivationWalletToManuFacturer.findOne({
+            activationWallet: activationPlanId
+        });
+
+        if (sendActivationToManu) {
+            sendActivationToManu.noOfActivationWallets -= Number(sentStockQuantity);
+            if (sendActivationToManu.noOfActivationWallets < 0) {
+                sendActivationToManu.noOfActivationWallets = 0;
+            }
+
+            await sendActivationToManu.save();
+        }
+
+
         // 🔹 Save activation transfer record
         const newSendActivation = new sendActivationWalletToDistributorOrOem({
             manufaturId: userId,
@@ -3460,6 +3476,18 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
                     (wallet.balance || 0) + Number(sentWalletAmount);
 
                 await distributor.save();
+
+
+                // also do in requestForActivationWallet collections update requestStatus to "completed"
+                const requestWallet = await requestForActivationWallet.findOne({
+                    activationPlanId: activationPlanId,
+                    distributorId: distributorId
+                });
+
+                if (requestWallet) {
+                    requestWallet.requestStatus = "completed";
+                    await requestWallet.save();
+                }
             }
         }
 
@@ -3481,6 +3509,18 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
                     (wallet.balance || 0) + Number(sentWalletAmount);
 
                 await oem.save();
+
+
+                // also do in requestForActivationWallet collections update requestStatus to "completed"
+                const requestWallet = await requestForActivationWallet.findOne({
+                    activationPlanId: activationPlanId,
+                    oemId: oemId
+                });
+
+                if (requestWallet) {
+                    requestWallet.requestStatus = "completed";
+                    await requestWallet.save();
+                }
             }
         }
 
