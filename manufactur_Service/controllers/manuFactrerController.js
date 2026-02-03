@@ -3539,6 +3539,111 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
     }
 };
 
+exports.fetchmanufacturwalletValues = async (req, res) =>{
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const manufacturUser = await User.findById(userId);
+
+        const manuf = await ManuFactur.findById(manufacturUser.manufacturId);
+        if (!manuf) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer not found",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Manufacturer wallet values fetched successfully",
+            walletValues: manuf.walletPriceForActivation
+        });
+
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchmanufacturwalletValues"
+        })
+    }
+}
+
+exports.fetchdistributorwalletValues = async (req, res) =>{
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+
+            });
+        }
+
+        const distributorUser = await User.findById(userId);
+
+        const distributor = await Distributor.findById(distributorUser.distributorId);
+
+        if (!distributor) {
+            return res.status(404).json({
+                success: false,
+                message: "Distributor not found",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Distributor wallet values fetched successfully",
+            walletValues: distributor.walletforActivation
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchdistributorwalletValues"
+        })
+    }
+}
+
+exports.fetchOEMwalletValues = async (req, res) =>{
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const oemUser = await User.findById(userId);
+        const oem = await OemModelSchema.findById(oemUser.oemId);
+        if (!oem) {
+            return res.status(404).json({
+                success: false,
+                message: "OEM not found",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: "OEM wallet values fetched successfully",
+            walletValues: oem.walletforActivation
+        });
+        
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchOEMwalletValues"
+        })
+    }
+}
 
 
 exports.fetchManufacturSentActivationWallets = async (req, res) => {
