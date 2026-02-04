@@ -2956,7 +2956,7 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
         manuf.walletPriceForActivation.avaliableStock += noOfActivationWallets;
         await manuf.save(); // Save the updated manufacturer document
         // also for balance
-        manuf.walletPriceForActivation.balance = manuf.walletPriceForActivation.avaliableStock * price;
+        manuf.walletPriceForActivation.balance = (manuf.walletPriceForActivation.balance || 0) + (price * noOfActivationWallets);
         await manuf.save(); // Save the updated manufacturer document
 
 
