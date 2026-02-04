@@ -3433,6 +3433,7 @@ exports.fetchActivationDisptachData = async (req, res) => {
                 success: true,
                 message: "Request data fetched successfully",
                 data: {
+                    role:"distributor",
                     state: manufacturer.state,
                     partnerName: manufacturer.business_Name,
                     activationPlanId: request.activationPlanId,
@@ -3456,6 +3457,7 @@ exports.fetchActivationDisptachData = async (req, res) => {
                 success: true,
                 message: "Request data fetched successfully",
                 data: {
+                    role:"oem",
                     state: oem.state,
                     partnerName: oem.business_Name,
                     activationPlanId: request.activationPlanId,
@@ -3593,12 +3595,14 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
 
                 await distributor.save();
 
-
+                // find in user collections
+                const userDist = await User.findOne({ distributorId: distributorId });
                 // also do in requestForActivationWallet collections update requestStatus to "completed"
                 const requestWallet = await requestForActivationWallet.findOne({
                     activationPlanId: activationPlanId,
-                    distributorId: distributorId
+                    distributorId: userDist?._id
                 });
+                console.log(requestWallet)
 
                 if (requestWallet) {
                     requestWallet.requestStatus = "completed";
@@ -3626,12 +3630,15 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
 
                 await oem.save();
 
+                // find in user collections
+                const userOem = await User.findOne({ oemId: oemId });
 
                 // also do in requestForActivationWallet collections update requestStatus to "completed"
                 const requestWallet = await requestForActivationWallet.findOne({
                     activationPlanId: activationPlanId,
-                    oemId: oemId
+                    oemId: userOem?._id
                 });
+                console.log(requestWallet)
 
                 if (requestWallet) {
                     requestWallet.requestStatus = "completed";
