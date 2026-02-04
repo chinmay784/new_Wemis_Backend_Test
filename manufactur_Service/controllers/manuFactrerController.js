@@ -2901,7 +2901,7 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
 exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { price,totalPrice, distributorAndOemMarginPrice, delerMarginPrice, noOfActivationWallets, activationId } = req.body;
+        const { price, totalPrice, distributorAndOemMarginPrice, delerMarginPrice, noOfActivationWallets, activationId } = req.body;
 
         if (!userId || !activationId) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -2929,7 +2929,7 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
         // ✅ Update 1: WLP Activation
         const updatedActivation = await wlpActivation.findByIdAndUpdate(
             activationId,
-            { price, distributorAndOemMarginPrice, delerMarginPrice,totalPrice },
+            { price, distributorAndOemMarginPrice, delerMarginPrice, totalPrice },
             { new: true }
         );
 
@@ -3032,7 +3032,7 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
             });
         }
 
-        const { activationPlanId, requestedWalletCount ,totalPrice ,paymentMethod,utrNumber} = req.body;
+        const { activationPlanId, requestedWalletCount, totalPrice, paymentMethod, utrNumber } = req.body;
 
         if (!activationPlanId || !requestedWalletCount || !totalPrice || !paymentMethod || !utrNumber) {
             return res.status(400).json({
@@ -3379,7 +3379,101 @@ exports.distributor_OrOem_OrdelerDistributor_OrdelerOem = async (req, res) => {
 
 
 
-// // // // // // // // // // // //    //  //  // /  /
+// // // // // // // // // // // //    //  //  // /  //
+// Before moving to send wallet to next do one thing that fetch all related data
+exports.fetchActivationDisptachData = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const { requestId } = req.body;
+
+        if (!requestId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide requestId",
+            });
+        }
+
+        // in requestForActivationWallet collections fetch all data
+        const request = await requestForActivationWallet.findById(requestId);
+
+        if (!request) {
+            return res.status(404).json({
+                success: false,
+                message: "Request not found",
+            });
+        }
+
+        // i want all details in inside request
+        if (request.distributorId) {
+            const manufacturerUser = await User.findById(request.distributorId);
+            if (!manufacturerUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufacturer user not found",
+                });
+            }
+
+            const manufacturer = await Distributor.findById(manufacturerUser?.distributorId);
+            if (!manufacturer) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Manufacturer not found",
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Request data fetched successfully",
+                data: {
+                    state: manufacturer.state,
+                    partnerName: manufacturer.business_Name,
+                    activationPlanId: request.activationPlanId,
+                    requestedWalletCount: request.requestedWalletCount,
+                }
+            });
+        }
+
+        if (request.oemId) {
+            // also for oem
+            const oemUser = await User.findById(request.oemId);
+            const oem = await OemModelSchema.findById(oemUser?.oemId);
+            if (!oem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "OEM not found",
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Request data fetched successfully",
+                data: {
+                    state: oem.state,
+                    partnerName: oem.business_Name,
+                    activationPlanId: request.activationPlanId,
+                    requestedWalletCount: request.requestedWalletCount,
+                }
+            });
+        }
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchData"
+        })
+    }
+}
+
 exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
     try {
         const userId = req.user?.userId;
