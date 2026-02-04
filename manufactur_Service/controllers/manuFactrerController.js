@@ -3505,17 +3505,17 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
         }
 
         // ❌ Already sent check
-        const alreadySent = await sendActivationWalletToDistributorOrOem.findOne({
-            partnerName,
-            activationPlanId
-        });
+        // const alreadySent = await sendActivationWalletToDistributorOrOem.findOne({
+        //     partnerName,
+        //     activationPlanId
+        // });
 
-        if (alreadySent) {
-            return res.status(400).json({
-                success: false,
-                message: "Activation wallet already sent to this partner"
-            });
-        }
+        // if (alreadySent) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Activation wallet already sent to this partner"
+        //     });
+        // }
 
         // 🔹 Manufacturer wallet update
         const manufacturUser = await User.findById(userId);
