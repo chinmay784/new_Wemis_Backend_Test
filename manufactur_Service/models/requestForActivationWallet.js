@@ -25,6 +25,19 @@ const requestForActivationWalletSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    totalPrice: {
+        type: Number,
+        default: 0
+    },
+    paymentMethod:{
+        type: String,
+        trim: true,
+        enum:["UPI","Net Banking","Card Payment","Wallet Payment","Other"],
+    },
+    utrNumber:{
+        type: Number,
+        default: 0
+    },
     requestStatus: {
         type: String,
         trim: true,

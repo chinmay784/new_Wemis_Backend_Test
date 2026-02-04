@@ -2901,7 +2901,7 @@ exports.fetchManufacturActivatioWallet = async (req, res) => {
 exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const { price, distributorAndOemMarginPrice, delerMarginPrice, noOfActivationWallets, activationId } = req.body;
+        const { price,totalPrice, distributorAndOemMarginPrice, delerMarginPrice, noOfActivationWallets, activationId } = req.body;
 
         if (!userId || !activationId) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -2929,7 +2929,7 @@ exports.manufacturCanAddPriceAndNoOfWallet = async (req, res) => {
         // ✅ Update 1: WLP Activation
         const updatedActivation = await wlpActivation.findByIdAndUpdate(
             activationId,
-            { price, distributorAndOemMarginPrice, delerMarginPrice },
+            { price, distributorAndOemMarginPrice, delerMarginPrice,totalPrice },
             { new: true }
         );
 
@@ -2983,20 +2983,32 @@ exports.plansShowOEMandDistributor = async (req, res) => {
             .populate({
                 path: "activationWallet",
                 select: `
-          elementName
-          packageName
-          packageType
-          billingCycle
-          description
-        `
+                    elementName
+                    packageName
+                    packageType
+                    billingCycle
+                    description
+                    distributorAndOemMarginPrice
+                    price
+                `
             })
             .sort({ createdAt: -1 });
+
+        // 🔹 Add price to distributorAndOemMarginPrice
+        const updatedPlans = plans.map(plan => {
+            if (plan.activationWallet) {
+                const wallet = plan.activationWallet;
+                wallet.distributorAndOemMarginPrice = Number(wallet.distributorAndOemMarginPrice || 0) + Number(wallet.price || 0);
+            }
+
+            return plan;
+        });
 
         return res.status(200).json({
             success: true,
             message: "OEM & Distributor plans fetched successfully",
-            total: plans.length,
-            data: plans
+            total: updatedPlans.length,
+            data: updatedPlans
         });
 
     } catch (error) {
@@ -3007,6 +3019,7 @@ exports.plansShowOEMandDistributor = async (req, res) => {
         });
     }
 };
+
 
 exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
     try {
@@ -3019,9 +3032,9 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
             });
         }
 
-        const { activationPlanId, requestedWalletCount } = req.body;
+        const { activationPlanId, requestedWalletCount ,totalPrice ,paymentMethod,utrNumber} = req.body;
 
-        if (!activationPlanId || !requestedWalletCount) {
+        if (!activationPlanId || !requestedWalletCount || !totalPrice || !paymentMethod || !utrNumber) {
             return res.status(400).json({
                 success: false,
                 message: "Please provide all required fields",
@@ -3049,7 +3062,10 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
                 manufaturId: distributor.manufacturId,
                 distributorId: userId,
                 requestedWalletCount,
-                activationPlanId
+                activationPlanId,
+                totalPrice,
+                paymentMethod,
+                utrNumber
             });
 
             await newRequest.save();
@@ -3089,7 +3105,10 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
                 manufaturId: oem.manufacturId,
                 oemId: userId,
                 requestedWalletCount,
-                activationPlanId
+                activationPlanId,
+                totalPrice,
+                paymentMethod,
+                utrNumber
             });
 
             await newRequest.save();
@@ -3129,7 +3148,10 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
                 distributorId: dealerDist.distributorId,
                 distributordelerId: userId,
                 requestedWalletCount,
-                activationPlanId
+                activationPlanId,
+                totalPrice,
+                paymentMethod,
+                utrNumber
             })
 
             await newRequest.save();
@@ -3539,7 +3561,7 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
     }
 };
 
-exports.fetchmanufacturwalletValues = async (req, res) =>{
+exports.fetchmanufacturwalletValues = async (req, res) => {
     try {
         const userId = req.user?.userId;
 
@@ -3575,7 +3597,7 @@ exports.fetchmanufacturwalletValues = async (req, res) =>{
     }
 }
 
-exports.fetchdistributorwalletValues = async (req, res) =>{
+exports.fetchdistributorwalletValues = async (req, res) => {
     try {
         const userId = req.user?.userId;
         if (!userId) {
@@ -3610,7 +3632,7 @@ exports.fetchdistributorwalletValues = async (req, res) =>{
     }
 }
 
-exports.fetchOEMwalletValues = async (req, res) =>{
+exports.fetchOEMwalletValues = async (req, res) => {
     try {
         const userId = req.user?.userId;
 
@@ -3634,7 +3656,7 @@ exports.fetchOEMwalletValues = async (req, res) =>{
             message: "OEM wallet values fetched successfully",
             walletValues: oem.walletforActivation
         });
-        
+
 
     } catch (error) {
         console.log(error)
