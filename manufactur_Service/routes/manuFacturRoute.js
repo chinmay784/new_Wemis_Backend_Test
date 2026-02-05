@@ -1,6 +1,28 @@
 const express = require('express');
 const { authMiddelWere } = require('../middelwere/authMiddelWere');
-const { createDistributor, fetchDistributor, deleteDistributor, fetchDistributorById, editDistributor, createDelerUnderDistributor, fetchDelerDistributor, deleteDelerDistributor, createOem, fetchOems, deleteOems, getOemsById, editOemsById, createDelerUnderOems, fetchDelerUnderOems, deleteDelerUnderOems, getDelerUnderOemsById, editDelerOem, createBarCode, fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice, liveTrackingAllDevices, ticketIssueByCoustmer, fetchAllCoustmerVechileNo, getCustomerTicketIssues, getTicketIssuesListManufactur, ticketIssueByDeler, fetchAllDelerTicketIssue, fetchAllVechileNoByDeler, chatBetweenManufacturAndDeler, getAllMessagesBetweenUsers, chatBetweenCoustmerAndManuFactur, getAllMessagesBetweenCoustmerAndManufactur, manufacturCloseTicketApi, fetchDistributorAllocatedBarcode, fetchDelerUnderDistributor, distributorAllocatedBarCode, AllocatedListOfBarCode, DistributorCreateDeler, fetchAllDistributorDelerList, getAllBarcodeListByCurrentDeler, technicianCreateByDeler, fetchAllDelerTechenicien, delerMapDevice, fetchDelerMapDevices, fetchdelerSubscriptionPlans, fetchSingleRoutePlayback, fetchVehicleDistanceReport, fetchStoppageReport, fetchIgnitionReport, fetchMovingTimeReport, fetchIdleTimeReport, fetchParkingTimeReport, fetchSOSReport, addWalletBalance, fetchWalletBalance, fetchManufacturPaymentHistory, fetchDistributorPaymentHistory, addActivationLogic, fetchAllActivationPlans,fetchManufacturerOnBasisOsState ,ActivationWalletToManufactur, fetchAssignActivationWallet, fetchManufacturActivatioWallet, manufacturCanAddPriceAndNoOfWallet, sendActivationWalletToDistributorOrOem, plansShowOEMandDistributor, distributorAndOemRequestForActivationWallet, manufacturCanSeeRequestwallets, distributor_OrOem_OrdelerDistributor_OrdelerOem, fetchManufacturSentActivationWallets, fetchmanufacturwalletValues, fetchdistributorwalletValues, fetchOEMwalletValues, fetchActivationDisptachData} = require('../controllers/manuFactrerController');
+
+const { 
+    createDistributor,
+     fetchDistributor,
+     deleteDistributor,
+     fetchDistributorById,
+     editDistributor,
+     createDelerUnderDistributor,
+     fetchDelerDistributor,
+     deleteDelerDistributor,
+     createOem,
+     fetchOems,
+     deleteOems,
+     getOemsById,
+     editOemsById,
+     createDelerUnderOems,
+     fetchDelerUnderOems, 
+    deleteDelerUnderOems,
+     getDelerUnderOemsById,
+     editDelerOem,
+     createBarCode, 
+    fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice, liveTrackingAllDevices, ticketIssueByCoustmer, fetchAllCoustmerVechileNo, getCustomerTicketIssues, getTicketIssuesListManufactur, ticketIssueByDeler, fetchAllDelerTicketIssue, fetchAllVechileNoByDeler, chatBetweenManufacturAndDeler, getAllMessagesBetweenUsers, chatBetweenCoustmerAndManuFactur, getAllMessagesBetweenCoustmerAndManufactur, manufacturCloseTicketApi, fetchDistributorAllocatedBarcode, fetchDelerUnderDistributor, distributorAllocatedBarCode, AllocatedListOfBarCode, DistributorCreateDeler, fetchAllDistributorDelerList, getAllBarcodeListByCurrentDeler, technicianCreateByDeler, fetchAllDelerTechenicien, delerMapDevice, fetchDelerMapDevices, fetchdelerSubscriptionPlans, fetchSingleRoutePlayback, fetchVehicleDistanceReport, fetchStoppageReport, fetchIgnitionReport, fetchMovingTimeReport, fetchIdleTimeReport, fetchParkingTimeReport, fetchSOSReport, addWalletBalance, fetchWalletBalance, fetchManufacturPaymentHistory, fetchDistributorPaymentHistory, addActivationLogic, fetchAllActivationPlans,fetchManufacturerOnBasisOsState ,ActivationWalletToManufactur, fetchAssignActivationWallet, fetchManufacturActivatioWallet, manufacturCanAddPriceAndNoOfWallet, sendActivationWalletToDistributorOrOem, plansShowOEMandDistributor, distributorAndOemRequestForActivationWallet, manufacturCanSeeRequestwallets, distributor_OrOem_OrdelerDistributor_OrdelerOem, fetchManufacturSentActivationWallets, fetchmanufacturwalletValues, fetchdistributorwalletValues, fetchOEMwalletValues, fetchActivationDisptachData, fetchDistributorOrOemReceivedActivationWallets
+} = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
 
@@ -54,6 +76,8 @@ router.post("/manufacturCanAddPriceAndNoOfWallet",authMiddelWere,manufacturCanAd
 router.post("/distributorAndOemRequestForActivationWallet",authMiddelWere,distributorAndOemRequestForActivationWallet);
 router.get("/manufacturCanSeeRequestwallets",authMiddelWere,manufacturCanSeeRequestwallets);
 router.get("/distributor_OrOem_OrdelerDistributor_OrdelerOem",authMiddelWere,distributor_OrOem_OrdelerDistributor_OrdelerOem);
+
+router.get("/fetchDistributorOrOemReceivedActivationWallets",authMiddelWere,fetchDistributorOrOemReceivedActivationWallets)
 
 router.post("/fetchActivationDisptachData",authMiddelWere,fetchActivationDisptachData)
 router.post("/sendActivationWalletToDistributorOrOem",authMiddelWere,sendActivationWalletToDistributorOrOem);

@@ -1495,51 +1495,49 @@ exports.fetchElementData = async (req, res) => {
 
 exports.fetchAllBarCodesNumber = async (req, res) => {
     try {
-        const userId = req.user.userId; // make sure req.user exists
+        const userId = req.user?.userId;
 
         if (!userId) {
-            return res.status(401).json({ // 🔥 Use 401 instead of 200
+            return res.status(401).json({
                 success: false,
-                message: "Unauthorized: Please Provide UserId"
+                message: "Unauthorized",
             });
         }
 
-        const elementData = await User.findById(userId);
+        // ❌ ALLOCATED barcodes are excluded here
+        const barcodes = await createBarCode.find(
+            {
+                manufacturId: userId,
+                status: { $ne: "ALLOCATED" }, // 🔥 key condition
+            },
+            { barCodeNo: 1, _id: 0 }
+        );
 
-        if (!elementData) {
+        if (!barcodes.length) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "No non-allocated barcodes found",
             });
         }
 
-        // find all barcodes for that manufacturId
-        const manuF = await createBarCode.find({ manufacturId: userId });
-
-        if (!manuF || manuF.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No Data Found in ManuFactur Collections"
-            });
-        }
-
-        // collect all barcodes from all docs
-        const allBarcodes = manuF.flatMap(doc => doc.barCodeNo);
+        const elementData = barcodes.map(b => b.barCodeNo);
 
         return res.status(200).json({
             success: true,
-            message: "Element Data Fetched Successfully",
-            elementData: allBarcodes,
+            elementData,
         });
 
     } catch (error) {
-        console.log(error, error.message);
+        console.error(error);
         return res.status(500).json({
             success: false,
-            message: "Server Error while fetching element data"
+            message: "Server error",
         });
     }
 };
+
+
+
 
 
 
@@ -3433,7 +3431,7 @@ exports.fetchActivationDisptachData = async (req, res) => {
                 success: true,
                 message: "Request data fetched successfully",
                 data: {
-                    role:"distributor",
+                    role: "distributor",
                     state: manufacturer.state,
                     partnerName: manufacturer.business_Name,
                     activationPlanId: request.activationPlanId,
@@ -3457,7 +3455,7 @@ exports.fetchActivationDisptachData = async (req, res) => {
                 success: true,
                 message: "Request data fetched successfully",
                 data: {
-                    role:"oem",
+                    role: "oem",
                     state: oem.state,
                     partnerName: oem.business_Name,
                     activationPlanId: request.activationPlanId,
@@ -3803,6 +3801,96 @@ exports.fetchManufacturSentActivationWallets = async (req, res) => {
         })
     }
 }
+
+// fetch Distributor or Oem received activation wallets
+exports.fetchDistributorOrOemReceivedActivationWallets = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        let activationIds = [];
+
+        // 🟢 DISTRIBUTOR
+        if (user.role === "dealer-distributor") {
+            const dist = await Distributor.findById(user.distributorId);
+            if (!dist) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Distributor not found",
+                });
+            }
+
+            activationIds = [
+                ...new Set(
+                    dist.assign_Activation_Packages.map(item =>
+                        item.activationId.toString()
+                    )
+                )
+            ];
+        }
+
+        // 🟢 OEM
+        else if (user.role === "dealer-oem") {
+            const oem = await OemModelSchema.findById(user.oemId);
+            if (!oem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "OEM not found",
+                });
+            }
+
+            activationIds = [
+                ...new Set(
+                    oem.assign_Activation_Packages.map(item =>
+                        item.activationId.toString()
+                    )
+                )
+            ];
+        }
+
+        // ❌ Invalid role
+        else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user role for this operation",
+            });
+        }
+
+        // 🔥 FETCH ACTIVATION PLAN DETAILS
+        const activationPlans = await wlpActivation.find({
+            _id: { $in: activationIds }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Activation plans fetched successfully",
+            data: activationPlans
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchDistributorOrOemReceivedActivationWallets",
+        });
+    }
+};
+
+
 
 
 
