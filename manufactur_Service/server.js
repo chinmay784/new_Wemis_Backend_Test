@@ -712,7 +712,7 @@ function buildLiveTrackingObject(parsed, dev) {
 
   // Safe Fallback if 'dev' is missing (prevents crashes)
   const safeDev = dev || { deviceNo: parsed.deviceId, deviceType: "Unknown", RegistrationNo: "Unknown" };
-  const dataAge = Date.now() - new Date(safeDev.lastUpdate).getTime();
+  const dataAge = Date.now() - new Date(parsed.lastUpdate).getTime();
 
   const metaData = {
     dev: safeDev,
