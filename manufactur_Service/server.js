@@ -712,6 +712,7 @@ function buildLiveTrackingObject(parsed, dev) {
 
   // Safe Fallback if 'dev' is missing (prevents crashes)
   const safeDev = dev || { deviceNo: parsed.deviceId, deviceType: "Unknown", RegistrationNo: "Unknown" };
+  const dataAge = Date.now() - new Date(safeDev.lastUpdate).getTime();
 
   const metaData = {
     dev: safeDev,
@@ -724,7 +725,7 @@ function buildLiveTrackingObject(parsed, dev) {
     // date: safeDev.date,
     // simDetails: safeDev.simDetails || [],
     liveTracking: parsed || null,
-    status: speed > 0 ? "online" : "offline",
+    status: dataAge < 120000  ? "online" : "stale", // online if data is less than 1 min old
     lat,
     lng,
     speed,

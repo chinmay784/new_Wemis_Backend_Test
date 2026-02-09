@@ -3144,7 +3144,7 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
 
             const newRequest = new requestForActivationWallet({
                 distributorId: dealerDist.distributorId,
-                distributordelerId: userId,
+                DistributordelerId: userId,
                 requestedWalletCount,
                 activationPlanId,
                 totalPrice,
@@ -3158,8 +3158,8 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
             await dealerDist.save();
 
             // also push in distributor
-            const userdist = await User.findById(dealerDist.distributorId);
-            const distributor = await Distributor.findById(userdist.distributorId);
+            // const userdist = await User.findById(dealerDist.distributorId);
+            const distributor = await Distributor.findById(dealerDist.distributorId);
             if (!distributor) {
                 return res.status(404).json({
                     success: false,
@@ -3325,38 +3325,88 @@ exports.distributor_OrOem_OrdelerDistributor_OrdelerOem = async (req, res) => {
         const result = [];
 
         for (const request of requests) {
-            // Manufacturer
-            const manufacturerUser = await User.findById(request.manufaturId);
-            const manufacturer = await ManuFactur.findById(manufacturerUser?.manufacturId);
+            //    for distributor request fetch distributor name and manufactur Name Oem name and activation plan details
+            if (user.role === "distributor" || user.role === "oem") {
+                // Manufacturer
+                const manufacturerUser = await User.findById(request.manufaturId);
+                const manufacturer = await ManuFactur.findById(manufacturerUser?.manufacturId);
 
-            // Distributor
-            let distributorName = null;
-            if (request.distributorId) {
-                const distUser = await User.findById(request.distributorId);
-                const realDist = await Distributor.findById(distUser?.distributorId);
-                distributorName = realDist?.business_Name || null;
+                // Distributor
+                let distributorName = null;
+                if (request.distributorId) {
+                    const distUser = await User.findById(request.distributorId);
+                    const realDist = await Distributor.findById(distUser?.distributorId);
+                    distributorName = realDist?.business_Name || null;
+                }
+
+                // OEM
+                let oemName = null;
+                if (request.oemId) {
+                    const oemUser = await User.findById(request.oemId);
+                    const realOem = await OemModelSchema.findById(oemUser?.oemId);
+                    oemName = realOem?.business_Name || null;
+                }
+
+                // Activation Plan
+                const activationPlan = await wlpActivation.findById(
+                    request.activationPlanId
+                );
+
+                result.push({
+                    ...request.toObject(),
+                    manufacturerName: manufacturer?.business_Name || null,
+                    distributorName,
+                    oemName,
+                    activationPlanDetails: activationPlan || null,
+                });
             }
+            if (user.role === "dealer-distributor" || user.role === "dealer-oem") {
+                // Distributor
+                let distributorName = null;
+                if (request.distributorId) {
+                    // const distUser = await User.findById(request.distributorId);
+                    const realDist = await Distributor.findById(request.distributorId);
+                    distributorName = realDist?.business_Name || null;
 
-            // OEM
-            let oemName = null;
-            if (request.oemId) {
-                const oemUser = await User.findById(request.oemId);
-                const realOem = await OemModelSchema.findById(oemUser?.oemId);
-                oemName = realOem?.business_Name || null;
+                }
+                // OEM
+                let oemName = null;
+                if (request.oemId) {
+                    // const oemUser = await User.findById(request.oemId);
+                    const realOem = await OemModelSchema.findById(request.oemId);
+                    oemName = realOem?.business_Name || null;
+                }
+
+                // also for delerDistributor and delerOem
+                let delerDistributorName = null;
+                if (request.DistributordelerId) {
+                    const delerDistUser = await User.findById(request.DistributordelerId);
+                    const realDelerDist = await CreateDelerUnderDistributor.findById(delerDistUser?.distributorDelerId);
+                    delerDistributorName = realDelerDist?.business_Name || null;
+                }
+
+                let delerOemName = null;
+                if (request.oemDelerId) {
+                    const delerOemUser = await User.findById(request.oemDelerId);
+                    const realDelerOem = await CreateDelerUnderOems.findById(delerOemUser?.oemsDelerId);
+                    delerOemName = realDelerOem?.business_Name || null;
+                }
+
+
+                // Also Send Activation Plan Details
+                const activationPlan = await wlpActivation.findById(
+                    request.activationPlanId
+                );
+                result.push({
+                    ...request.toObject(),
+                    distributorName,
+                    oemName,
+                    delerDistributorName,
+                    delerOemName,
+                    activationPlanDetails: activationPlan || null,
+                });
+
             }
-
-            // Activation Plan
-            const activationPlan = await wlpActivation.findById(
-                request.activationPlanId
-            );
-
-            result.push({
-                ...request.toObject(),
-                manufacturerName: manufacturer?.business_Name || null,
-                distributorName,
-                oemName,
-                activationPlanDetails: activationPlan || null,
-            });
         }
 
         return res.status(200).json({

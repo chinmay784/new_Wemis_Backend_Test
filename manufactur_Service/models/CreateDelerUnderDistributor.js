@@ -156,6 +156,21 @@ const CreateDelerUnderDistributor = new mongoose.Schema({
             },
         }
     ],
+
+     walletforActivation:{
+        balance: {
+            type: Number,
+            default: 0
+        },
+        availableStock: {
+            type: Number,
+            default: 0
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    },
 });
 
 
