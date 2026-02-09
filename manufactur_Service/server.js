@@ -540,7 +540,7 @@ const { Server } = require("socket.io");
 const io = new Server(httpServer, {
   cors: {
     // Allow both your domain and localhost
-    origin: ["https://websave.in", "https://api.websave.in", "http://localhost:5173"],
+    origin: ["https://websave.in","https://wemis.in", "https://api.websave.in", "http://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -725,7 +725,7 @@ function buildLiveTrackingObject(parsed, dev) {
     // date: safeDev.date,
     // simDetails: safeDev.simDetails || [],
     liveTracking: parsed || null,
-    status: dataAge < 120000  ? "online" : "stale", // online if data is less than 1 min old
+    status: dataAge < 120000  ? "online" : "stale", // online if data is less than 2 min old
     lat,
     lng,
     speed,
