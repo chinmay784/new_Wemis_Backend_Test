@@ -3942,6 +3942,86 @@ exports.fetchDistributorOrOemReceivedActivationWallets = async (req, res) => {
 
 
 
+// Here i do that distributor and oem can see all request comming from dealer-distributor and dealer-oem
+exports.fetchAllRequestsFromDealer = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide UserID",
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        let requests = [];
+
+        // 🟢 DISTRIBUTOR
+        if (user.role === "distibutor") {
+            // populate delerId and also populate activationPlanId
+            requests = await requestForActivationWallet.find({ distributorId: user.distributorId }).populate("activationPlanId");
+
+            // find in USER COllections 
+            for (let dealerId of requests.map(r => r.DistributordelerId).filter(Boolean)) {
+
+                const userDist = await User.findById(dealerId);
+                const delerDist = await CreateDelerUnderDistributor.findById(
+                    userDist?.distributorDelerId
+                );
+
+                requests = requests.map(r => {
+                    if (
+                        r.DistributordelerId &&
+                        r.DistributordelerId.toString() === dealerId.toString()
+                    ) {
+                        return {
+                            ...(r._doc ?? r),   // ✅ SAFE replacement for toObject()
+                            dealerName: delerDist?.business_Name || null
+                        };
+                    }
+                    return r;
+                });
+            }
+
+        }
+
+        // 🟢 OEM
+        else if (user.role === "oem") {
+            requests = await requestForActivationWallet.find({ oemId: user.oemId });
+        }
+
+        // ❌ Invalid role
+        else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user role for this operation",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Requests fetched successfully",
+            length: requests.length,
+            data: requests
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchAllRequestsFromDealer",
+        });
+    }
+};
+
 
 
 // exports.manuFacturMAPaDevice = async (req, res) => {
