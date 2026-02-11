@@ -3177,6 +3177,43 @@ exports.distributorAndOemRequestForActivationWallet = async (req, res) => {
                 message: "Request for activation wallet sent successfully"
             })
         } else {
+
+            const delerOem = await CreateDelerUnderOems.findById(roleBaseUser.oemsDelerId);
+            if (!delerOem) {
+                return res.status(200).json({
+                    success: false,
+                    message: "DelerOem Not Found"
+                })
+            }
+
+            const newRequest = new requestForActivationWallet({
+                oemId: delerOem.oemsId,
+                oemDelerId: userId,
+                requestedWalletCount,
+                activationPlanId,
+                totalPrice,
+                paymentMethod,
+                utrNumber
+            })
+
+            await newRequest.save();
+
+            delerOem.requestForActivationWallets.push(newRequest._id);
+            await delerOem.save()
+
+
+            // also push in oem 
+            const oem = await CreateOemModel.findById(delerOem.oemsId);
+            if (!oem) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Oem Not Found"
+                })
+            }
+
+            oem.requestForActivationWallets.push(newRequest._id);
+            await oem.save();
+
             // send response
             return res.status(200).json({
                 success: true,
@@ -4021,6 +4058,94 @@ exports.fetchAllRequestsFromDealer = async (req, res) => {
         });
     }
 };
+// some oem work pending in just this above api
+
+
+exports.distributorSendToManufacturORoemSendToManufacturer = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserID"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not found"
+            });
+        }
+
+        let manufacturName = null;
+        let request = [];
+        let realMan = null;
+
+        if (user.role === "distibutor") {
+            const dist = await Distributor.findById(user.distributorId);
+            if (!dist) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Distributor not found"
+                });
+            }
+
+            // manufacturer user
+            realMan = await User.findById(dist.manufacturId);
+
+            if (realMan?.manufacturId) {
+                const manu = await ManuFactur.findById(realMan.manufacturId);
+                manufacturName = manu?.business_Name || null;
+            }
+
+            request = await requestForActivationWallet.find({
+                manufaturId: realMan?._id,
+                distributorId: userId
+            });
+
+            // ✅ manufacturName ALWAYS returned
+            return res.status(200).json({
+                success: true,
+                message: "Received Successfully",
+                request,
+                manufacturName
+            });
+        }
+        if (user.role === "oem") {
+            const oem = await CreateOemModel.findById(user.oemId);
+            // manufacturer user
+            realMan = await User.findById(oem.manufacturId);
+
+            if (realMan?.manufacturId) {
+                const manu = await ManuFactur.findById(realMan.manufacturId);
+                manufacturName = manu?.business_Name || null;
+            }
+
+            request = await requestForActivationWallet.find({
+                manufaturId: realMan?._id,
+                oemId: userId
+            });
+            // ✅ manufacturName ALWAYS returned
+            return res.status(200).json({
+                success: true,
+                message: "Received Successfully",
+                request,
+                manufacturName
+            });
+        }
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in distributorSendToManufacturORoemSendToManufacturer"
+        });
+    }
+};
+
 
 
 

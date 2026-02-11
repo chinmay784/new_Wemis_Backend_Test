@@ -22,7 +22,8 @@ const {
      editDelerOem,
      createBarCode, 
     fetchAllAssignElementDataRelatedToCreateBarCode, fetchAllBarCode, AllocateBarCode, fetchElementData, fetchAllBarCodesNumber, findDistributorUnderManufactur, findOemUnderManufactur, fetchAllAllocatedBarcode, rollBackAllocatedBarCode, findDelerUnderDistributor, findDelerUnderOem, createNewSubscription, fetchAllSubscriptionPlans, findSubScriptionById, editSubscriptionById, manuFacturMAPaDevice, fetchDistributorOnBasisOfState, fetchdelerOnBasisOfDistributor, createTechnician, fetchAllDistributors, fetchAlldelersUnderDistributor, fetchAllTechnicien, fetchDeviceNoOnBasisOfDeler, fetchSubScriptionPackages, fetchTechnicienAllRelatedData, fetchAllMapDevice, viewAMapDeviceInManufactur, viewDocumentsOnMapDevice, fetchCoustmerallDevices, fetchCoustmerSingleDevice, liveTrackingSingleDevice, liveTrackingAllDevices, ticketIssueByCoustmer, fetchAllCoustmerVechileNo, getCustomerTicketIssues, getTicketIssuesListManufactur, ticketIssueByDeler, fetchAllDelerTicketIssue, fetchAllVechileNoByDeler, chatBetweenManufacturAndDeler, getAllMessagesBetweenUsers, chatBetweenCoustmerAndManuFactur, getAllMessagesBetweenCoustmerAndManufactur, manufacturCloseTicketApi, fetchDistributorAllocatedBarcode, fetchDelerUnderDistributor, distributorAllocatedBarCode, AllocatedListOfBarCode, DistributorCreateDeler, fetchAllDistributorDelerList, getAllBarcodeListByCurrentDeler, technicianCreateByDeler, fetchAllDelerTechenicien, delerMapDevice, fetchDelerMapDevices, fetchdelerSubscriptionPlans, fetchSingleRoutePlayback, fetchVehicleDistanceReport, fetchStoppageReport, fetchIgnitionReport, fetchMovingTimeReport, fetchIdleTimeReport, fetchParkingTimeReport, fetchSOSReport, addWalletBalance, fetchWalletBalance, fetchManufacturPaymentHistory, fetchDistributorPaymentHistory, addActivationLogic, fetchAllActivationPlans,fetchManufacturerOnBasisOsState ,ActivationWalletToManufactur, fetchAssignActivationWallet, fetchManufacturActivatioWallet, manufacturCanAddPriceAndNoOfWallet, sendActivationWalletToDistributorOrOem, plansShowOEMandDistributor, distributorAndOemRequestForActivationWallet, manufacturCanSeeRequestwallets, distributor_OrOem_OrdelerDistributor_OrdelerOem, fetchManufacturSentActivationWallets, fetchmanufacturwalletValues, fetchdistributorwalletValues, fetchOEMwalletValues, fetchActivationDisptachData, fetchDistributorOrOemReceivedActivationWallets,
-    fetchAllRequestsFromDealer
+    fetchAllRequestsFromDealer,
+    distributorSendToManufacturORoemSendToManufacturer
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -90,7 +91,8 @@ router.get("/fetchOEMwalletValues",authMiddelWere,fetchOEMwalletValues)
 router.get("/fetchManufacturSentActivationWallets",authMiddelWere,fetchManufacturSentActivationWallets);
 
 
-router.get("/fetchAllRequestsFromDealer",authMiddelWere,fetchAllRequestsFromDealer)
+router.get("/fetchAllRequestsFromDealer",authMiddelWere,fetchAllRequestsFromDealer);
+router.get("/distributorSendToManufacturORoemSendToManufacturer",authMiddelWere,distributorSendToManufacturORoemSendToManufacturer)
 
 // Map a Device Routes
 router.post(
