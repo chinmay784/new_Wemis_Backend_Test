@@ -26,7 +26,8 @@ const {
     distributorSendToManufacturORoemSendToManufacturer,
     fetchParticularDelerRequestForSendWallet,
     sendWalletDistributorToDeler,
-    fetchdelerDistAnddelerOemwalletValues
+    fetchdelerDistAnddelerOemwalletValues,
+    sendWalletOemToDeler
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -100,7 +101,8 @@ router.get("/distributorSendToManufacturORoemSendToManufacturer",authMiddelWere,
 
 router.post("/fetchParticularDelerRequestForSendWallet",authMiddelWere,fetchParticularDelerRequestForSendWallet);
 
-router.post("/sendWalletDistributorToDeler",authMiddelWere,sendWalletDistributorToDeler)
+router.post("/sendWalletDistributorToDeler",authMiddelWere,sendWalletDistributorToDeler);
+router.post("/sendWalletOemToDeler",authMiddelWere, sendWalletOemToDeler)
 
 // Map a Device Routes
 router.post(

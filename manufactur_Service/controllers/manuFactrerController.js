@@ -4309,7 +4309,7 @@ exports.fetchParticularDelerRequestForSendWallet = async (req, res) => {
                 success: true,
                 message: "Fetched Successfully",
                 data: {
-                    role: "distributor-deler",
+                    role: "oem-deler",
                     state: realDeler.state,
                     partnerName: realDeler.business_Name,
                     activationPlanId: allReq.activationPlanId,
@@ -4503,7 +4503,173 @@ exports.sendWalletDistributorToDeler = async (req, res) => {
 }
 
 
+// oem Send wallet To deler
+exports.sendWalletOemToDeler = async (req, res) => {
+    try {
+        const userId = req.user.userId;
 
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const {
+            state,
+            partnerName,
+            oemDelerId,
+            activationPlanId,
+            sentWalletAmount,
+            sentStockQuantity
+        } = req.body;
+
+        if (
+            !userId ||
+            !state ||
+            !partnerName ||
+            !activationPlanId ||
+            !sentWalletAmount ||
+            !sentStockQuantity
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields"
+            });
+        }
+
+
+        // This means Oem
+        const userOem = await User.findById(userId);
+        if (!userOem) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        // find in Oem collections
+        const realOem = await CreateOemModel.findById(userOem.oemId);
+        if (!realOem) {
+            return res.status(200).json({
+                success: false,
+                message: "Oem Not Found"
+            })
+        }
+
+        const oemDelerWallet = realOem.walletforActivation;
+
+        if (oemDelerWallet.availableStock < sentStockQuantity) {
+            return res.status(400).json({
+                success: false,
+                message: "Insufficient stock in Distributor's wallet"
+            });
+        }
+
+        if (oemDelerWallet.balance < sentWalletAmount) {
+            return res.status(400).json({
+                success: false,
+                message: "Insufficient balance in Distributor's wallet"
+            });
+        }
+
+        oemDelerWallet.availableStock -= Number(sentStockQuantity);
+        oemDelerWallet.balance -= Number(sentWalletAmount);
+
+        if (oemDelerWallet.availableStock < 0) oemDelerWallet.availableStock = 0;
+        if (oemDelerWallet.balance < 0) oemDelerWallet.balance = 0;
+
+
+        // ✅ save parent document
+        await realOem.save();
+
+
+        // also do one thing here deduct noOfActivationWallets in sendActivationWalletToManuFacturer collections
+        const sendActivationToManu = await sendActivationWalletToManuFacturer.findOne({
+            activationWallet: activationPlanId
+        });
+
+        if (sendActivationToManu) {
+            sendActivationToManu.noOfActivationWallets -= Number(sentStockQuantity);
+            if (sendActivationToManu.noOfActivationWallets < 0) {
+                sendActivationToManu.noOfActivationWallets = 0;
+            }
+
+            await sendActivationToManu.save();
+        }
+
+
+        // Here for add stock and balance to delerId
+        const deler = await User.findById(oemDelerId);
+        if (!deler) {
+            return res.status(200).json({
+                success: false,
+                message: "deler User Not FOund"
+            })
+        }
+
+        // find in deler Collection
+        const realNewDeler = await CreateDelerUnderOems.findById(deler.oemsDelerId);
+        if (!realNewDeler) {
+            return res.status(200).json({
+                success: false,
+                message: "Real deler Not FOund"
+            })
+        }
+
+
+        // add stock and balance
+        realNewDeler.assign_Activation_Packages.push({
+            activationId: activationPlanId
+        })
+
+        const wallet = realNewDeler.walletforActivation;
+
+        wallet.availableStock =
+            (wallet.availableStock || 0) + Number(sentStockQuantity);
+
+        wallet.balance =
+            (wallet.balance || 0) + Number(sentWalletAmount);
+
+        await realNewDeler.save();
+
+        const newSendActivation = new sendwalletDistDelerOemDeler({
+            distributorId: userId,
+            oemDelerId: oemDelerId,
+            state,
+            partnerName,
+            activationPlanId,
+            sentWalletAmount,
+            sentStockQuantity
+        });
+
+        await newSendActivation.save();
+
+        const requestWallet = await requestForActivationWallet.findOne({
+            activationPlanId: activationPlanId,
+            oemDelerId: oemDelerId,
+            requestedWalletCount: sentStockQuantity
+        });
+
+        if (requestWallet) {
+            requestWallet.requestStatus = "completed";
+            await requestWallet.save();
+        }
+
+
+        return res.status(200).json({
+            success: true,
+            message: "send Wallet SuccessFully",
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error ion sendWalletOemToDeler"
+        })
+    }
+}
 
 
 // exports.manuFacturMAPaDevice = async (req, res) => {
