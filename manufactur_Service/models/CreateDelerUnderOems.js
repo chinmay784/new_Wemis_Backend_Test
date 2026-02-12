@@ -166,6 +166,18 @@ const createDelerUnderOems = new mongoose.Schema({
             default: Date.now
         }
     },
+    assign_Activation_Packages: [
+        {
+            activationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "wlpActivation"
+            },
+            assigned_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
 });
 
 

@@ -25,7 +25,8 @@ const WlpModel = require("../models/WlpModel");
 const wlpActivation = require("../models/wlpActivationModel");
 const sendActivationWalletToManuFacturer = require("../models/sendActivationWalletToManuFacturerModel");
 const sendActivationWalletToDistributorOrOem = require("../models/sendActivationWalletToDistributorOrOem")
-const requestForActivationWallet = require("../models/requestForActivationWallet")
+const requestForActivationWallet = require("../models/requestForActivationWallet");
+const sendwalletDistDelerOemDeler = require("../models/sendActivationWalletsToDistDelerAndOemDeler");
 
 
 
@@ -4223,6 +4224,182 @@ exports.fetchParticularDelerRequestForSendWallet = async (req, res) => {
 // Some Pending work is there not complite
 
 
+
+
+
+
+// distributor send wallet to deler
+exports.sendWalletDistributorToDeler = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const {
+            state,
+            partnerName,
+            distDelerId,
+            activationPlanId,
+            sentWalletAmount,
+            sentStockQuantity
+        } = req.body;
+
+        if (
+            !userId ||
+            !state ||
+            !partnerName ||
+            !activationPlanId ||
+            !sentWalletAmount ||
+            !sentStockQuantity
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields"
+            });
+        }
+
+        // This means Distributor
+        const userDist = await User.findById(userId);
+        if (!userDist) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        // find in distributor collections
+        const realDist = await Distributor.findById(userDist.distributorId);
+        if (!realDist) {
+            return res.status(200).json({
+                success: false,
+                message: "Distributor Not Found"
+            })
+        }
+
+        // deduct the price and stock from distributor
+        const distDelerWallet = realDist.walletforActivation;
+
+        if (distDelerWallet.availableStock < sentStockQuantity) {
+            return res.status(400).json({
+                success: false,
+                message: "Insufficient stock in Distributor's wallet"
+            });
+        }
+
+        if (distDelerWallet.balance < sentWalletAmount) {
+            return res.status(400).json({
+                success: false,
+                message: "Insufficient balance in Distributor's wallet"
+            });
+        }
+
+        distDelerWallet.availableStock -= Number(sentStockQuantity);
+        distDelerWallet.balance -= Number(sentWalletAmount);
+
+        if (distDelerWallet.availableStock < 0) distDelerWallet.availableStock = 0;
+        if (distDelerWallet.balance < 0) distDelerWallet.balance = 0;
+
+
+        // ✅ save parent document
+        await realDist.save();
+
+        // also do one thing here deduct noOfActivationWallets in sendActivationWalletToManuFacturer collections
+        const sendActivationToManu = await sendActivationWalletToManuFacturer.findOne({
+            activationWallet: activationPlanId
+        });
+
+        if (sendActivationToManu) {
+            sendActivationToManu.noOfActivationWallets -= Number(sentStockQuantity);
+            if (sendActivationToManu.noOfActivationWallets < 0) {
+                sendActivationToManu.noOfActivationWallets = 0;
+            }
+
+            await sendActivationToManu.save();
+        }
+
+
+
+        // Here for add stock and balance to delerId
+        const deler = await User.findById(distDelerId);
+        if (!deler) {
+            return res.status(200).json({
+                success: false,
+                message: "deler User Not FOund"
+            })
+        }
+
+        // find in deler Collection
+        const realNewDeler = await CreateDelerUnderDistributor.findById(deler.distributorDelerId);
+        if (!realNewDeler) {
+            return res.status(200).json({
+                success: false,
+                message: "Real deler Not FOund"
+            })
+        }
+
+        // add stock and balance
+        realNewDeler.assign_Activation_Packages.push({
+            activationId: activationPlanId
+        })
+
+        const wallet = realNewDeler.walletforActivation;
+
+        wallet.availableStock =
+            (wallet.availableStock || 0) + Number(sentStockQuantity);
+
+        wallet.balance =
+            (wallet.balance || 0) + Number(sentWalletAmount);
+
+        await realNewDeler.save();
+
+        const newSendActivation = new sendwalletDistDelerOemDeler({
+            distributorId: userId,
+            distDelerId: distDelerId,
+            state,
+            partnerName,
+            activationPlanId,
+            sentWalletAmount,
+            sentStockQuantity
+        });
+
+        await newSendActivation.save();
+
+        const requestWallet = await requestForActivationWallet.findOne({
+            activationPlanId: activationPlanId,
+            DistributordelerId: distDelerId,
+            requestedWalletCount: sentStockQuantity
+        });
+
+        if (requestWallet) {
+            requestWallet.requestStatus = "completed";
+            await requestWallet.save();
+        }
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched SuccessFully",
+            distDelerWallet
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in sendWalletDistributorToDeler"
+        })
+    }
+}
+
+
+
+
+
 // exports.manuFacturMAPaDevice = async (req, res) => {
 
 //     try {
@@ -5956,6 +6133,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             success: true,
             message: "Live GPS data retrieved successfully",
             VehicleType: matchedDevice.VehicleType || "Unknown",
+            vechileNo:matchedDevice.vechileNo, // add new
             previousLocation,
             currentLocation,
             smoothPath,
