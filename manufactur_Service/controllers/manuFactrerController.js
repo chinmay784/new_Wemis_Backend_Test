@@ -4147,6 +4147,80 @@ exports.distributorSendToManufacturORoemSendToManufacturer = async (req, res) =>
 };
 
 
+exports.fetchParticularDelerRequestForSendWallet = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const { requestId } = req.body;
+
+        if (!requestId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide requestId"
+            })
+        }
+
+        // find in request Schema for delerDistributor and delerOem
+        const allReq = await requestForActivationWallet.findById(requestId);
+        if (!allReq) {
+            return res.status(200).json({
+                success: false,
+                message: "Request Not Found"
+            })
+        }
+
+        if (allReq.DistributordelerId) {
+            // main logic for find distributorDelerUser
+            const distributorDelerUser = await User.findById(allReq.DistributordelerId);
+            if (!distributorDelerUser) {
+                return res.status(200).json({
+                    success: false,
+                    message: "User Not Found",
+                })
+            }
+
+            // also find in real deler
+            const realDeler = await CreateDelerUnderDistributor.findById(distributorDelerUser.distributorDelerId);
+            if (!realDeler) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Real Deler Not Found",
+                })
+            }
+            return res.status(200).json({
+                success: true,
+                message: "Fetched Successfully",
+                data: {
+                    role: "distributor-deler",
+                    state: realDeler.state,
+                    partnerName: realDeler.business_Name,
+                    activationPlanId: allReq.activationPlanId,
+                    requestedWalletCount: allReq.requestedWalletCount,
+                }
+            })
+        } else {
+            return res.status(200).json({
+                success: true,
+                re: "Not Found"
+            })
+        }
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchParticularDelerRequestForSendWallet"
+        })
+    }
+}
+// Some Pending work is there not complite
 
 
 // exports.manuFacturMAPaDevice = async (req, res) => {
