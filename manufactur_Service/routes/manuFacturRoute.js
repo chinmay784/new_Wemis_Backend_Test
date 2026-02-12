@@ -25,7 +25,8 @@ const {
     fetchAllRequestsFromDealer,
     distributorSendToManufacturORoemSendToManufacturer,
     fetchParticularDelerRequestForSendWallet,
-    sendWalletDistributorToDeler
+    sendWalletDistributorToDeler,
+    fetchdelerDistAnddelerOemwalletValues
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -89,6 +90,7 @@ router.post("/sendActivationWalletToDistributorOrOem",authMiddelWere,sendActivat
 router.get("/fetchmanufacturwalletValues",authMiddelWere,fetchmanufacturwalletValues)
 router.get("/fetchdistributorwalletValues",authMiddelWere,fetchdistributorwalletValues);
 router.get("/fetchOEMwalletValues",authMiddelWere,fetchOEMwalletValues)
+router.get("/fetchdelerDistAnddelerOemwalletValues",authMiddelWere,fetchdelerDistAnddelerOemwalletValues)
 
 router.get("/fetchManufacturSentActivationWallets",authMiddelWere,fetchManufacturSentActivationWallets);
 

@@ -3855,6 +3855,65 @@ exports.fetchOEMwalletValues = async (req, res) => {
 }
 
 
+exports.fetchdelerDistAnddelerOemwalletValues = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: 'Please Provide UserID'
+            })
+        };
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: 'User Not Found'
+            })
+        };
+
+        if (user.role === "dealer-distributor") {
+            const deler = await CreateDelerUnderDistributor.findById(user.distributorDelerId);
+            if (!deler) {
+                return res.status(200).json({
+                    success: false,
+                    message: 'deler Not Found'
+                })
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Balanced Fetched SuccessFully",
+                walletValues: deler.walletforActivation
+            })
+        } else {
+            const oem = await CreateDelerUnderOems.findById(user.distributorDelerId);
+            if (!oem) {
+                return res.status(200).json({
+                    success: false,
+                    message: 'deler Not Found'
+                })
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Balanced Fetched SuccessFully",
+                walletValues: oem.walletforActivation
+            })
+        }
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in fetchdelerDistAnddelerOemwalletValues"
+        })
+    }
+}
+
+
 exports.fetchManufacturSentActivationWallets = async (req, res) => {
     try {
         const userId = req.user?.userId;
@@ -6133,7 +6192,7 @@ exports.liveTrackingSingleDevice = async (req, res) => {
             success: true,
             message: "Live GPS data retrieved successfully",
             VehicleType: matchedDevice.VehicleType || "Unknown",
-            vechileNo:matchedDevice.vechileNo, // add new
+            vechileNo: matchedDevice.vechileNo, // add new
             previousLocation,
             currentLocation,
             smoothPath,
