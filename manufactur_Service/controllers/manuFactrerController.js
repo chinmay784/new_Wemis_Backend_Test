@@ -3889,7 +3889,7 @@ exports.fetchdelerDistAnddelerOemwalletValues = async (req, res) => {
                 walletValues: deler.walletforActivation
             })
         } else {
-            const oem = await CreateDelerUnderOems.findById(user.distributorDelerId);
+            const oem = await CreateDelerUnderOems.findById(user.oemsDelerId);
             if (!oem) {
                 return res.status(200).json({
                     success: false,
@@ -4092,7 +4092,28 @@ exports.fetchAllRequestsFromDealer = async (req, res) => {
 
         // 🟢 OEM
         else if (user.role === "oem") {
-            requests = await requestForActivationWallet.find({ oemId: user.oemId });
+            requests = await requestForActivationWallet.find({ oemId: user.oemId }).populate("activationPlanId");
+
+            /// find in USER COllections 
+            for (let dealerId of requests.map(r => r.oemDelerId).filter(Boolean)) {
+                const userOem = await User.findById(dealerId);
+                const delerOem = await CreateDelerUnderOems.findById(
+                    userOem?.oemsDelerId
+                );
+
+                requests = requests.map(r => {
+                    if (
+                        r.oemDelerId &&
+                        r.oemDelerId.toString() === dealerId.toString()
+                    ) {
+                        return {
+                            ...(r._doc ?? r),   // ✅ SAFE replacement for toObject()
+                            dealerName: delerOem?.business_Name || null
+                        };
+                    }
+                    return r;
+                });
+            }
         }
 
         // ❌ Invalid role
@@ -4266,10 +4287,36 @@ exports.fetchParticularDelerRequestForSendWallet = async (req, res) => {
                 }
             })
         } else {
+
+            // main logic
+            const oemDelerUser = await User.findById(allReq.oemDelerId)
+            if (!oemDelerUser) {
+                return res.status(200).json({
+                    success: false,
+                    message: "User Not Found",
+                })
+            }
+
+            // also find in real deler
+            const realDeler = await CreateDelerUnderOems.findById(oemDelerUser.oemsDelerId);
+            if (!realDeler) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Real Deler Not Found",
+                })
+            }
             return res.status(200).json({
                 success: true,
-                re: "Not Found"
+                message: "Fetched Successfully",
+                data: {
+                    role: "distributor-deler",
+                    state: realDeler.state,
+                    partnerName: realDeler.business_Name,
+                    activationPlanId: allReq.activationPlanId,
+                    requestedWalletCount: allReq.requestedWalletCount,
+                }
             })
+
         }
 
     } catch (error) {
