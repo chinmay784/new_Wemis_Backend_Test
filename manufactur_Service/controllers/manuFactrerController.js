@@ -5558,6 +5558,67 @@ exports.manuFacturMAPaDevice = async (req, res) => {
     }
 };
 
+// coustmer Can See Their Device Activations Wallets
+exports.fetchCoustmerActivationWallet = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        // find i CoustmerUser Collections 
+        const coustmer = await CoustmerDevice.findById(user.coustmerId);
+        if (!coustmer) {
+            return res.status(200).json({
+                success: false,
+                message: "Coustmer Not Found"
+            })
+        }
+
+
+        // const devicesWithPackages = coustmer.devicesOwened.map(device => ({
+        //     deviceNo: device.deviceNo,
+        //     vechileNo: device.vechileNo,
+        //     packageId: device.Packages
+
+        //     // also find in wlpActivation
+
+
+        // }));
+        const packageIds = coustmer.devicesOwened
+            .map(device => device.Packages)
+            .filter(Boolean);
+
+        const packages = await wlpActivation.find({
+            _id: { $in: packageIds }
+        });
+
+        res.json({
+            success: true,
+            package: packages
+        });
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in fetchCoustmerActivationWallet"
+        })
+    }
+}
 
 
 exports.fetchCoustmerallDevices = async (req, res) => {
