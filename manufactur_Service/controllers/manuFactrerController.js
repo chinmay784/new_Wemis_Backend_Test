@@ -5409,6 +5409,56 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         // Convert Packages to ObjectId if possible (keep as string/null otherwise)
 
+        //  //  //   //  //  //  //  //  //  //  //  //  //  //    //  //  //  //  //  
+
+        // Here Work On if Manufactur Have Wallets Then He/She can Map Devices
+        const realUser = await User.findById(userId);
+        if (!realUser) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+        // find RealManuFactur
+        const RealManuFactur = await ManuFactur.findById(realUser.manufacturId);
+        if (!RealManuFactur) {
+            return res.status(200).json({
+                success: false,
+                message: "RealManuFactur Not Found"
+            })
+        }
+        // Then check RealManuFactur.walletPriceForActivation.avaliableStock and RealManuFactur.walletPriceForActivation.balance
+        if (RealManuFactur.walletPriceForActivation.avaliableStock === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "InSufficient Stock"
+            })
+        } else {
+            RealManuFactur.walletPriceForActivation.avaliableStock -= 1
+            await RealManuFactur.save()
+        }
+
+        // also find package price for manufacturer then substract with the balance
+        const pack = await wlpActivation.findById(Packages);
+        if (!pack) {
+            return res.status(200).json({
+                success: false,
+                message: "Activation Package Not Found"
+            })
+        }
+
+        if (RealManuFactur.walletPriceForActivation.balance < pack.price) {
+            return res.status(200).json({
+                success: false,
+                message: "InSufficient Balance"
+            })
+        } else {
+            // substract the balance with the pack.price
+            RealManuFactur.walletPriceForActivation.balance -= pack.price
+            await RealManuFactur.save();
+        }
+
+        //  //  //   //  //  //  //  //  //  //  //  //  //  //    //  //  //  //  // 
 
         // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
@@ -9182,6 +9232,59 @@ exports.delerMapDevice = async (req, res) => {
         } catch (err) {
             return res.status(400).json({ success: false, message: "Invalid simDetails format" });
         }
+
+
+
+        const delUser = await User.findById(userId);
+        if (!delUser) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+        // find Real-Deler
+        const realDeler = await CreateDelerUnderDistributor.findById(delUser.distributorDelerId);
+        if (!realDeler) {
+            return res.status(200).json({
+                success: false,
+                message: "RealDeler Not Found"
+            })
+        }
+
+
+        if (realDeler.walletforActivation.availableStock === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "InSufficient Stock"
+            })
+        } else {
+            realDeler.walletforActivation.availableStock -= 1
+            await realDeler.save()
+        }
+
+        // also find package price for manufacturer then substract with the balance
+        const pack = await wlpActivation.findById(Packages);
+        if (!pack) {
+            return res.status(200).json({
+                success: false,
+                message: "Activation Package Not Found"
+            })
+        }
+        let price = (pack.price)+(pack.distributorAndOemMarginPrice)
+
+
+        if (realDeler.walletforActivation.balance < price) {
+            return res.status(200).json({
+                success: false,
+                message: "InSufficient Balance"
+            })
+        } else {
+            // substract the balance with the pack.price
+            realDeler.walletforActivation.balance -= price
+            await realDeler.save();
+        }
+
+
 
 
         // save in db
