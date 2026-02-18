@@ -1,74 +1,74 @@
-const cluster = require("cluster");
-const os = require("os");
+// const cluster = require("cluster");
+// const os = require("os");
 
-if (cluster.isPrimary) {
-  os.cpus().forEach(() => cluster.fork());
-  cluster.on("exit", () => cluster.fork());
-} else {
+// if (cluster.isPrimary) {
+//   os.cpus().forEach(() => cluster.fork());
+//   cluster.on("exit", () => cluster.fork());
+// } else {
 
-  const express = require('express');
-  const { connectToDatabase } = require('./dataBase/db');
+//   const express = require('express');
+//   const { connectToDatabase } = require('./dataBase/db');
 
-  const app = express();
-  const port = 4001;
-  const superAdminRouter = require('./routes/superAdminRoute');
-
-
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  app.use('/', superAdminRouter);
-
-  // ✅ Log aborted requests (optional)
-  app.use((req, res, next) => {
-    req.on('aborted', () => {
-      console.warn('⚠️ Client aborted request:', req.method, req.url);
-    });
-    next();
-  });
+//   const app = express();
+//   const port = 4001;
+//   const superAdminRouter = require('./routes/superAdminRoute');
 
 
-  connectToDatabase();
-  app.listen(port, () => {
-    console.log(`Super Admin Service is running on port ${port} and url http://localhost:${port}`);
-  });
+//   app.use(express.json({ limit: "50mb" }));
+//   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+//   app.use('/', superAdminRouter);
 
-}
-
-
-
-
-
-
-
-
-
-
-// const express = require('express');
-// const { connectToDatabase } = require('./dataBase/db');
-
-// const app = express();
-// const port =  4001;
-// const superAdminRouter = require('./routes/superAdminRoute');
-
-
-// app.use(express.json({ limit: "50mb" }));
-// app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-// app.use('/', superAdminRouter);
-
-// // ✅ Log aborted requests (optional)
-// app.use((req, res, next) => {
-//   req.on('aborted', () => {
-//     console.warn('⚠️ Client aborted request:', req.method, req.url);
+//   // ✅ Log aborted requests (optional)
+//   app.use((req, res, next) => {
+//     req.on('aborted', () => {
+//       console.warn('⚠️ Client aborted request:', req.method, req.url);
+//     });
+//     next();
 //   });
-//   next();
-// });
 
 
-// connectToDatabase();
-// app.listen(port, () => {
-//   console.log(`Super Admin Service is running on port ${port} and url http://localhost:${port}`);
-// });
+//   connectToDatabase();
+//   app.listen(port, () => {
+//     console.log(`Super Admin Service is running on port ${port} and url http://localhost:${port}`);
+//   });
+
+
+// }
+
+
+
+
+
+
+
+
+
+
+const express = require('express');
+const { connectToDatabase } = require('./dataBase/db');
+
+const app = express();
+const port =  4001;
+const superAdminRouter = require('./routes/superAdminRoute');
+
+
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+app.use('/', superAdminRouter);
+
+// ✅ Log aborted requests (optional)
+app.use((req, res, next) => {
+  req.on('aborted', () => {
+    console.warn('⚠️ Client aborted request:', req.method, req.url);
+  });
+  next();
+});
+
+
+connectToDatabase();
+app.listen(port, () => {
+  console.log(`Super Admin Service is running on port ${port} and url http://localhost:${port}`);
+});
 

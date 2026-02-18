@@ -1,82 +1,82 @@
-const cluster = require("cluster");
-const os = require("os");
+// const cluster = require("cluster");
+// const os = require("os");
 
-if (cluster.isPrimary) {
-  os.cpus().forEach(() => cluster.fork());
-  cluster.on("exit", () => cluster.fork());
-} else {
-
-
-  const express = require('express');
-  const { connectToDatabase } = require('./dataBase/db');
-
-  const app = express();
-  const port = 4003;
-
-  const WlpRouter = require('./routes/wlpRoute');
-  const SuperAdminRouter = require('./routes/superAdminRoute');
-
-  // ✅ Log aborted requests (optional)
-  app.use((req, res, next) => {
-    req.on('aborted', () => {
-      console.warn('⚠️ Client aborted request:', req.method, req.url);
-    });
-    next();
-  });
-  // ✅ JSON parser - must come AFTER multer
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  // ✅ VERY IMPORTANT ✅
-  // Mount multer routes BEFORE json body parsing
-  app.use('/', WlpRouter, SuperAdminRouter);
+// if (cluster.isPrimary) {
+//   os.cpus().forEach(() => cluster.fork());
+//   cluster.on("exit", () => cluster.fork());
+// } else {
 
 
-  connectToDatabase();
-  app.listen(port, () => {
-    console.log(`✅ WLP Service is running on port ${port}`);
-  });
+//   const express = require('express');
+//   const { connectToDatabase } = require('./dataBase/db');
 
+//   const app = express();
+//   const port = 4003;
 
+//   const WlpRouter = require('./routes/wlpRoute');
+//   const SuperAdminRouter = require('./routes/superAdminRoute');
 
-}
-
-
-
-
-
-
-
-
-
-// const express = require('express');
-// const { connectToDatabase } = require('./dataBase/db');
-
-// const app = express();
-// const port = 4003;
-
-// const WlpRouter = require('./routes/wlpRoute');
-// const SuperAdminRouter = require('./routes/superAdminRoute');
-
-// // ✅ Log aborted requests (optional)
-// app.use((req, res, next) => {
-//   req.on('aborted', () => {
-//     console.warn('⚠️ Client aborted request:', req.method, req.url);
+//   // ✅ Log aborted requests (optional)
+//   app.use((req, res, next) => {
+//     req.on('aborted', () => {
+//       console.warn('⚠️ Client aborted request:', req.method, req.url);
+//     });
+//     next();
 //   });
-//   next();
-// });
-// // ✅ JSON parser - must come AFTER multer
-// app.use(express.json({ limit: "50mb" }));
-// app.use(express.urlencoded({ limit: "50mb", extended: true }));
+//   // ✅ JSON parser - must come AFTER multer
+//   app.use(express.json({ limit: "50mb" }));
+//   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// // ✅ VERY IMPORTANT ✅
-// // Mount multer routes BEFORE json body parsing
-// app.use('/', WlpRouter, SuperAdminRouter);
+//   // ✅ VERY IMPORTANT ✅
+//   // Mount multer routes BEFORE json body parsing
+//   app.use('/', WlpRouter, SuperAdminRouter);
 
 
-// connectToDatabase();
-// app.listen(port, () => {
-//   console.log(`✅ WLP Service is running on port ${port}`);
-// });
+//   connectToDatabase();
+//   app.listen(port, () => {
+//     console.log(`✅ WLP Service is running on port ${port}`);
+//   });
+
+
+
+// }
+
+
+
+
+
+
+
+
+
+const express = require('express');
+const { connectToDatabase } = require('./dataBase/db');
+
+const app = express();
+const port = 4003;
+
+const WlpRouter = require('./routes/wlpRoute');
+const SuperAdminRouter = require('./routes/superAdminRoute');
+
+// ✅ Log aborted requests (optional)
+app.use((req, res, next) => {
+  req.on('aborted', () => {
+    console.warn('⚠️ Client aborted request:', req.method, req.url);
+  });
+  next();
+});
+// ✅ JSON parser - must come AFTER multer
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// ✅ VERY IMPORTANT ✅
+// Mount multer routes BEFORE json body parsing
+app.use('/', WlpRouter, SuperAdminRouter);
+
+
+connectToDatabase();
+app.listen(port, () => {
+  console.log(`✅ WLP Service is running on port ${port}`);
+});
 
 
