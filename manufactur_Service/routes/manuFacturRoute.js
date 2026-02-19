@@ -28,7 +28,8 @@ const {
     sendWalletDistributorToDeler,
     fetchdelerDistAnddelerOemwalletValues,
     sendWalletOemToDeler,
-    fetchCoustmerActivationWallet
+    fetchCoustmerActivationWallet,
+    endPackage
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -121,6 +122,7 @@ router.post(
     // ]),
     manuFacturMAPaDevice
 );
+// router.post("/endPackage",endPackage)
 
 router.get("/fetchCoustmerActivationWallet",authMiddelWere,fetchCoustmerActivationWallet)
 

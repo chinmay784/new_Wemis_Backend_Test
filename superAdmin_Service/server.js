@@ -48,6 +48,7 @@
 const express = require('express');
 const { connectToDatabase } = require('./dataBase/db');
 
+
 const app = express();
 const port =  4001;
 const superAdminRouter = require('./routes/superAdminRoute');

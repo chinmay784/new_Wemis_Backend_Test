@@ -1,6 +1,4 @@
 
-
-console.log("Try programiz.pro");
 // Find the largest number in an array
 function Largest(arr){
     let max = -Infinity;

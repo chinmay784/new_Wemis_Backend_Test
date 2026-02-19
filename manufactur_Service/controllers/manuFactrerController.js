@@ -5395,7 +5395,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerstate, Customerdistrict, Rto, PinCode,
             CompliteAddress, AdharNo, PanNo, Packages,
             InvoiceNo, VehicleKMReading, DriverLicenseNo,
-            MappedDate, NoOfPanicButtons, vechileNo
+            MappedDate, NoOfPanicButtons, vechileNo,deviceSendTo
         } = req.body;
 
         // Parse simDetails if string
@@ -5463,7 +5463,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
             manufacturId: userId,
-            country, state, distributorName, delerName,
+            country, state, distributorName, delerName,deviceSendTo,
             deviceType, deviceNo, voltage, elementType,
             batchNo, simDetails, VechileBirth, RegistrationNo,
             date, ChassisNumber, EngineNumber, VehicleType,
@@ -5487,11 +5487,37 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         });
 
         const savedMapDevice = await newMapDevice.save();
+
+
+
+        // // // / / / / / / / / / / / / / / / / / / / // // //
+
+
+        const now = new Date();
+
+        // billingCycle = number of days
+        const endTime = new Date(
+            now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
+        );
+
+        pack.startTime = now;
+        pack.endTime = endTime;
+        pack.activationStatus = "Active";
+
+        await pack.save();
+
+
+
+        // // // / / / / / / / / / / / / / / / / / / / // // //
+
         // Immediate response to client (fast)
         res.status(200).json({
             success: true,
             message: "Device mapped successfully (background customer/user processing started)",
-            mapDeviceId: savedMapDevice._id
+            mapDeviceId: savedMapDevice._id,
+            message: "Package activated",
+            startTime: now,
+            endTime
         });
 
         // Background processing (non-blocking)
@@ -5607,6 +5633,53 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // otherwise just log
     }
 };
+
+
+
+// Testing Purpose for end the package limite
+// exports.endPackage = async (req, res) => {
+//     try {
+//         const { packageId } = req.body;
+
+//         if (!packageId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide packageId"
+//             })
+//         }
+
+//         const pack = await wlpActivation.findById(packageId);
+
+//         const now = new Date();
+
+//         // billingCycle = number of days
+//         const endTime = new Date(
+//             now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
+//         );
+
+//         pack.startTime = now;
+//         pack.endTime = endTime;
+//         pack.activationStatus = "Active";
+
+//         await pack.save();
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Package activated",
+//             startTime: now,
+//             endTime
+//         });
+
+//     } catch (error) {
+//         console.log(error, error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in endPackage"
+//         })
+//     }
+// }
+
+
 
 // coustmer Can See Their Device Activations Wallets
 exports.fetchCoustmerActivationWallet = async (req, res) => {
@@ -9270,7 +9343,7 @@ exports.delerMapDevice = async (req, res) => {
                 message: "Activation Package Not Found"
             })
         }
-        let price = (pack.price)+(pack.distributorAndOemMarginPrice)
+        let price = (pack.price) + (pack.distributorAndOemMarginPrice)
 
 
         if (realDeler.walletforActivation.balance < price) {

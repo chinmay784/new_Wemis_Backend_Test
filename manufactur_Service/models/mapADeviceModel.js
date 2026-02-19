@@ -10,6 +10,16 @@ const mapDeviceSchema = new mongoose.Schema({
     distributorName: { type: String, trim: true },
     delerName: { type: String, trim: true },
 
+
+
+    // 
+    deviceSendTo:{
+        type:String,
+        trim:true,
+    },
+
+    // 
+
     // Device Info
     deviceType: { type: String, trim: true },
     deviceNo: { type: String, trim: true },
