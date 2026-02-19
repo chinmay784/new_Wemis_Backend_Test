@@ -513,6 +513,8 @@ const User = require("./models/UserModel");
 const CoustmerDevice = require("./models/coustmerDeviceModel");
 const devicesStore = require("./devicesStore"); // in-memory store
 const { connectProducer, sendRoutePoint } = require("./KAFKA/producer");
+const { forwardPacket } = require("./tcpForwarder");
+
 
 // corn 
 require("./corn/expirePackages");
@@ -808,6 +810,13 @@ const tcpServer = net.createServer((socket) => {
 
         // // Save to DB
         saveToRouteHistory(parsed);
+
+
+
+
+        // foward to Hansha Server
+        forwardPacket(packet);
+
 
         // Send to Kafka (No DB write here)
         // try {
