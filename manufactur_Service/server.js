@@ -609,7 +609,7 @@ const initializeUserDeviceMap = async () => {
         }));
       }
     });
-    console.log("✅ User-Device Map initialized:", userDeviceMap);
+    //console.log("✅ User-Device Map initialized:", userDeviceMap);
   } catch (err) {
     console.log("❌ Error initializing user-device map:", err.message);
   }

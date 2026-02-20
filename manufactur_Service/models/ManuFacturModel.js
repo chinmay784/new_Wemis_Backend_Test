@@ -103,6 +103,14 @@ const ManuFacturSchema = new mongoose.Schema({
         }
     ],
 
+    // RenewalWallets
+    renewalWallets: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "ReneWalPackage",
+        }
+    ],
+
     // ✅ Add ticket issues here
     ticketIssues: [
         {

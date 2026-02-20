@@ -5395,7 +5395,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerstate, Customerdistrict, Rto, PinCode,
             CompliteAddress, AdharNo, PanNo, Packages,
             InvoiceNo, VehicleKMReading, DriverLicenseNo,
-            MappedDate, NoOfPanicButtons, vechileNo,deviceSendTo
+            MappedDate, NoOfPanicButtons, vechileNo, deviceSendTo
         } = req.body;
 
         // Parse simDetails if string
@@ -5463,7 +5463,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
             manufacturId: userId,
-            country, state, distributorName, delerName,deviceSendTo,
+            country, state, distributorName, delerName, deviceSendTo,
             deviceType, deviceNo, voltage, elementType,
             batchNo, simDetails, VechileBirth, RegistrationNo,
             date, ChassisNumber, EngineNumber, VehicleType,
@@ -5656,6 +5656,10 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 //         const endTime = new Date(
 //             now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
 //         );
+
+//         // const endTime = new Date(
+//         //     now.getTime() + 2 * 60 * 1000
+//         // );
 
 //         pack.startTime = now;
 //         pack.endTime = endTime;
@@ -11377,6 +11381,161 @@ exports.fetchOemPaymentHistory = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server Error in fetchOemPaymentHistory"
+        })
+    }
+}
+
+
+
+
+
+// ReneWall Package logic
+const ReneWalPackage = require("../models/ReneWalPackageModel")
+exports.addReneWallPackage = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        // find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        const { elementName, packageName, packageType, billingCycle, description } = req.body;
+
+        if (!elementName || !packageName || !billingCycle || description || !packageType) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide All Fieldes"
+            })
+        }
+
+        // check or prevent Duplicate
+        const exist = await ReneWalPackage.findOne({ elementName });
+        if (exist) {
+            return res.status(200).json({
+                success: false,
+                message: "Renewal ElementName is Already Exist"
+            })
+        }
+
+        // create Renewal
+        await ReneWalPackage.create({
+            wlpCreatedId: userId,
+            elementName: elementName,
+            packageName: packageName,
+            packageType: packageType,
+            billingCycle: billingCycle,
+            description: description,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "ReneWal Created SuccessFully"
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            messaeg: "Server Error In addReneWallPackage"
+        })
+    }
+}
+
+// fetch all renewal Package 
+exports.fetchAllRenewalPackages = async (req, res) =>{
+    try {
+        // fetch all renewal Package 
+
+        const renewalPackages = await ReneWalPackage.find();
+        if(renewalPackages.length === 0 || !renewalPackages){
+            return res.status(200).json({
+                success:false,
+                message:"Data Not Found"
+            })
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"Fetched Successfully renewalPackages",
+            renewalPackages,
+        })
+
+    } catch (error) {
+        console.log(error,error.message);
+        return res.status(500).json({
+            success:false,
+            message:"Server Error in fetchAllRenewalPackages"
+        })
+    }
+}
+
+
+// send renewal Package To manufacturer
+const sendRenewalPackageToManufacturer = require("../models/sendRenewalPackageToManuFacturer")
+exports.sendRenewalPackageToManuFacturer = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const { manufacturerId ,renewalPackageId , state} = req.body;
+        if (!manufacturerId || !renewalPackageId || !state) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide manufacturerId or renewalPackageId or state"
+            })
+        }
+
+        // find in realManufacturer Collections
+        const manufacturer = await ManuFactur.findById(manufacturerId);
+        if (!manufacturer) {
+            return res.status(200).json({
+                success: false,
+                message: "Manufacturer Not Found"
+            })
+        }
+
+
+        // sendRenewalPackageToManufacturer create
+        await sendRenewalPackageToManufacturer.create({
+            state,
+            wlpId:userId,
+            manufacturerId:manufacturerId,
+            renewalId:renewalPackageId,
+        })
+
+        // push renewalPackageId to manufacturer.renewalWallets
+        manufacturer.renewalWallets.push(renewalPackageId);
+
+        await manufacturer.save();
+
+        return res.status(200).json({
+            success:true,
+            message:"RenewalPackage Send SuccessFully"
+        })
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in sendRenewalPackageToManuFacturer"
         })
     }
 }

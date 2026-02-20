@@ -13,7 +13,10 @@ cron.schedule("* * * * *", async () => {
         endTime: { $lte: now }
       },
       {
-        $set: { activationStatus: "Ended" }
+        $set: {
+          activationStatus: "Ended",
+          IsCycleComplite: true
+        }
       }
     );
 
