@@ -11453,29 +11453,29 @@ exports.addReneWallPackage = async (req, res) => {
 }
 
 // fetch all renewal Package 
-exports.fetchAllRenewalPackages = async (req, res) =>{
+exports.fetchAllRenewalPackages = async (req, res) => {
     try {
         // fetch all renewal Package 
 
         const renewalPackages = await ReneWalPackage.find();
-        if(renewalPackages.length === 0 || !renewalPackages){
+        if (renewalPackages.length === 0 || !renewalPackages) {
             return res.status(200).json({
-                success:false,
-                message:"Data Not Found"
+                success: false,
+                message: "Data Not Found"
             })
         }
 
         return res.status(200).json({
-            success:true,
-            message:"Fetched Successfully renewalPackages",
+            success: true,
+            message: "Fetched Successfully renewalPackages",
             renewalPackages,
         })
 
     } catch (error) {
-        console.log(error,error.message);
+        console.log(error, error.message);
         return res.status(500).json({
-            success:false,
-            message:"Server Error in fetchAllRenewalPackages"
+            success: false,
+            message: "Server Error in fetchAllRenewalPackages"
         })
     }
 }
@@ -11494,7 +11494,7 @@ exports.sendRenewalPackageToManuFacturer = async (req, res) => {
             })
         }
 
-        const { manufacturerId ,renewalPackageId , state} = req.body;
+        const { manufacturerId, renewalPackageId, state } = req.body;
         if (!manufacturerId || !renewalPackageId || !state) {
             return res.status(200).json({
                 success: false,
@@ -11515,9 +11515,9 @@ exports.sendRenewalPackageToManuFacturer = async (req, res) => {
         // sendRenewalPackageToManufacturer create
         await sendRenewalPackageToManufacturer.create({
             state,
-            wlpId:userId,
-            manufacturerId:manufacturerId,
-            renewalId:renewalPackageId,
+            wlpId: userId,
+            manufacturerId: manufacturerId,
+            renewalId: renewalPackageId,
         })
 
         // push renewalPackageId to manufacturer.renewalWallets
@@ -11526,8 +11526,8 @@ exports.sendRenewalPackageToManuFacturer = async (req, res) => {
         await manufacturer.save();
 
         return res.status(200).json({
-            success:true,
-            message:"RenewalPackage Send SuccessFully"
+            success: true,
+            message: "RenewalPackage Send SuccessFully"
         })
 
 
@@ -11539,3 +11539,77 @@ exports.sendRenewalPackageToManuFacturer = async (req, res) => {
         })
     }
 }
+
+// wlp see the send renewalPackages
+exports.fetchWlpSendRenewalPackage = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        // 1️⃣ Find renewal records
+        const sendRenewal = await sendRenewalPackageToManufacturer.find({
+            wlpId: userId
+        });
+
+        if (!sendRenewal.length) {
+            return res.status(200).json({
+                success: false,
+                message: "Data Not Found"
+            });
+        }
+
+        // 2️⃣ Enrich data
+        const result = await Promise.all(
+            sendRenewal.map(async (item) => {
+
+                // ---- WLP NAME ----
+                const user = await User.findById(item.wlpId).lean();
+                let wlpName = null;
+
+                if (user?.wlpId) {
+                    const wlp = await WlpModel.findById(user.wlpId).lean();
+                    wlpName = wlp?.organizationName || null;
+                }
+
+                // ---- MANUFACTURER NAME ----
+                const manufacturer = await ManuFactur
+                    .findById(item.manufacturerId)
+                    .lean();
+
+                const manufacturerName = manufacturer?.business_Name || null;
+
+                // ---- RENEWAL ELEMENT NAME ----
+                const renewal = await ReneWalPackage
+                    .findById(item.renewalId)
+                    .lean();
+
+                const renewalElementName = renewal?.elementName || null;
+
+                return {
+                    ...item.toObject(),
+                    wlpName,
+                    manufacturerName,
+                    renewalElementName
+                };
+            })
+        );
+
+        return res.status(200).json({
+            success: true,
+            sendRenewal: result
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in fetchWlpSendRenewalPackage"
+        });
+    }
+};
