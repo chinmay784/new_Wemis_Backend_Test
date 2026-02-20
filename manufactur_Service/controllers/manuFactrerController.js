@@ -11412,7 +11412,7 @@ exports.addReneWallPackage = async (req, res) => {
 
         const { elementName, packageName, packageType, billingCycle, description } = req.body;
 
-        if (!elementName || !packageName || !billingCycle || description || !packageType) {
+        if (!elementName || !packageName || !billingCycle || !description || !packageType) {
             return res.status(200).json({
                 success: false,
                 message: "Please Provide All Fieldes"
