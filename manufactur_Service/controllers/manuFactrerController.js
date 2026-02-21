@@ -27,6 +27,7 @@ const sendActivationWalletToManuFacturer = require("../models/sendActivationWall
 const sendActivationWalletToDistributorOrOem = require("../models/sendActivationWalletToDistributorOrOem")
 const requestForActivationWallet = require("../models/requestForActivationWallet");
 const sendwalletDistDelerOemDeler = require("../models/sendActivationWalletsToDistDelerAndOemDeler");
+const mongoose = require("mongoose")
 
 
 
@@ -11613,3 +11614,64 @@ exports.fetchWlpSendRenewalPackage = async (req, res) => {
         });
     }
 };
+
+
+
+// fetch manufactur send RenewalWallet Package
+exports.fetchManufacturRenewalWalletPackage = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId"
+            });
+        }
+
+        // 1️⃣ Find user
+        const user = await User.findById(userId).lean();
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User Not Found"
+            });
+        }
+
+        // 2️⃣ Find manufacturer
+        const manufacturer = await ManuFactur.findById(user.manufacturId).lean();
+        if (!manufacturer) {
+            return res.status(404).json({
+                success: false,
+                message: "Manufacturer Not Found"
+            });
+        }
+
+        // also find parent wlp name
+        const parentWlpUser = await User.findById(manufacturer.wlpId);
+        const realParentWlp = await WlpModel.findById(parentWlpUser.wlpId)
+
+
+        // 3️⃣ Fetch ALL renewal packages in ONE query
+        const renewalPackages = await ReneWalPackage.find({
+            _id: { $in: manufacturer.renewalWallets }
+        }).lean();
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched Successfully",
+            manufacturerName: manufacturer.business_Name,
+            wlpName:realParentWlp.organizationName,
+            renewalPackages
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in fetchManufacturRenewalWalletPackage"
+        });
+    }
+};
+
+
