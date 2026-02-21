@@ -11661,7 +11661,7 @@ exports.fetchManufacturRenewalWalletPackage = async (req, res) => {
             success: true,
             message: "Fetched Successfully",
             manufacturerName: manufacturer.business_Name,
-            wlpName:realParentWlp.organizationName,
+            wlpName: realParentWlp.organizationName,
             renewalPackages
         });
 
@@ -11675,3 +11675,71 @@ exports.fetchManufacturRenewalWalletPackage = async (req, res) => {
 };
 
 
+
+// manufactur can update the renewalPackage price
+exports.manufacturerUpdareRenewalPackagePrice = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const { renewalPackageId, price, distributorOemMarginPrice, delerMarginPrice, totalPrice } = req.body;
+
+        if (!renewalPackageId || !price || !distributorOemMarginPrice || !delerMarginPrice || !totalPrice) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide All Fieldes"
+            })
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        if (user.role === "manufacturer") {
+
+            // find renewalPackage
+            const pack = await ReneWalPackage.findById(renewalPackageId);
+            if (!pack) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Package Not Found"
+                })
+            }
+
+            // update price
+            pack.price = price;
+            pack.distributorAndOemMarginPrice = distributorOemMarginPrice;
+            pack.delerMarginPrice = delerMarginPrice;
+            pack.totalPrice = totalPrice;
+
+            await pack.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "Renewal Price Updated SuccessFully"
+            })
+
+        } else {
+            return res.status(200).json({
+                success: True,
+                message: "You Are UnAuthorized"
+            })
+        }
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in manufacturerUpdareRenewalPackagePrice"
+        })
+    }
+}

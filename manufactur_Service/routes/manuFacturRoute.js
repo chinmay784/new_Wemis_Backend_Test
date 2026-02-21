@@ -34,7 +34,8 @@ const {
     fetchAllRenewalPackages,
     sendRenewalPackageToManuFacturer,
     fetchWlpSendRenewalPackage,
-    fetchManufacturRenewalWalletPackage
+    fetchManufacturRenewalWalletPackage,
+    manufacturerUpdareRenewalPackagePrice
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -237,5 +238,6 @@ router.get("/fetchAllRenewalPackages",fetchAllRenewalPackages);
 router.post("/sendRenewalPackageToManuFacturer",authMiddelWere,sendRenewalPackageToManuFacturer);
 router.get("/fetchWlpSendRenewalPackage",authMiddelWere,fetchWlpSendRenewalPackage);
 router.get("/fetchManufacturRenewalWalletPackage",authMiddelWere,fetchManufacturRenewalWalletPackage);
+router.post("/manufacturerUpdareRenewalPackagePrice",authMiddelWere,manufacturerUpdareRenewalPackagePrice);
 
 module.exports = router;

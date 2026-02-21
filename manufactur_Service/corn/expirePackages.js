@@ -3,7 +3,7 @@ const wlpActivation = require("../models/wlpActivationModel");
 
 
 
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   try {
     const now = new Date();
 
