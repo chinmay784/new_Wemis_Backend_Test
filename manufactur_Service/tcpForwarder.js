@@ -1,7 +1,7 @@
 const net = require("net");
 
 // const TARGET_IP = "3.6.57.153";
-const TARGET_IP = "35.154.241.136"
+const TARGET_IP = "3.6.57.153"
 // const TARGET_PORT = 1642;
 const TARGET_PORT = 1696;
 
