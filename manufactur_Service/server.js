@@ -605,11 +605,12 @@ const initializeUserDeviceMap = async () => {
           RegistrationNo: d.RegistrationNo,
           MakeModel: d.MakeModel,
           ModelYear: d.ModelYear,
-          batchNo: d.batchNo
+          batchNo: d.batchNo,
+          deviceSendTo: d.deviceSendTo
         }));
       }
     });
-    //console.log("✅ User-Device Map initialized:", userDeviceMap);
+    console.log("✅ User-Device Map initialized:", userDeviceMap);
   } catch (err) {
     console.log("❌ Error initializing user-device map:", err.message);
   }
@@ -815,7 +816,7 @@ const tcpServer = net.createServer((socket) => {
 
 
         // foward to Hansha Server
-        forwardPacket(packet);
+        // forwardPacket(packet);
 
 
         // Send to Kafka (No DB write here)
@@ -860,6 +861,21 @@ const tcpServer = net.createServer((socket) => {
           const devMetadata = deviceObjects.find(d => d.deviceNo === parsed.deviceId);
 
           if (devMetadata) {
+
+            /////////////////////////////////////////////  Update Code Start/////////////////////////////
+            // ✅ FORWARD ONLY IF deviceSendTo === "Hansa Sambalpur"
+            if (devMetadata.deviceSendTo === "Hansa Sambalpur") {
+              forwardPacket(packet);
+              console.log(
+                `📤 Packet forwarded for device ${parsed.deviceId} to Hansa Sambalpur`
+              );
+            } else {
+              console.log(
+                `🚫 Packet NOT forwarded for device ${parsed.deviceId}, deviceSendTo: ${devMetadata.deviceSendTo}`
+              );
+            }
+            /////////////////////////////////////////////  Update Code End /////////////////////////////
+
             // ✅ SUCCESS: Pass the real metadata (including VehicleType and vechileNo)
             const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
 
