@@ -5545,6 +5545,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                     InsuranceRenewDate,
                     PollutionRenewdate,
                     vechileNo,
+                    deviceSendTo
                 };
 
                 // ✅ Create or update customer AND return customer document
@@ -11740,6 +11741,60 @@ exports.manufacturerUpdareRenewalPackagePrice = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server error in manufacturerUpdareRenewalPackagePrice"
+        })
+    }
+}
+
+
+exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        // find user 
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        if (user.role === "manufacturer") {
+            return res.status(200).json({
+                success: true,
+                message: "You Can't Send (UnAuthorized)",
+            })
+        }
+
+        if (user.role === "distibutor") {
+
+
+
+            return res.status(200).json({
+                success: true,
+                message: "Renewal Package Assign To Distributor SuccesssFully",
+            })
+
+        } else {
+
+
+            return res.status(200).json({
+                success: true,
+                message: "Renewal Package Assign To Oem SuccesssFully",
+            })
+        }
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server error in manuFacturSentRenewalPackageToDistributor_Oem"
         })
     }
 }

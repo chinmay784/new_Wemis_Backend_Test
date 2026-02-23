@@ -77,6 +77,10 @@ const coustmerDeviceSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "createSubscription",
             },
+            deviceSendTo:{
+                type:String,
+                trim:true,
+            },
             
             vechileNo: { type: String, trim: true },
             VechileBirth: { type: String, trim: true },
