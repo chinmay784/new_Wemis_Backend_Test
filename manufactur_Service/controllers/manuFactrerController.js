@@ -27,7 +27,8 @@ const sendActivationWalletToManuFacturer = require("../models/sendActivationWall
 const sendActivationWalletToDistributorOrOem = require("../models/sendActivationWalletToDistributorOrOem")
 const requestForActivationWallet = require("../models/requestForActivationWallet");
 const sendwalletDistDelerOemDeler = require("../models/sendActivationWalletsToDistDelerAndOemDeler");
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+const RenewalPackageSendDistributorAndOem = require("../models/RenewalPackageSendDistributorAndOem")
 
 
 
@@ -11765,15 +11766,48 @@ exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
             })
         }
 
-        if (user.role === "manufacturer") {
+        if (user.role !== "manufacturer") {
             return res.status(200).json({
                 success: true,
                 message: "You Can't Send (UnAuthorized)",
             })
         }
 
-        if (user.role === "distibutor") {
+        // RenewalPackageSendDistributorAndOem
+        const { state, NoOfPackageWallet, price, renewalPackageId, distributorId, oemId } = req.body;
 
+        if (!state || !NoOfPackageWallet || !price || !renewalPackageId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide All Fieldes"
+            })
+        }
+
+
+        if (user.role === "distibutor") {
+            // Here Start Main Logic
+            // first create sendRenewal COllections 
+            await RenewalPackageSendDistributorAndOem.create({
+                senderManufacturerId: userId,
+                receiverDistributorId: distributorId,
+                receiverOemId: null,
+                state: state,
+                NoOfPackageWallet: NoOfPackageWallet,
+                price: price,
+                renewalPackageId: renewalPackageId,
+            })
+
+            // Then Create or Push the renewalPackageId in to distributorId
+            const dist = await Distributor.findById(distributorId);
+            if (!dist) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Distributor Not Found"
+                })
+            }
+
+            dist.assign_Renewal_Package.push(renewalPackageId);
+            await dist.save()
 
 
             return res.status(200).json({
@@ -11782,6 +11816,30 @@ exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
             })
 
         } else {
+
+            // Here Start Main Logic
+            // first create sendRenewal COllections 
+            await RenewalPackageSendDistributorAndOem.create({
+                senderManufacturerId: userId,
+                receiverDistributorId: null,
+                receiverOemId: oemId,
+                state: state,
+                NoOfPackageWallet: NoOfPackageWallet,
+                price: price,
+                renewalPackageId: renewalPackageId,
+            })
+
+            // Then Create or Push the renewalPackageId in to oemId
+            const oem = await CreateOemModel.findById(oemId);
+            if (!oem) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Oem Not Found"
+                })
+            }
+
+            oem.assign_Renewal_Package.push(renewalPackageId);
+            await oem.save()
 
 
             return res.status(200).json({

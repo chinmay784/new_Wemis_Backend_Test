@@ -129,7 +129,34 @@ const distributorSchema = new mongoose.Schema({
             },
         }
     ],
-    walletforActivation:{
+    walletforActivation: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        availableStock: {
+            type: Number,
+            default: 0
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    },
+
+    assign_Renewal_Package: [
+        {
+            renewalId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "ReneWalPackage"
+            },
+            assigned_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
+    walletforRenewal: {
         balance: {
             type: Number,
             default: 0
@@ -146,7 +173,7 @@ const distributorSchema = new mongoose.Schema({
 
     requestForActivationWallets: [
         {
-            requestActivationId:{
+            requestActivationId: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "requestForActivationWallet"
             },

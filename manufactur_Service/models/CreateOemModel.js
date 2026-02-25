@@ -143,18 +143,46 @@ const OemModelSchema = new mongoose.Schema({
         }
     },
 
+
+    assign_Renewal_Package: [
+        {
+            renewalId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "ReneWalPackage"
+            },
+            assigned_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
+    walletforRenewal: {
+        balance: {
+            type: Number,
+            default: 0
+        },
+        availableStock: {
+            type: Number,
+            default: 0
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    },
+
     requestForActivationWallets: [
-            {
-                requestActivationId:{
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "requestForActivationWallet"
-                },
-                requested_Date: {
-                    type: Date,
-                    default: Date.now
-                },
-            }
-        ],
+        {
+            requestActivationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "requestForActivationWallet"
+            },
+            requested_Date: {
+                type: Date,
+                default: Date.now
+            },
+        }
+    ],
 });
 
 
