@@ -1,9 +1,9 @@
 const net = require("net");
 
 // const TARGET_IP = "3.6.57.153";
-const TARGET_IP = "3.6.57.153"
+const TARGET_IP = "35.154.241.136"
 // const TARGET_PORT = 1642;
-const TARGET_PORT = 1696;
+const TARGET_PORT = 1642;
 
 let client;
 
@@ -11,7 +11,7 @@ function connect() {
   client = new net.Socket();
 
   client.connect(TARGET_PORT, TARGET_IP, () => {
-    console.log(`✅ Forward TCP connected → ${TARGET_IP}:${TARGET_PORT}`);
+    console.log(`✅ Forward Hansha Roulkela TCP connected → ${TARGET_IP}:${TARGET_PORT}`);
   });
 
   client.on("error", (err) => { 
@@ -32,7 +32,7 @@ function reconnect() {
   }, 5000);
 }
 
-function forwardPacket(rawPacket) {
+function forwardPacketHanshaRoulKela(rawPacket) {
   if (!client || !client.writable) {
     console.warn("⚠️ Forward TCP not ready, packet skipped");
     return;
@@ -47,5 +47,5 @@ function forwardPacket(rawPacket) {
 
 connect();
 
-module.exports = { forwardPacket };
+module.exports = { forwardPacketHanshaRoulKela };
  

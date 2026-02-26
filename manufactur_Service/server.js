@@ -514,6 +514,7 @@ const CoustmerDevice = require("./models/coustmerDeviceModel");
 const devicesStore = require("./devicesStore"); // in-memory store
 const { connectProducer, sendRoutePoint } = require("./KAFKA/producer");
 const { forwardPacket } = require("./tcpForwarder");
+const {forwardPacketHanshaRoulKela} = require("./tcpForwarderHanshaRoulKela")
 
 
 // corn 
@@ -874,6 +875,23 @@ const tcpServer = net.createServer((socket) => {
                 `🚫 Packet NOT forwarded for device ${parsed.deviceId}, deviceSendTo: ${devMetadata.deviceSendTo}`
               );
             }
+
+
+
+            if (devMetadata.deviceSendTo === "Hansa rourkela") {
+              forwardPacketHanshaRoulKela(packet);
+              console.log(
+                `📤 Packet forwarded for device ${parsed.deviceId} to Hansa rourkela`
+              );
+            } else {
+              console.log(
+                `🚫 Packet NOT forwarded for device ${parsed.deviceId}, deviceSendTo: ${devMetadata.deviceSendTo}`
+              );
+            }
+
+
+
+
             /////////////////////////////////////////////  Update Code End /////////////////////////////
 
             // ✅ SUCCESS: Pass the real metadata (including VehicleType and vechileNo)
