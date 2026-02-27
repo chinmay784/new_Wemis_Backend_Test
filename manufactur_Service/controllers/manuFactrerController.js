@@ -5462,6 +5462,18 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         //  //  //   //  //  //  //  //  //  //  //  //  //  //    //  //  //  //  // 
 
+
+        // Extra Added Code 
+        const isDeviceNoAdded = await MapDevice.findOne({deviceNo});
+        if(isDeviceNoAdded){
+            return res.status(200).json({
+                success:false,
+                message:`DeviceNo is Already Added, You Can't add This ${deviceNo} Number Again.  `
+            })
+        }
+
+
+
         // Create and save MapDevice quickly (no file uploads in this path)
         const newMapDevice = new MapDevice({
             manufacturId: userId,
