@@ -36,7 +36,10 @@ const {
     fetchWlpSendRenewalPackage,
     fetchManufacturRenewalWalletPackage,
     manufacturerUpdareRenewalPackagePrice,
-    manuFacturSentRenewalPackageToDistributor_Oem
+    manuFacturSentRenewalPackageToDistributor_Oem,
+    Instalation_Certificate,
+    fitment_Certificate,
+    device_renewal_certificate
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -241,5 +244,18 @@ router.get("/fetchWlpSendRenewalPackage",authMiddelWere,fetchWlpSendRenewalPacka
 router.get("/fetchManufacturRenewalWalletPackage",authMiddelWere,fetchManufacturRenewalWalletPackage);
 router.post("/manufacturerUpdareRenewalPackagePrice",authMiddelWere,manufacturerUpdareRenewalPackagePrice);
 router.post("/manuFacturSentRenewalPackageToDistributor_Oem",authMiddelWere,manuFacturSentRenewalPackageToDistributor_Oem)
+
+
+
+
+
+
+
+
+
+// coustmer Certificate APIS
+router.post("/Instalation_Certificate",authMiddelWere,Instalation_Certificate);
+router.post("/fitment_Certificate",authMiddelWere,fitment_Certificate);
+router.post("/device_renewal_certificate",authMiddelWere,device_renewal_certificate);
 
 module.exports = router;

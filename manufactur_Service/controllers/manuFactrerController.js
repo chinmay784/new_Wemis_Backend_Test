@@ -5464,11 +5464,11 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
 
         // Extra Added Code 
-        const isDeviceNoAdded = await MapDevice.findOne({deviceNo});
-        if(isDeviceNoAdded){
+        const isDeviceNoAdded = await MapDevice.findOne({ deviceNo });
+        if (isDeviceNoAdded) {
             return res.status(200).json({
-                success:false,
-                message:`DeviceNo is Already Added, You Can't add This ${deviceNo} Number Again.  `
+                success: false,
+                message: `DeviceNo is Already Added, You Can't add This ${deviceNo} Number Again.  `
             })
         }
 
@@ -11449,6 +11449,313 @@ exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server error in manuFacturSentRenewalPackageToDistributor_Oem"
+        })
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Coustmer DownloadAllData Related TO Instalation Certificate
+exports.Instalation_Certificate = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { vechileNo } = req.body;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "userId Missing"
+            })
+        }
+        if (!vechileNo) {
+            return res.status(200).json({
+                success: false,
+                message: "vechileNo Missing"
+            })
+        }
+
+
+        // find vechile Owner Details And vechile Details on the basis of vechileNo
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "user Not Found"
+            })
+        }
+        // find in coustmer devices Collections
+        const coustmerData = await CoustmerDevice.findById(user.coustmerId);
+        if (!coustmerData) {
+            return res.status(200).json({
+                success: false,
+                message: "Coustmer Not Found"
+            })
+        }
+
+        // also find in mapdevice Sections find another related Data
+        const mapSingleDeviceData = await MapDevice.findOne({ vechileNo: vechileNo });
+        if (!mapSingleDeviceData) {
+            return res.status(200).json({
+                success: false,
+                message: "mapSingleDeviceData Not Found"
+            })
+        }
+
+
+
+        // in the coustmerData have array of devicesOwened in this have objects i want to find objects on the basis of vechileNo
+        // in the coustmerData have array of devicesOwened
+        const deviceData = coustmerData.devicesOwened.find(
+            (device) => device.vechileNo === vechileNo
+        );
+
+        if (!deviceData) {
+            return res.status(200).json({
+                success: false,
+                message: "Vehicle not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            //deviceData,
+            // mapSingleDeviceData,
+            vechile_Owner_Details: {
+                name: mapSingleDeviceData.fullName || "",
+                mobileNo: coustmerData.mobileNo || "",
+                address: mapSingleDeviceData.CompliteAddress || "",
+                email: coustmerData.email || "",
+            },
+            vechile_Details: {
+                vechileNo,
+                chassisNo: deviceData.ChassisNumber || "",
+                vechilemodel: deviceData.MakeModel || "",
+                vechilemake: deviceData.ChassisNumber || "",
+                EngineNumber: mapSingleDeviceData.EngineNumber || "",
+                state: mapSingleDeviceData.state || "",
+                rto: mapSingleDeviceData.Rto || "",
+            },
+            vltd_Details: {
+                model: mapSingleDeviceData.model || "",
+                imeiNo: mapSingleDeviceData.deviceNo || "",
+                iccidNo: mapSingleDeviceData.simDetails[0].iccidNo || "",
+                noOfSOS: mapSingleDeviceData.NoOfPanicButtons || "",
+                instalationData: mapSingleDeviceData.MappedDate || "",
+                callibrationDate: mapSingleDeviceData.callibrationDate || "",
+                primarySim: mapSingleDeviceData.simDetails[1].simNo || "",
+                SecondarySim: mapSingleDeviceData.simDetails[0].simNo || "",
+                invoiceNo: mapSingleDeviceData.InvoiceNo || "",
+                invoiceDate: mapSingleDeviceData.invoiceDate || ""
+            }
+        });
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error In Instalation_Certificate"
+        })
+    }
+}
+
+
+// fitment Certificate for coustmer
+exports.fitment_Certificate = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { vechileNo } = req.body;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "userId Missing"
+            })
+        }
+        if (!vechileNo) {
+            return res.status(200).json({
+                success: false,
+                message: "vechileNo Missing"
+            })
+        }
+
+
+        // find vechile Owner Details And vechile Details on the basis of vechileNo
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "user Not Found"
+            })
+        }
+
+
+        // find in coustmer devices Collections
+        const coustmerData = await CoustmerDevice.findById(user.coustmerId);
+        if (!coustmerData) {
+            return res.status(200).json({
+                success: false,
+                message: "Coustmer Not Found"
+            })
+        }
+
+        // also find in mapdevice Sections find another related Data
+        const mapSingleDeviceData = await MapDevice.findOne({ vechileNo: vechileNo });
+        if (!mapSingleDeviceData) {
+            return res.status(200).json({
+                success: false,
+                message: "mapSingleDeviceData Not Found"
+            })
+        }
+
+
+
+        return res.status(200).json({
+            success: true,
+            //mapSingleDeviceData,
+            basic_Details: {
+                deviceId: mapSingleDeviceData.deviceNo || "",
+                coustmerName: mapSingleDeviceData.fullName || "",
+                vechileNo,
+            },
+            device_Information: {
+                deviceNo: mapSingleDeviceData.deviceNo || "",
+                deviceType: mapSingleDeviceData.VehicleType || "",
+                elementType: mapSingleDeviceData.elementType || "",
+            },
+            transfer_Date: {
+                transferDate: mapSingleDeviceData.transferDate || "",
+                Deler: mapSingleDeviceData.Deler || "",
+            }
+        })
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: `Server Error In fitment_Certificate / ${error.message}`
+        })
+    }
+}
+
+
+//device renewal certificate
+exports.device_renewal_certificate = async (req, res) => {
+    try {
+
+        const userId = req.user.userId;
+        const { vechileNo } = req.body;
+
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "userId Missing"
+            })
+        }
+        if (!vechileNo) {
+            return res.status(200).json({
+                success: false,
+                message: "vechileNo Missing"
+            })
+        }
+
+
+        // find vechile Owner Details And vechile Details on the basis of vechileNo
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "user Not Found"
+            })
+        }
+
+
+        // find in coustmer devices Collections
+        const coustmerData = await CoustmerDevice.findById(user.coustmerId);
+        if (!coustmerData) {
+            return res.status(200).json({
+                success: false,
+                message: "Coustmer Not Found"
+            })
+        }
+
+        // also find in mapdevice Sections find another related Data
+        const mapSingleDeviceData = await MapDevice.findOne({ vechileNo: vechileNo });
+        if (!mapSingleDeviceData) {
+            return res.status(200).json({
+                success: false,
+                message: "mapSingleDeviceData Not Found"
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            //mapSingleDeviceData,
+            basic_Details: {
+                deviceId: mapSingleDeviceData.deviceNo || "",
+                coustmerName: mapSingleDeviceData.fullName || "",
+                vechileNo,
+            },
+            device_Information: {
+                deviceNo: mapSingleDeviceData.deviceNo || "",
+                deviceType: mapSingleDeviceData.VehicleType || "",
+                elementType: mapSingleDeviceData.elementType || "",
+            },
+            renewal: {
+                renewalDate: mapSingleDeviceData.renewalDate || "",
+                Deler: mapSingleDeviceData.Deler || "",
+            }
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: `Server Error In fitment_Certificate / ${error.message}`
         })
     }
 }
