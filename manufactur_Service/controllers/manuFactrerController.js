@@ -11589,6 +11589,24 @@ exports.Instalation_Certificate = async (req, res) => {
                 SecondarySim: mapSingleDeviceData.simDetails[0].simNo || "",
                 invoiceNo: mapSingleDeviceData.InvoiceNo || "",
                 invoiceDate: mapSingleDeviceData.invoiceDate || ""
+            },
+            basic_Details: {
+                deviceId: mapSingleDeviceData.deviceNo || "",
+                coustmerName: mapSingleDeviceData.fullName || "",
+                vechileNo,
+            },
+            device_Information: {
+                deviceNo: mapSingleDeviceData.deviceNo || "",
+                deviceType: mapSingleDeviceData.VehicleType || "",
+                elementType: mapSingleDeviceData.elementType || "",
+            },
+            transfer_Date: {
+                transferDate: mapSingleDeviceData.transferDate || "",
+                Deler: mapSingleDeviceData.Deler || "",
+            },
+            renewal: {
+                renewalDate: mapSingleDeviceData.renewalDate || "",
+                Deler: mapSingleDeviceData.Deler || "",
             }
         });
 
