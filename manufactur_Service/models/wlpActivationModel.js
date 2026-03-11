@@ -1,66 +1,41 @@
 const mongoose = require('mongoose');
 
 const wlpActivationSchema = new mongoose.Schema({
-    wlpCreatorId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Wlp',
+    wlpCreatorId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Wlp"
     },
-    // activationStatus: {
-    //     type: Boolean,
-    //     default: false
-    // },
-    elementName: {
-        type: String,
-        trim: true,
+
+    elementName:String,
+
+    packageName:String,
+
+    packageType:String,
+
+    billingCycle:Number, // days
+
+    price:{
+        type:Number,
+        default:0
     },
-    packageName: {
-        type: String,
-        trim: true,
+
+    distributorAndOemMarginPrice:{
+        type:Number,
+        default:0
     },
-    packageType: {
-        type: String,
-        trim: true,
+
+    delerMarginPrice:{
+        type:Number,
+        default:0
     },
-    billingCycle: {
-        type: Number,
-        // trim: true,
+
+    totalPrice:{
+        type:Number,
+        default:0
     },
-    startTime: {
-        type: Date
-    },
-    endTime: {
-        type: Date
-    },
-    IsCycleComplite: {
-        type: Boolean,
-        default: false,
-    },
-    activationStatus: {
-        type: String,
-        enum: ["Pending", "Active", "Ended"],
-        default: "Pending"
-    },
-    price: {
-        type: Number,
-        default: 0
-    },
-    // Some Changes On price related fields
-    distributorAndOemMarginPrice: {
-        type: Number,
-        default: 0
-    },
-    delerMarginPrice: {
-        type: Number,
-        default: 0
-    },
-    totalPrice: {
-        type: Number,
-        default: 0
-    },
-    description: {
-        type: String,
-        trim: true,
-    },
+
+    description:String
+
 });
 
 module.exports = mongoose.model("wlpActivation", wlpActivationSchema);

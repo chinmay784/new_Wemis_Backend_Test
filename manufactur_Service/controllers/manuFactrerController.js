@@ -29,7 +29,7 @@ const requestForActivationWallet = require("../models/requestForActivationWallet
 const sendwalletDistDelerOemDeler = require("../models/sendActivationWalletsToDistDelerAndOemDeler");
 const mongoose = require("mongoose");
 const RenewalPackageSendDistributorAndOem = require("../models/RenewalPackageSendDistributorAndOem")
-
+const DeviceActivation = require("../models/deviceActivationModel");
 
 
 
@@ -5509,16 +5509,16 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
         const now = new Date();
 
-        // billingCycle = number of days
         const endTime = new Date(
             now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
         );
 
-        pack.startTime = now;
-        pack.endTime = endTime;
-        pack.activationStatus = "Active";
-
-        await pack.save();
+        await DeviceActivation.create({
+            deviceId: savedMapDevice._id,
+            packageId: pack._id,
+            startTime: now,
+            endTime: endTime
+        });
 
 
 
