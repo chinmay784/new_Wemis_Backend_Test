@@ -11570,6 +11570,7 @@ exports.Instalation_Certificate = async (req, res) => {
                 email: coustmerData.email || "",
             },
             vechile_Details: {
+                manufacturerYear:mapSingleDeviceData.manufacturerYear || "2026",
                 vechileNo,
                 chassisNo: deviceData.ChassisNumber || "",
                 vechilemodel: deviceData.MakeModel || "",
@@ -11579,7 +11580,7 @@ exports.Instalation_Certificate = async (req, res) => {
                 rto: mapSingleDeviceData.Rto || "",
             },
             vltd_Details: {
-                model: mapSingleDeviceData.model || "",
+                model: deviceData.model || "",
                 imeiNo: mapSingleDeviceData.deviceNo || "",
                 iccidNo: mapSingleDeviceData.simDetails[0].iccidNo || "",
                 noOfSOS: mapSingleDeviceData.NoOfPanicButtons || "",
