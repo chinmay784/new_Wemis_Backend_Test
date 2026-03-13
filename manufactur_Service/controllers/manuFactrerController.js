@@ -5507,18 +5507,19 @@ exports.manuFacturMAPaDevice = async (req, res) => {
         // // // / / / / / / / / / / / / / / / / / / / // // //
 
 
-        const now = new Date();
+        // const now = new Date();
 
-        const endTime = new Date(
-            now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
-        );
+        // const endTime = new Date(
+        //     now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
+        // );
 
-        await DeviceActivation.create({
-            deviceId: savedMapDevice._id,
-            packageId: pack._id,
-            startTime: now,
-            endTime: endTime
-        });
+        // await DeviceActivation.create({
+        //     coustmerId, // this id will be coustmerDevice._id
+        //     deviceId: savedMapDevice._id,
+        //     packageId: pack._id,
+        //     startTime: now,
+        //     endTime: endTime
+        // });
 
 
 
@@ -5606,6 +5607,31 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 } else {
                     console.log("✅ User already exists, not creating again");
                 }
+
+
+
+
+
+
+                const now = new Date();
+
+                const endTime = new Date(
+                    now.getTime() + pack.billingCycle * 24 * 60 * 60 * 1000
+                );
+
+                await DeviceActivation.create({
+                    coustmerId:savedCustomer._id, // this id will be coustmerDevice._id
+                    vechileNo:vechileNo,
+                    deviceId: savedMapDevice._id,
+                    packageId: pack._id,
+                    startTime: now,
+                    endTime: endTime
+                });
+
+
+
+
+
 
 
                 console.timeLog(`manuFacturMAPaDevice:${savedMapDevice._id}`, "user processed");
@@ -5723,17 +5749,34 @@ exports.fetchCoustmerActivationWallet = async (req, res) => {
 
 
         // }));
-        const packageIds = coustmer.devicesOwened
-            .map(device => device.Packages)
-            .filter(Boolean);
 
-        const packages = await wlpActivation.find({
-            _id: { $in: packageIds }
-        });
+
+        // const packageIds = coustmer.devicesOwened
+        //     .map(device => device.Packages)
+        //     .filter(Boolean);
+
+        // const packages = await wlpActivation.find({
+        //     _id: { $in: packageIds }
+        // });
+
+
+
+
+        // fetch all deviceActivation on tye basis of userID
+        const allActivations = await DeviceActivation.find({});
+        if (allActivations.length == 0) {
+            return res.status(200).json({
+                success: false,
+                meaasge: "No Data Found"
+            })
+        }
+
+
 
         res.json({
             success: true,
-            package: packages
+            // package: packages
+            allActivations
         });
 
 
@@ -11485,16 +11528,84 @@ exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
 
 
 
+exports.deleteAmapdevice = async (req, res) => {
+    try {
+        const { deviceNo } = req.body;
+
+        if (!deviceNo) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide deviceNo"
+            });
+        }
+
+        const deletedDevice = await MapDevice.findOneAndDelete({ deviceNo });
+
+        if (!deletedDevice) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Device deleted successfully",
+            data: deletedDevice
+        });
+
+    } catch (error) {
+        console.log(error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in deleteAmapdevice"
+        });
+    }
+};
 
 
 
 
 
+// some Api for Activation Package will be expiry API
+exports.getDeviceStatus = async (req, res) => {
+    try {
 
+        const { deviceId } = req.body;
 
+        const activation = await DeviceActivation.findOne({ deviceId });
 
+        if (!activation) {
+            return res.status(404).json({
+                success: false,
+                message: "Activation not found"
+            });
+        }
 
+        // 🔹 Expiry safety check
+        if (activation.endTime <= new Date()) {
 
+            activation.activationStatus = "Ended";
+            activation.IsCycleComplite = true;
+
+            await activation.save();
+        }
+
+        return res.status(200).json({
+            success: true,
+            status: activation.activationStatus,
+            endTime: activation.endTime
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
 
 
 
@@ -11570,7 +11681,7 @@ exports.Instalation_Certificate = async (req, res) => {
                 email: coustmerData.email || "",
             },
             vechile_Details: {
-                manufacturerYear:mapSingleDeviceData.manufacturerYear || "2026",
+                manufacturerYear: mapSingleDeviceData.manufacturerYear || "2026",
                 vechileNo,
                 chassisNo: deviceData.ChassisNumber || "",
                 vechilemodel: deviceData.MakeModel || "",

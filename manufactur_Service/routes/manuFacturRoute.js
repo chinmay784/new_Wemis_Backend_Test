@@ -39,7 +39,10 @@ const {
     manuFacturSentRenewalPackageToDistributor_Oem,
     Instalation_Certificate,
     fitment_Certificate,
-    device_renewal_certificate
+    device_renewal_certificate,
+    getDeviceStatus,
+    findOneVechile,
+    deleteAmapdevice
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -251,11 +254,14 @@ router.post("/manuFacturSentRenewalPackageToDistributor_Oem",authMiddelWere,manu
 
 
 
-
+// some api for expiry the Activation Package
+router.post("/getDeviceStatus",getDeviceStatus)
 
 // coustmer Certificate APIS
 router.post("/Instalation_Certificate",authMiddelWere,Instalation_Certificate);
 router.post("/fitment_Certificate",authMiddelWere,fitment_Certificate);
 router.post("/device_renewal_certificate",authMiddelWere,device_renewal_certificate);
+
+router.post("/deleteAmapdevice",deleteAmapdevice)
 
 module.exports = router;

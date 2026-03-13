@@ -35,25 +35,58 @@
 const cron = require("node-cron");
 const DeviceActivation = require("../models/deviceActivationModel");
 
-cron.schedule("*/5 * * * *", async () => {
+// cron.schedule("*/5 * * * *", async () => {
+
+//   const now = new Date();
+
+//   const expired = await DeviceActivation.updateMany(
+//     {
+//       activationStatus: "Active",
+//       endTime: { $lte: now }
+//     },
+//     {
+//       $set: {
+//         activationStatus: "Ended",
+//         IsCycleComplite: true
+//       }
+//     }
+//   );
+
+//   if (expired.modifiedCount > 0) {
+//     console.log("Expired devices:", expired.modifiedCount);
+//   }
+
+// });
+
+
+
+cron.schedule("* * * * *", async () => {
 
   const now = new Date();
 
-  const expired = await DeviceActivation.updateMany(
-    {
-      activationStatus: "Active",
-      endTime: { $lte: now }
-    },
-    {
-      $set: {
-        activationStatus: "Ended",
-        IsCycleComplite: true
-      }
-    }
-  );
+  try {
 
-  if (expired.modifiedCount > 0) {
-    console.log("Expired devices:", expired.modifiedCount);
+    console.log("Cron check:", now);
+
+    const result = await DeviceActivation.updateMany(
+      {
+        activationStatus: "Active",
+        endTime: { $lte: now }
+      },
+      {
+        $set: {
+          activationStatus: "Ended",
+          IsCycleComplite: true
+        }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log("Expired activations updated:", result.modifiedCount);
+    }
+
+  } catch (error) {
+    console.error("Cron error:", error);
   }
 
 });
