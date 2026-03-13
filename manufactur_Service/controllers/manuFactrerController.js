@@ -5531,8 +5531,8 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             message: "Device mapped successfully (background customer/user processing started)",
             mapDeviceId: savedMapDevice._id,
             message: "Package activated",
-            startTime: now,
-            endTime
+            // startTime: now,
+            // endTime
         });
 
         // Background processing (non-blocking)
