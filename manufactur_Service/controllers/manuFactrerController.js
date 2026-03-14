@@ -5620,8 +5620,8 @@ exports.manuFacturMAPaDevice = async (req, res) => {
                 );
 
                 await DeviceActivation.create({
-                    coustmerId:savedCustomer._id, // this id will be coustmerDevice._id
-                    vechileNo:vechileNo,
+                    coustmerId: savedCustomer._id, // this id will be coustmerDevice._id
+                    vechileNo: vechileNo,
                     deviceId: savedMapDevice._id,
                     packageId: pack._id,
                     startTime: now,
@@ -5711,83 +5711,187 @@ exports.manuFacturMAPaDevice = async (req, res) => {
 
 
 // coustmer Can See Their Device Activations Wallets
+// exports.fetchCoustmerActivationWallet = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide UserId"
+//             })
+//         }
+
+//         const user = await User.findById(userId);
+//         if (!user) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "User Not Found"
+//             })
+//         }
+
+//         // find i CoustmerUser Collections 
+//         const coustmer = await CoustmerDevice.findById(user.coustmerId);
+//         if (!coustmer) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Coustmer Not Found"
+//             })
+//         }
+
+
+//         // const devicesWithPackages = coustmer.devicesOwened.map(device => ({
+//         //     deviceNo: device.deviceNo,
+//         //     vechileNo: device.vechileNo,
+//         //     packageId: device.Packages
+
+//         //     // also find in wlpActivation
+
+
+//         // }));
+
+
+//         // const packageIds = coustmer.devicesOwened
+//         //     .map(device => device.Packages)
+//         //     .filter(Boolean);
+
+//         // const packages = await wlpActivation.find({
+//         //     _id: { $in: packageIds }
+//         // });
+
+
+
+
+//         // fetch all deviceActivation on tye basis of userID
+//         const allActivations = await DeviceActivation.find({coustmerId:user.coustmerId});
+//         if (allActivations.length == 0) {
+//             return res.status(200).json({
+//                 success: false,
+//                 meaasge: "No Data Found"
+//             })
+//         }
+
+
+
+//         res.json({
+//             success: true,
+//             // package: packages
+//             allActivations
+//         });
+
+
+//     } catch (error) {
+//         console.log(error, error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in fetchCoustmerActivationWallet"
+//         })
+//     }
+// }
+
+
 exports.fetchCoustmerActivationWallet = async (req, res) => {
     try {
+
         const userId = req.user.userId;
 
         if (!userId) {
             return res.status(200).json({
                 success: false,
                 message: "Please Provide UserId"
-            })
+            });
         }
 
         const user = await User.findById(userId);
+
         if (!user) {
             return res.status(200).json({
                 success: false,
                 message: "User Not Found"
-            })
+            });
         }
 
-        // find i CoustmerUser Collections 
         const coustmer = await CoustmerDevice.findById(user.coustmerId);
+
         if (!coustmer) {
             return res.status(200).json({
                 success: false,
                 message: "Coustmer Not Found"
-            })
+            });
         }
 
+        const allActivations = await DeviceActivation.find({
+            coustmerId: user.coustmerId
+        });
 
-        // const devicesWithPackages = coustmer.devicesOwened.map(device => ({
-        //     deviceNo: device.deviceNo,
-        //     vechileNo: device.vechileNo,
-        //     packageId: device.Packages
-
-        //     // also find in wlpActivation
-
-
-        // }));
-
-
-        // const packageIds = coustmer.devicesOwened
-        //     .map(device => device.Packages)
-        //     .filter(Boolean);
-
-        // const packages = await wlpActivation.find({
-        //     _id: { $in: packageIds }
-        // });
-
-
-
-
-        // fetch all deviceActivation on tye basis of userID
-        const allActivations = await DeviceActivation.find({});
-        if (allActivations.length == 0) {
+        if (allActivations.length === 0) {
             return res.status(200).json({
                 success: false,
-                meaasge: "No Data Found"
-            })
+                message: "No Data Found"
+            });
         }
 
+        const result = [];
 
+        for (const activation of allActivations) {
+
+            // find device inside devicesOwened
+            const device = coustmer.devicesOwened.find(
+                d =>
+                    d.vechileNo === activation.vechileNo &&
+                    String(d.Packages) === String(activation.packageId)
+            );
+
+            // find package details
+            const packageDetails = await wlpActivation.findById(
+                activation.packageId
+            );
+
+            // Convert to IST
+            const startTimeIST = new Date(activation.startTime)
+                .toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+            const endTimeIST = new Date(activation.endTime)
+                .toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+
+            // Calculate remaining days
+            const now = new Date();
+            const end = new Date(activation.endTime);
+
+            const diffTime = end - now;
+            const remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+
+            result.push({
+                activationId: activation._id,
+                coustmerId: user.coustmerId,
+                vechileNo: activation.vechileNo,
+                //device,
+                package: packageDetails,
+                activationStatus: activation.activationStatus,
+                remainingDays: remainingDays > 0 ? remainingDays : 0,
+                IndiastartTime: startTimeIST,
+                IndiaendTime: endTimeIST,
+            });
+        }
 
         res.json({
             success: true,
-            // package: packages
-            allActivations
+            data: result
         });
 
-
     } catch (error) {
-        console.log(error, error.message);
+
+        console.log(error);
+
         return res.status(500).json({
             success: false,
             message: "Server Error in fetchCoustmerActivationWallet"
-        })
+        });
+
     }
-}
+};
 
 
 exports.fetchCoustmerallDevices = async (req, res) => {
@@ -11572,9 +11676,20 @@ exports.deleteAmapdevice = async (req, res) => {
 exports.getDeviceStatus = async (req, res) => {
     try {
 
-        const { deviceId } = req.body;
 
-        const activation = await DeviceActivation.findOne({ deviceId });
+        // in this i want to get the vechileNo and coustmerId
+        // const { deviceId } = req.body;
+
+        const { vechileNo, coustmerId } = req.body;
+
+        if (!vechileNo || !coustmerId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide coustmerId or vechileNo"
+            })
+        }
+
+        const activation = await DeviceActivation.findOne({ vechileNo, coustmerId });
 
         if (!activation) {
             return res.status(404).json({
@@ -11595,7 +11710,9 @@ exports.getDeviceStatus = async (req, res) => {
         return res.status(200).json({
             success: true,
             status: activation.activationStatus,
-            endTime: activation.endTime
+            endTime: new Date(activation.endTime).toLocaleString("en-IN", {
+                timeZone: "Asia/Kolkata"
+            })
         });
 
     } catch (error) {
