@@ -566,6 +566,7 @@ io.on("connection", (socket) => {
   deviceIds.forEach((deviceObj) => {
     const deviceId = deviceObj.deviceNo;
     const parsed = devices[deviceId]; // last GPS stored in memory
+    console.log("PARSED",parsed);
 
     if (parsed) {
       const enrichedData = buildLiveTrackingObject(parsed, deviceObj);

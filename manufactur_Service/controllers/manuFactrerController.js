@@ -5867,8 +5867,17 @@ exports.fetchCoustmerActivationWallet = async (req, res) => {
                 activationId: activation._id,
                 coustmerId: user.coustmerId,
                 vechileNo: activation.vechileNo,
+                vehicleType: device.VehicleType,
                 //device,
-                package: packageDetails,
+                // package: packageDetails,
+                package: {
+                    elementName: packageDetails?.elementName,
+                    packageName: packageDetails?.packageName,
+                    packageType: packageDetails?.packageType,
+                    billingCycle: packageDetails?.billingCycle,
+                    totalPrice: packageDetails?.totalPrice,
+                    description: packageDetails?.description
+                },
                 activationStatus: activation.activationStatus,
                 remainingDays: remainingDays > 0 ? remainingDays : 0,
                 IndiastartTime: startTimeIST,
@@ -11787,10 +11796,22 @@ exports.Instalation_Certificate = async (req, res) => {
             });
         }
 
+
+        // Here find deviceNo in addBarCode Collections
+        const slNo = await createBarCode.findOne({ barCodeNo: mapSingleDeviceData.deviceNo });
+        if (!slNo) {
+            return res.status(200).json({
+                success: false,
+                message: "SlNo not found"
+            });
+        }
+
+
+
         return res.status(200).json({
             success: true,
             //deviceData,
-            // mapSingleDeviceData,
+            mapSingleDeviceData,
             vechile_Owner_Details: {
                 name: mapSingleDeviceData.fullName || "",
                 mobileNo: coustmerData.mobileNo || "",
@@ -11804,6 +11825,8 @@ exports.Instalation_Certificate = async (req, res) => {
                 vechilemodel: deviceData.MakeModel || "",
                 vechilemake: deviceData.ChassisNumber || "",
                 EngineNumber: mapSingleDeviceData.EngineNumber || "",
+                RegistrationNo: mapSingleDeviceData.RegistrationNo || "",
+                serialNumber:slNo.deviceSerialNo || "",
                 state: mapSingleDeviceData.state || "",
                 rto: mapSingleDeviceData.Rto || "",
             },
