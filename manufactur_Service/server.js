@@ -566,7 +566,7 @@ io.on("connection", (socket) => {
   deviceIds.forEach((deviceObj) => {
     const deviceId = deviceObj.deviceNo;
     const parsed = devices[deviceId]; // last GPS stored in memory
-    console.log("PARSED",parsed);
+
 
     if (parsed) {
       const enrichedData = buildLiveTrackingObject(parsed, deviceObj);
@@ -674,6 +674,88 @@ function parsePvtPacket(packet) {
     return null;
   }
 }
+
+
+
+
+// ==================  PARSE NON-AIS-140 PACKET DATA ==================
+function parseTraxoPacket(packet) {
+  try {
+
+    const parts = packet.split(",");
+
+    return {
+      deviceId: parts[1].split(":")[1], // imei
+      lat: parseFloat(parts[3]),
+      lng: parseFloat(parts[4]),
+      speed: parseFloat(parts[5]) || 0,
+      gpsFix: "A",
+      ignition: "1",
+      satellites: 5,
+      lastUpdate: new Date(),
+      timestamp: new Date().toISOString()
+    };
+
+  } catch (e) {
+    console.log("❌ Traxo Parse Error:", e.message);
+    return null;
+  }
+}
+
+
+// ==================  PARSE NON-AIS-140 PACKET DATA ==================
+function parseImeiPacket(packet) {
+  try {
+
+    const parts = packet.split(",");
+
+    const imei = parts[1]?.split(":")[1] || null;
+
+    const gpsFix = parts[2] || "V"; // A = valid, V = invalid
+    const lat = parseFloat(parts[3]) || 0;
+    const lng = parseFloat(parts[4]) || 0;
+    const speed = parseFloat(parts[5]) || 0;
+
+    const timeStr = parts[6] || null;
+
+    let timestamp = new Date();
+    if (timeStr && timeStr.length === 14) {
+      const year = timeStr.slice(0, 4);
+      const month = timeStr.slice(4, 6);
+      const day = timeStr.slice(6, 8);
+      const hour = timeStr.slice(8, 10);
+      const min = timeStr.slice(10, 12);
+      const sec = timeStr.slice(12, 14);
+
+      timestamp = new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}Z`);
+    }
+
+    return {
+      deviceId: imei,
+      deviceNo: imei,
+
+      gpsFix,
+      lat,
+      lng,
+      speed,
+
+      ignition: "0",        // not available in this packet
+      satellites: 0,        // not available in this packet
+
+      timestamp,
+      lastUpdate: new Date(),
+
+      rawPacket: packet
+    };
+
+  } catch (err) {
+    console.log("❌ IMEI Packet Parse Error:", err.message);
+    return null;
+  }
+}
+
+
+
 
 // ================= BUILD LIVE TRACKING OBJECT =================
 function buildLiveTrackingObject(parsed, dev) {
@@ -800,13 +882,63 @@ const tcpServer = net.createServer((socket) => {
 
     buffer += ascii;
 
-    while (buffer.includes("$PVT")) {
-      const start = buffer.indexOf("$PVT");
-      let end = buffer.indexOf("\n", start);
-      if (end === -1) end = buffer.length;
+    while (buffer.includes("$PVT") ||
+      buffer.includes("$TRAXO") ||
+      buffer.includes("##")) {
+      // const start = buffer.indexOf("$PVT");
+      // let end = buffer.indexOf("\n", start);
+      // if (end === -1) end = buffer.length;
+      // console.log(start)
+
+      // const packet = buffer.slice(start, end).trim();
+
+
+      // New Added for Both Ais-140 and Non-Ais-140
+      let start = -1;
+      let header = null;
+
+      const pvtIndex = buffer.indexOf("$PVT");
+      const traxoIndex = buffer.indexOf("$TRAXO");
+      const imeiIndex = buffer.indexOf("##");
+
+      // Find the earliest header in the buffer
+      const indexes = [pvtIndex, traxoIndex, imeiIndex].filter(i => i !== -1);
+      if (indexes.length === 0) break;
+
+      start = Math.min(...indexes);
+
+      if (start === pvtIndex) header = "$PVT";
+      else if (start === traxoIndex) header = "$TRAXO";
+      else if (start === imeiIndex) header = "##";
+
+      let end = -1;
+
+      if (header === "$TRAXO") {
+        end = buffer.indexOf("#", start);
+        if (end !== -1) end += 1;
+      } else {
+        end = buffer.indexOf("\n", start);
+      }
+
+      if (end === -1) break; // wait for full packet
 
       const packet = buffer.slice(start, end).trim();
-      const parsed = parsePvtPacket(packet);
+
+      let parsed = null;
+
+      if (header === "$PVT") {
+        parsed = parsePvtPacket(packet);
+      }
+      else if (header === "$TRAXO") {
+        parsed = parseTraxoPacket(packet);
+      }
+      else if (header === "##") {
+        parsed = parseImeiPacket(packet);
+      }
+
+
+
+      // const parsed = parsePvtPacket(packet);
 
       if (parsed && parsed.deviceId) {
         // Update global store
