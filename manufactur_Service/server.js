@@ -681,19 +681,38 @@ function parsePvtPacket(packet) {
 // ==================  PARSE NON-AIS-140 PACKET DATA ==================
 function parseTraxoPacket(packet) {
   try {
+    const clean = packet.replace("#", "");
+    const parts = clean.split(",");
 
-    const parts = packet.split(",");
+    const imei = parts[1];
+    const lat = parseFloat(parts[2]) || 0;
+    const lng = parseFloat(parts[3]) || 0;
+    const speed = parseFloat(parts[4]) || 0;
+
+    const timeStr = parts[5];
+
+    let timestamp = new Date();
+    if (timeStr && timeStr.length === 14) {
+      timestamp = new Date(
+        `${timeStr.slice(0, 4)}-${timeStr.slice(4, 6)}-${timeStr.slice(6, 8)}T${timeStr.slice(8, 10)}:${timeStr.slice(10, 12)}:${timeStr.slice(12, 14)}Z`
+      );
+    }
 
     return {
-      deviceId: parts[1].split(":")[1], // imei
-      lat: parseFloat(parts[3]),
-      lng: parseFloat(parts[4]),
-      speed: parseFloat(parts[5]) || 0,
+      deviceId: imei,
+
+      lat,
+      lng,
+      speed,
+
       gpsFix: "A",
-      ignition: "1",
-      satellites: 5,
-      lastUpdate: new Date(),
-      timestamp: new Date().toISOString()
+
+      // 🔥 SAME NORMALIZATION
+      ignition: speed > 0 ? "1" : "0",
+      satellites: 0,
+
+      lastUpdate: timestamp,
+      timestamp
     };
 
   } catch (e) {
@@ -706,50 +725,43 @@ function parseTraxoPacket(packet) {
 // ==================  PARSE NON-AIS-140 PACKET DATA ==================
 function parseImeiPacket(packet) {
   try {
-
     const parts = packet.split(",");
 
     const imei = parts[1]?.split(":")[1] || null;
+    const gpsFix = parts[2] || "V";
 
-    const gpsFix = parts[2] || "V"; // A = valid, V = invalid
     const lat = parseFloat(parts[3]) || 0;
     const lng = parseFloat(parts[4]) || 0;
     const speed = parseFloat(parts[5]) || 0;
 
-    const timeStr = parts[6] || null;
+    const timeStr = parts[6];
 
     let timestamp = new Date();
     if (timeStr && timeStr.length === 14) {
-      const year = timeStr.slice(0, 4);
-      const month = timeStr.slice(4, 6);
-      const day = timeStr.slice(6, 8);
-      const hour = timeStr.slice(8, 10);
-      const min = timeStr.slice(10, 12);
-      const sec = timeStr.slice(12, 14);
-
-      timestamp = new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}Z`);
+      timestamp = new Date(
+        `${timeStr.slice(0, 4)}-${timeStr.slice(4, 6)}-${timeStr.slice(6, 8)}T${timeStr.slice(8, 10)}:${timeStr.slice(10, 12)}:${timeStr.slice(12, 14)}Z`
+      );
     }
 
     return {
       deviceId: imei,
-      deviceNo: imei,
 
-      gpsFix,
       lat,
       lng,
       speed,
 
-      ignition: "0",        // not available in this packet
-      satellites: 0,        // not available in this packet
+      gpsFix,
 
-      timestamp,
-      lastUpdate: new Date(),
+      // 🔥 SMART DEFAULTS
+      ignition: speed > 0 ? "1" : "0",   // infer from speed
+      satellites: 0,                     // not available
 
-      rawPacket: packet
+      lastUpdate: timestamp,
+      timestamp
     };
 
   } catch (err) {
-    console.log("❌ IMEI Packet Parse Error:", err.message);
+    console.log("❌ IMEI Parse Error:", err.message);
     return null;
   }
 }
