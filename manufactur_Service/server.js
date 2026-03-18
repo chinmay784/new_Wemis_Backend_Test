@@ -985,24 +985,49 @@ const tcpServer = net.createServer((socket) => {
 
 
             // ❌ Skip DB save for Hansa devices
-            if (
-              devMetadata.deviceSendTo !== "Hansa Sambalpur" &&
-              devMetadata.deviceSendTo !== "Hansa rourkela"
-            ) {
-              const now = Date.now();
-              const lastTime = lastSavedTime[parsed.deviceId] || 0;
+            // if (
+            //   devMetadata.deviceSendTo !== "Hansa Sambalpur" &&
+            //   devMetadata.deviceSendTo !== "Hansa rourkela"
+            // ) {
+            //   const now = Date.now();
+            //   const lastTime = lastSavedTime[parsed.deviceId] || 0;
 
-              // ✅ Save only every 30 seconds
-              if (now - lastTime >= 30000) {
-                saveToRouteHistory(parsed);
-                lastSavedTime[parsed.deviceId] = now;
+            //   // ✅ Save only every 30 seconds
+            //   if (now - lastTime >= 30000) {
+            //     saveToRouteHistory(parsed);
+            //     lastSavedTime[parsed.deviceId] = now;
 
-                console.log(`💾 Route saved for ${parsed.deviceId}`);
-              }
-              console.log(`💾 Saved route history for ${parsed.deviceId}`);
-            } else {
-              console.log(`🚫 DB save skipped for ${parsed.deviceId}`);
+            //     console.log(`💾 Route saved for ${parsed.deviceId}`);
+            //   }
+            //   console.log(`💾 Saved route history for ${parsed.deviceId}`);
+            // } else {
+            //   console.log(`🚫 DB save skipped for ${parsed.deviceId}`);
+            // }
+
+
+
+
+
+
+
+
+
+            const now = Date.now();
+            const lastTime = lastSavedTime[parsed.deviceId] || 0;
+
+            // ✅ Save only every 30 seconds
+            if (now - lastTime >= 60000) {
+              saveToRouteHistory(parsed);
+              lastSavedTime[parsed.deviceId] = now;
+
+              console.log(`💾 Route saved for ${parsed.deviceId}`);
             }
+
+
+
+
+
+
 
 
 
@@ -1084,7 +1109,12 @@ async function saveToRouteHistory(parsed) {
       latitude: parsed.lat,
       longitude: parsed.lng,
       speed: parsed.speed,
-      raw: parsed,
+      // raw: parsed,
+      raw: {
+        headDegree: parsed.headDegree || 0,
+        ignition: parsed.ignition || parsed.ignition || "0",
+        sosStatus: parsed.sosStatus || "0"
+      },
       timestamp: parsed.lastUpdate || new Date(),
     });
     console.log(`📍 Route point saved for IMEI: ${parsed.deviceId}`);
