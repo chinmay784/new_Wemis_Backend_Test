@@ -1016,7 +1016,7 @@ const tcpServer = net.createServer((socket) => {
             const lastTime = lastSavedTime[parsed.deviceId] || 0;
 
             // ✅ Save only every 30 seconds
-            if (now - lastTime >= 60000) {
+            if (parsed.speed > 0 &&now - lastTime >= 60000) {
               saveToRouteHistory(parsed);
               lastSavedTime[parsed.deviceId] = now;
 
