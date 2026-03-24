@@ -5397,7 +5397,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerstate, Customerdistrict, Rto, PinCode,
             CompliteAddress, AdharNo, PanNo, Packages,
             InvoiceNo, VehicleKMReading, DriverLicenseNo,
-            MappedDate, NoOfPanicButtons, vechileNo, deviceSendTo
+            MappedDate, NoOfPanicButtons, vechileNo, deviceSendTo,invoiceDate,manufacturerYear,callibrationDate
         } = req.body;
 
         // Parse simDetails if string
@@ -5489,6 +5489,9 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             VehicleKMReading, DriverLicenseNo, MappedDate,
             NoOfPanicButtons,
             vechileNo,
+            manufacturerYear,
+            invoiceDate,
+            callibrationDate,
             // documents left null for now (upload separately if needed)
             VechileIDocument: null,
             RcDocument: null,
@@ -11780,6 +11783,7 @@ exports.Instalation_Certificate = async (req, res) => {
                 message: "mapSingleDeviceData Not Found"
             })
         }
+
 
 
 

@@ -87,6 +87,9 @@ const mapDeviceSchema = new mongoose.Schema({
 
     // Installation Detail
     InvoiceNo: { type: String, trim: true },
+    invoiceDate:{ type: String, trim: true },
+    manufacturerYear : { type: String, trim: true },
+    callibrationDate:{ type: String, trim: true },
     VehicleKMReading: { type: Number, default: 0 },
     DriverLicenseNo: { type: String, trim: true },
     MappedDate: { type: String, trim: true },
