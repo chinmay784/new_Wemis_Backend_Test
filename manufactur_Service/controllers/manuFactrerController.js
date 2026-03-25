@@ -11691,6 +11691,44 @@ exports.deleteAmapdevice = async (req, res) => {
     }
 };
 
+
+exports.getAMapDeviceData = async (req, res) => {
+    try {
+        const { mapId } = req.body;
+
+        if (!mapId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide mapId"
+            });
+        }
+
+
+        // find in mapDevice Collections 
+        const result = await MapDevice.findById(mapId);
+        if(!result){
+            return res.status(200).json({
+                success:false,
+                message:"No Data Found"
+            })
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"Map Device Data Fetched SuccessFully",
+            result,
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: `Server Error in getAMapDeviceData Or ${error.message}`
+        })
+    }
+}
+
+
 exports.editAmapDevice = async (req, res) => {
     try {
         const {
