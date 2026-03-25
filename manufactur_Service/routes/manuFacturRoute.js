@@ -42,7 +42,8 @@ const {
     device_renewal_certificate,
     getDeviceStatus,
     findOneVechile,
-    deleteAmapdevice
+    deleteAmapdevice,
+    editAmapDevice
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -262,6 +263,7 @@ router.post("/Instalation_Certificate",authMiddelWere,Instalation_Certificate);
 router.post("/fitment_Certificate",authMiddelWere,fitment_Certificate);
 router.post("/device_renewal_certificate",authMiddelWere,device_renewal_certificate);
 
-router.post("/deleteAmapdevice",deleteAmapdevice)
+router.post("/deleteAmapdevice",deleteAmapdevice);
+router.post("/editAmapDevice",editAmapDevice);
 
 module.exports = router;

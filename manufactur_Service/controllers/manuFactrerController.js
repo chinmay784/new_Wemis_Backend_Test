@@ -5397,7 +5397,7 @@ exports.manuFacturMAPaDevice = async (req, res) => {
             Customerstate, Customerdistrict, Rto, PinCode,
             CompliteAddress, AdharNo, PanNo, Packages,
             InvoiceNo, VehicleKMReading, DriverLicenseNo,
-            MappedDate, NoOfPanicButtons, vechileNo, deviceSendTo,invoiceDate,manufacturerYear,callibrationDate
+            MappedDate, NoOfPanicButtons, vechileNo, deviceSendTo, invoiceDate, manufacturerYear, callibrationDate
         } = req.body;
 
         // Parse simDetails if string
@@ -11646,23 +11646,34 @@ exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
 
 exports.deleteAmapdevice = async (req, res) => {
     try {
-        const { deviceNo } = req.body;
+        const { deviceNo, email } = req.body;
 
-        if (!deviceNo) {
+        if (!deviceNo || !email) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide deviceNo"
+                message: "Please provide deviceNo and email"
             });
         }
 
-        const deletedDevice = await MapDevice.findOneAndDelete({ deviceNo });
+        // ✅ Delete from MapDevice
+        const deletedDevice = await MapDevice.findOneAndDelete({ deviceNo, email });
 
         if (!deletedDevice) {
             return res.status(404).json({
                 success: false,
-                message: "Device not found"
+                message: "Device not found or mismatch with email"
             });
         }
+
+        // ✅ Remove from Customer collection
+        await CoustmerDevice.updateOne(
+            { email: email },
+            {
+                $pull: {
+                    devicesOwened: { deviceNo: deviceNo }
+                }
+            }
+        );
 
         return res.status(200).json({
             success: true,
@@ -11676,6 +11687,167 @@ exports.deleteAmapdevice = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server Error in deleteAmapdevice"
+        });
+    }
+};
+
+exports.editAmapDevice = async (req, res) => {
+    try {
+        const {
+            mapId,
+            deviceSendTo,
+            deviceType,
+            deviceNo,
+            voltage,
+            elementType,
+            batchNo,
+            VechileBirth,
+            RegistrationNo,
+            date,
+            ChassisNumber,
+            EngineNumber,
+            VehicleType,
+            MakeModel,
+            ModelYear,
+            InsuranceRenewDate,
+            PollutionRenewdate,
+            vechileNo,
+            fullName,
+            email,
+            mobileNo,
+            GstinNo,
+            Customercountry,
+            Customerstate,
+            Customerdistrict,
+            Rto,
+            PinCode,
+            CompliteAddress,
+            AdharNo,
+            PanNo,
+            Packages,
+            InvoiceNo,
+            VehicleKMReading,
+            DriverLicenseNo,
+            MappedDate,
+            NoOfPanicButtons
+        } = req.body;
+
+        if (!mapId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide mapId"
+            });
+        }
+
+        // ✅ Get existing document
+        const device = await MapDevice.findById(mapId);
+
+        if (!device) {
+            return res.status(404).json({
+                success: false,
+                message: "Device Not Found"
+            });
+        }
+
+
+        // also Update in CoustmerDevices Collections
+        // in this i have to find on the Basis Of email
+
+        const coustmerDevice = await CoustmerDevice.findOne({ email: device.email });
+        if (!coustmerDevice) {
+            return res.status(200).json({
+                success: false,
+                message: "Coustmer Email Not Found",
+            })
+        }
+
+        const deviceData = coustmerDevice.devicesOwened.find(
+            d => d.deviceNo === device.deviceNo
+        );
+
+        if (!deviceData) {
+            return res.status(404).json({
+                success: false,
+                message: "Device not found in customer devices"
+            });
+        }
+
+
+
+        // ✅ Update inside devicesOwened (only if value provided)
+
+        if (deviceType) deviceData.deviceType = deviceType;
+        if (deviceNo) deviceData.deviceNo = deviceNo;
+        if (voltage) deviceData.voltage = voltage;
+        if (elementType) deviceData.elementType = elementType;
+        if (batchNo) deviceData.batchNo = batchNo;
+        if (Packages) deviceData.Packages = Packages;
+        if (deviceSendTo) deviceData.deviceSendTo = deviceSendTo;
+        if (vechileNo) deviceData.vechileNo = vechileNo;
+        if (VechileBirth) deviceData.VechileBirth = VechileBirth;
+        if (RegistrationNo) deviceData.RegistrationNo = RegistrationNo;
+        if (date) deviceData.date = date;
+        if (ChassisNumber) deviceData.ChassisNumber = ChassisNumber;
+        if (EngineNumber) deviceData.EngineNumber = EngineNumber;
+        if (VehicleType) deviceData.VehicleType = VehicleType;
+        if (MakeModel) deviceData.MakeModel = MakeModel;
+        if (ModelYear) deviceData.ModelYear = ModelYear;
+        if (InsuranceRenewDate) deviceData.InsuranceRenewDate = InsuranceRenewDate;
+        if (PollutionRenewdate) deviceData.PollutionRenewdate = PollutionRenewdate;
+
+        await coustmerDevice.save();
+
+        // ✅ Update only if value is provided
+
+        if (deviceSendTo) device.deviceSendTo = deviceSendTo;
+        if (deviceType) device.deviceType = deviceType;
+        if (deviceNo) device.deviceNo = deviceNo;
+        if (voltage) device.voltage = voltage;
+        if (elementType) device.elementType = elementType;
+        if (batchNo) device.batchNo = batchNo;
+        if (VechileBirth) device.VechileBirth = VechileBirth;
+        if (RegistrationNo) device.RegistrationNo = RegistrationNo;
+        if (date) device.date = date;
+        if (ChassisNumber) device.ChassisNumber = ChassisNumber;
+        if (EngineNumber) device.EngineNumber = EngineNumber;
+        if (VehicleType) device.VehicleType = VehicleType;
+        if (MakeModel) device.MakeModel = MakeModel;
+        if (ModelYear) device.ModelYear = ModelYear;
+        if (InsuranceRenewDate) device.InsuranceRenewDate = InsuranceRenewDate;
+        if (PollutionRenewdate) device.PollutionRenewdate = PollutionRenewdate;
+        if (vechileNo) device.vechileNo = vechileNo;
+        if (fullName) device.fullName = fullName;
+        if (email) device.email = email;
+        if (mobileNo) device.mobileNo = mobileNo;
+        if (GstinNo) device.GstinNo = GstinNo;
+        if (Customercountry) device.Customercountry = Customercountry;
+        if (Customerstate) device.Customerstate = Customerstate;
+        if (Customerdistrict) device.Customerdistrict = Customerdistrict;
+        if (Rto) device.Rto = Rto;
+        if (PinCode) device.PinCode = PinCode;
+        if (CompliteAddress) device.CompliteAddress = CompliteAddress;
+        if (AdharNo) device.AdharNo = AdharNo;
+        if (PanNo) device.PanNo = PanNo;
+        if (Packages) device.Packages = Packages;
+        if (InvoiceNo) device.InvoiceNo = InvoiceNo;
+        if (VehicleKMReading !== undefined) device.VehicleKMReading = VehicleKMReading;
+        if (DriverLicenseNo) device.DriverLicenseNo = DriverLicenseNo;
+        if (MappedDate) device.MappedDate = MappedDate;
+        if (NoOfPanicButtons !== undefined) device.NoOfPanicButtons = NoOfPanicButtons;
+
+        // ✅ Save updated document
+        await device.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Edited Successfully",
+        });
+
+    } catch (error) {
+        console.log(error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error"
         });
     }
 };
@@ -11830,7 +12002,7 @@ exports.Instalation_Certificate = async (req, res) => {
                 vechilemake: deviceData.ChassisNumber || "",
                 EngineNumber: mapSingleDeviceData.EngineNumber || "",
                 RegistrationNo: mapSingleDeviceData.RegistrationNo || "",
-                serialNumber:slNo.deviceSerialNo || "",
+                serialNumber: slNo.deviceSerialNo || "",
                 state: mapSingleDeviceData.state || "",
                 rto: mapSingleDeviceData.Rto || "",
             },
