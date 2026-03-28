@@ -1310,8 +1310,14 @@ const tcpServer = net.createServer((socket) => {
         devices[parsed.deviceId] = parsed;
 
         for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
+          // const devMetadata = deviceObjects.find(
+          //   (d) => d.deviceNo === parsed.deviceId
+          // );
+
           const devMetadata = deviceObjects.find(
-            (d) => d.deviceNo === parsed.deviceId
+            (d) =>
+              d.imei === parsed.deviceId ||   // 🔥 primary match
+              d.deviceNo === parsed.deviceId  // fallback
           );
 
           if (devMetadata) {
