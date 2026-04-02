@@ -30,6 +30,7 @@ const sendwalletDistDelerOemDeler = require("../models/sendActivationWalletsToDi
 const mongoose = require("mongoose");
 const RenewalPackageSendDistributorAndOem = require("../models/RenewalPackageSendDistributorAndOem")
 const DeviceActivation = require("../models/deviceActivationModel");
+const DeviceRenewal = require("../models/deviceRenewalModel")
 
 
 
@@ -11615,8 +11616,99 @@ exports.manuFacturSentRenewalPackageToDistributor_Oem = async (req, res) => {
 
 
 
+// Here Work On Renewal Feture's (Means Coustmer Can Extend/Renewal A Package)
+exports.CoustmerRenewalApi = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "UserId is Missing / Please Provide UserId"
+            })
+        }
+
+        const { activationId, vechileNo, vechileType, packageName, price, billingCycle, paymentMethod, utrNo } = req.body;
+        if (!activationId) {
+            return res.status(200).json({
+                success: false,
+                message: "ActivationId is Missing / Please Provide ActivationId"
+            })
+        }
 
 
+        if (!vechileNo || !vechileType || !packageName || !price || !billingCycle || !paymentMethod || !utrNo) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide vechileNo or  vechileType or packageName or price or billingCycle or paymentMethod or utrNo"
+            })
+        }
+
+        // On the Basis Of activationId we Move Forward 
+        const deviceActivation = await DeviceActivation.findById(activationId);
+        if (!deviceActivation) {
+            return res.status(200).json({
+                success: false,
+                message: "Device Activations Not Found"
+            })
+        }
+        ////////
+
+        // Here Check deviceActivation.activationStatus is Ended then you move to next
+        if (deviceActivation.activationStatus === "Active") {
+            return res.status(200).json({
+                success: false,
+                message: "You Activation Will not Expiry , Wait for Your Expiry Date"
+            })
+        }
+
+
+
+        // Here for get 
+
+        const now = new Date();
+
+        const endTime = new Date(
+            now.getTime() + billingCycle * 24 * 60 * 60 * 1000
+        );
+
+
+
+        // create Renewal Model
+        await DeviceRenewal.create({
+            deviceActivationId: activationId,
+            vechileNo,
+            vechileType,
+            packageName,
+            price,
+            startDate:now,
+            expiryDate: endTime,
+            billingCycle,
+            paymentMethod,
+            utrNo,
+        })
+
+
+        // Then Update in deviceActivation
+        deviceActivation.startTime = now;
+        deviceActivation.endTime = endTime;
+        deviceActivation.activationStatus = "Active";
+
+        await deviceActivation.save();
+
+
+        return res.status(200).json({
+            success: true,
+            deviceActivation,
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: `Server Error Or ${error.messaeg}`
+        })
+    }
+}
 
 
 
@@ -11706,16 +11798,16 @@ exports.getAMapDeviceData = async (req, res) => {
 
         // find in mapDevice Collections 
         const result = await MapDevice.findById(mapId);
-        if(!result){
+        if (!result) {
             return res.status(200).json({
-                success:false,
-                message:"No Data Found"
+                success: false,
+                message: "No Data Found"
             })
         }
 
         return res.status(200).json({
-            success:true,
-            message:"Map Device Data Fetched SuccessFully",
+            success: true,
+            message: "Map Device Data Fetched SuccessFully",
             result,
         })
 
