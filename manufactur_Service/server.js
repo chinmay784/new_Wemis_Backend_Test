@@ -646,6 +646,7 @@ const devicesStore = require("./devicesStore"); // in-memory store
 const { connectProducer, sendRoutePoint } = require("./KAFKA/producer");
 const { forwardPacket } = require("./tcpForwarder");
 const { forwardPacketHanshaRoulKela } = require("./tcpForwarderHanshaRoulKela")
+const { forwardPacketHanshaBhubanaswer } = require("./tcpForwarderHanshaBhubanaswer")
 
 
 // corn 
@@ -937,74 +938,45 @@ function parseTraxoPacket(packet) {
 
 
 // ==================  PARSE NON-AIS-140 PACKET DATA ==================
-// function parseImeiPacket(packet) {
-//   try {
-//     const parts = packet.split(",");
-
-//     const imei = parts[1]?.split(":")[1] || null;
-//     const gpsFix = parts[2] || "V";
-
-//     const lat = parseFloat(parts[3]) || 0;
-//     const lng = parseFloat(parts[4]) || 0;
-//     const speed = parseFloat(parts[5]) || 0;
-
-//     const timeStr = parts[6];
-
-//     let timestamp = new Date();
-//     if (timeStr && timeStr.length === 14) {
-//       timestamp = new Date(
-//         `${timeStr.slice(0, 4)}-${timeStr.slice(4, 6)}-${timeStr.slice(6, 8)}T${timeStr.slice(8, 10)}:${timeStr.slice(10, 12)}:${timeStr.slice(12, 14)}Z`
-//       );
-//     }
-
-//     return {
-//       deviceId: imei,
-
-//       lat,
-//       lng,
-//       speed,
-
-//       gpsFix,
-
-//       // 🔥 SMART DEFAULTS
-//       ignition: speed > 0 ? "1" : "0",   // infer from speed
-//       satellites: 0,                     // not available
-
-//       lastUpdate: timestamp,
-//       timestamp
-//     };
-
-//   } catch (err) {
-//     console.log("❌ IMEI Parse Error:", err.message);
-//     return null;
-//   }
-// }
-
 function parseImeiPacket(packet) {
   try {
     const parts = packet.split(",");
-    // Handles "##,imei:12345..." OR "##,12345..."
-    let imei = parts[1] || "";
-    if (imei.includes(":")) {
-      imei = imei.split(":")[1];
-    }
+
+    const imei = parts[1]?.split(":")[1] || null;
+    const gpsFix = parts[2] || "V";
 
     const lat = parseFloat(parts[3]) || 0;
     const lng = parseFloat(parts[4]) || 0;
     const speed = parseFloat(parts[5]) || 0;
 
+    const timeStr = parts[6];
+
+    let timestamp = new Date();
+    if (timeStr && timeStr.length === 14) {
+      timestamp = new Date(
+        `${timeStr.slice(0, 4)}-${timeStr.slice(4, 6)}-${timeStr.slice(6, 8)}T${timeStr.slice(8, 10)}:${timeStr.slice(10, 12)}:${timeStr.slice(12, 14)}Z`
+      );
+    }
+
     return {
-      deviceId: imei.trim(), // Use trim to avoid hidden newline issues
+      deviceId: imei,
+
       lat,
       lng,
       speed,
-      ignition: speed > 0 ? "1" : "0",
-      gpsFix: parts[2] || "A",
-      lastUpdate: new Date(),
-      timestamp: new Date()
+
+      gpsFix,
+
+      // 🔥 SMART DEFAULTS
+      ignition: speed > 0 ? "1" : "0",   // infer from speed
+      satellites: 0,                     // not available
+
+      lastUpdate: timestamp,
+      timestamp
     };
+
   } catch (err) {
-    console.log("❌ IMEI/TK103 Parse Error:", err.message);
+    console.log("❌ IMEI Parse Error:", err.message);
     return null;
   }
 }
@@ -1329,170 +1301,76 @@ const tcpServer = net.createServer((socket) => {
   console.log("Hello Every-One")
 
   // This is CHAT-GPT Generated Code
-  // socket.on("data", async (data) => {
-  //   const ascii = data.toString("utf8");
-  //   const hex = data.toString("hex");
-
-  //   // ================= HEX PROTOCOL (NEW 🔥) =================
-  //   if (hex.startsWith("7878") || hex.startsWith("7979")) {
-  //     const parsed = parseHexPacket(data, socket);
-
-  //     if (parsed && parsed.deviceId) {
-  //       devices[parsed.deviceId] = parsed;
-
-  //       for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
-  //         // const devMetadata = deviceObjects.find(
-  //         //   (d) => d.deviceNo === parsed.deviceId
-  //         // );
-
-  //         const devMetadata = deviceObjects.find(
-  //           (d) =>
-  //             d.imei === parsed.deviceId ||   // 🔥 primary match
-  //             d.deviceNo === parsed.deviceId  // fallback
-  //         );
-
-  //         if (devMetadata) {
-  //           const now = Date.now();
-  //           const lastTime = lastSavedTime[parsed.deviceId] || 0;
-
-  //           // Save every 60 sec when moving
-  //           if (parsed.speed > 0 && now - lastTime >= 60000) {
-  //             saveToRouteHistory(parsed);
-  //             lastSavedTime[parsed.deviceId] = now;
-  //           }
-
-  //           // Forwarding (if needed)
-  //           if (devMetadata.deviceSendTo === "Hansa Sambalpur") {
-  //             forwardPacket(data);
-  //           }
-
-  //           if (devMetadata.deviceSendTo === "Hansa rourkela") {
-  //             forwardPacketHanshaRoulKela(data);
-  //           }
-
-  //           const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
-  //           io.to(userId).emit("gps-update", enrichedData);
-
-  //           console.log(
-  //             `📡 HEX GPS sent for ${devMetadata.vechileNo} to user ${userId}`
-  //           );
-  //         }
-  //       }
-  //     }
-
-  //     return; // ⛔ VERY IMPORTANT (stop here)
-  //   }
-
-  //   // ================= EXISTING ASCII PROTOCOL =================
-  //   if (ascii.includes("GET") || ascii.includes("HTTP")) {
-  //     return socket.destroy();
-  //   }
-
-  //   buffer += ascii;
-
-  //   while (
-  //     buffer.includes("$PVT") ||
-  //     buffer.includes("$TRAXO") ||
-  //     buffer.includes("##")
-  //   ) {
-  //     let start = -1;
-  //     let header = null;
-
-  //     const pvtIndex = buffer.indexOf("$PVT");
-  //     const traxoIndex = buffer.indexOf("$TRAXO");
-  //     const imeiIndex = buffer.indexOf("##");
-
-  //     const indexes = [pvtIndex, traxoIndex, imeiIndex].filter(i => i !== -1);
-  //     if (indexes.length === 0) break;
-
-  //     start = Math.min(...indexes);
-
-  //     if (start === pvtIndex) header = "$PVT";
-  //     else if (start === traxoIndex) header = "$TRAXO";
-  //     else if (start === imeiIndex) header = "##";
-
-  //     let end = -1;
-
-  //     if (header === "$TRAXO") {
-  //       end = buffer.indexOf("#", start);
-  //       if (end !== -1) end += 1;
-  //     } else {
-  //       end = buffer.indexOf("\n", start);
-  //     }
-
-  //     if (end === -1) break;
-
-  //     const packet = buffer.slice(start, end).trim();
-
-  //     let parsed = null;
-
-  //     if (header === "$PVT") parsed = parsePvtPacket(packet);
-  //     else if (header === "$TRAXO") parsed = parseTraxoPacket(packet);
-  //     else if (header === "##") parsed = parseImeiPacket(packet);
-
-  //     if (parsed && parsed.deviceId) {
-  //       devices[parsed.deviceId] = parsed;
-
-  //       for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
-  //         const devMetadata = deviceObjects.find(
-  //           (d) => d.deviceNo === parsed.deviceId
-  //         );
-
-  //         if (devMetadata) {
-  //           const now = Date.now();
-  //           const lastTime = lastSavedTime[parsed.deviceId] || 0;
-
-  //           if (parsed.speed > 0 && now - lastTime >= 60000) {
-  //             saveToRouteHistory(parsed);
-  //             lastSavedTime[parsed.deviceId] = now;
-  //           }
-
-  //           if (devMetadata.deviceSendTo === "Hansa Sambalpur") {
-  //             forwardPacket(packet);
-  //           }
-
-  //           if (devMetadata.deviceSendTo === "Hansa rourkela") {
-  //             forwardPacketHanshaRoulKela(packet);
-  //           }
-
-  //           const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
-  //           io.to(userId).emit("gps-update", enrichedData);
-
-  //           console.log(
-  //             `📡 Sent GPS for ${devMetadata.vechileNo} to user ${userId}`
-  //           );
-  //         }
-  //       }
-  //     }
-
-  //     buffer = buffer.slice(end);
-  //   }
-
-  //   if (buffer.length > 5000) buffer = "";
-  // });
-
-  console.log('first Look Then Leap')
-
-  // Replace your existing socket.on("data") with this:
   socket.on("data", async (data) => {
     const ascii = data.toString("utf8");
     const hex = data.toString("hex");
 
-    // 1. HEX PROTOCOL HANDLER (GT06 / Concox)
+    // ================= HEX PROTOCOL (NEW 🔥) =================
     if (hex.startsWith("7878") || hex.startsWith("7979")) {
       const parsed = parseHexPacket(data, socket);
+
       if (parsed && parsed.deviceId) {
-        processDeviceData(parsed, data, true); // true = isHex
+        devices[parsed.deviceId] = parsed;
+
+        for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
+          // const devMetadata = deviceObjects.find(
+          //   (d) => d.deviceNo === parsed.deviceId
+          // );
+
+          const devMetadata = deviceObjects.find(
+            (d) =>
+              d.imei === parsed.deviceId ||   // 🔥 primary match
+              d.deviceNo === parsed.deviceId  // fallback
+          );
+
+          if (devMetadata) {
+            const now = Date.now();
+            const lastTime = lastSavedTime[parsed.deviceId] || 0;
+
+            // Save every 60 sec when moving
+            if (parsed.speed > 0 && now - lastTime >= 60000) {
+              saveToRouteHistory(parsed);
+              lastSavedTime[parsed.deviceId] = now;
+            }
+
+            // Forwarding (if needed)
+            if (devMetadata.deviceSendTo === "Hansa Sambalpur") {
+              forwardPacket(data);
+            }
+
+            if (devMetadata.deviceSendTo === "Hansa rourkela") {
+              forwardPacketHanshaRoulKela(data);
+            }
+
+            if(devMetadata.deviceSendTo === "Hansa Bhubaneswar"){
+              forwardPacketHanshaBhubanaswer(data);
+            }
+
+            const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
+            io.to(userId).emit("gps-update", enrichedData);
+
+            console.log(
+              `📡 HEX GPS sent for ${devMetadata.vechileNo} to user ${userId}`
+            );
+          }
+        }
       }
-      return;
+
+      return; // ⛔ VERY IMPORTANT (stop here)
     }
 
-    // 2. ASCII PROTOCOL HANDLER ($PVT, $TRAXO, ##)
-    if (ascii.includes("GET") || ascii.includes("HTTP")) return socket.destroy();
+    // ================= EXISTING ASCII PROTOCOL =================
+    if (ascii.includes("GET") || ascii.includes("HTTP")) {
+      return socket.destroy();
+    }
 
     buffer += ascii;
 
-    while (buffer.includes("$PVT") || buffer.includes("$TRAXO") || buffer.includes("##")) {
+    while (
+      buffer.includes("$PVT") ||
+      buffer.includes("$TRAXO") ||
+      buffer.includes("##")
+    ) {
       let start = -1;
       let header = null;
 
@@ -1504,14 +1382,24 @@ const tcpServer = net.createServer((socket) => {
       if (indexes.length === 0) break;
 
       start = Math.min(...indexes);
+
       if (start === pvtIndex) header = "$PVT";
       else if (start === traxoIndex) header = "$TRAXO";
       else if (start === imeiIndex) header = "##";
 
-      let end = (header === "$TRAXO") ? buffer.indexOf("#", start) + 1 : buffer.indexOf("\n", start);
-      if (end <= 0) break; // Wait for more data
+      let end = -1;
+
+      if (header === "$TRAXO") {
+        end = buffer.indexOf("#", start);
+        if (end !== -1) end += 1;
+      } else {
+        end = buffer.indexOf("\n", start);
+      }
+
+      if (end === -1) break;
 
       const packet = buffer.slice(start, end).trim();
+
       let parsed = null;
 
       if (header === "$PVT") parsed = parsePvtPacket(packet);
@@ -1519,49 +1407,49 @@ const tcpServer = net.createServer((socket) => {
       else if (header === "##") parsed = parseImeiPacket(packet);
 
       if (parsed && parsed.deviceId) {
-        processDeviceData(parsed, packet, false); // false = isAscii
+        devices[parsed.deviceId] = parsed;
+
+        for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
+          const devMetadata = deviceObjects.find(
+            (d) => d.deviceNo === parsed.deviceId
+          );
+
+          if (devMetadata) {
+            const now = Date.now();
+            const lastTime = lastSavedTime[parsed.deviceId] || 0;
+
+            if (parsed.speed > 0 && now - lastTime >= 60000) {
+              saveToRouteHistory(parsed);
+              lastSavedTime[parsed.deviceId] = now;
+            }
+
+            if (devMetadata.deviceSendTo === "Hansa Sambalpur") {
+              forwardPacket(packet);
+            }
+
+            if (devMetadata.deviceSendTo === "Hansa rourkela") {
+              forwardPacketHanshaRoulKela(packet);
+            }
+
+            const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
+            io.to(userId).emit("gps-update", enrichedData);
+
+            console.log(
+              `📡 Sent GPS for ${devMetadata.vechileNo} to user ${userId}`
+            );
+          }
+        }
       }
+
       buffer = buffer.slice(end);
     }
 
     if (buffer.length > 5000) buffer = "";
   });
 
-  /**
-   * Helper function to handle DB saves, forwarding, and Socket.io emits
-   */
-  async function processDeviceData(parsed, rawData, isHex) {
-    devices[parsed.deviceId] = parsed;
+  console.log('first Look Then Leap')
 
-    for (const [userId, deviceObjects] of Object.entries(userDeviceMap)) {
-      // 🔥 FLEXIBLE MATCH: Check both deviceNo and imei (converted to String)
-      const devMetadata = deviceObjects.find(d =>
-        String(d.deviceNo) === String(parsed.deviceId) ||
-        (d.imei && String(d.imei) === String(parsed.deviceId))
-      );
-
-      if (devMetadata) {
-        const now = Date.now();
-        const lastTime = lastSavedTime[parsed.deviceId] || 0;
-
-        // 💾 Save to Route History (Moving or every 1 min)
-        if (parsed.speed > 0 && now - lastTime >= 60000) {
-          saveToRouteHistory(parsed);
-          lastSavedTime[parsed.deviceId] = now;
-        }
-
-        // 📤 Forwarding logic
-        if (devMetadata.deviceSendTo === "Hansa Sambalpur") forwardPacket(rawData);
-        if (devMetadata.deviceSendTo === "Hansa rourkela") forwardPacketHanshaRoulKela(rawData);
-
-        // 📡 Push to UI
-        const enrichedData = buildLiveTrackingObject(parsed, devMetadata);
-        io.to(userId).emit("gps-update", enrichedData);
-
-        console.log(`✅ [${devMetadata.vechileNo}] Data processed for user ${userId}`);
-      }
-    }
-  }
+  
 
 
   socket.on("end", () => console.log("❌ Device Disconnected"));
