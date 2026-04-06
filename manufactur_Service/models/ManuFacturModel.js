@@ -131,6 +131,46 @@ const ManuFacturSchema = new mongoose.Schema({
             },
         }
     ],
+
+
+
+    // In This i want to add the renewal request come from Direct from coustmer 
+    requestForRenewalWallets: [
+        {
+            // 👉 New Fields Added
+            vechileNo: {
+                type: String,
+                required: true
+            },
+            deviceActivationId: {
+                type: mongoose.Schema.Types.ObjectId,
+                required: true
+            },
+            packageName: {
+                type: String,
+                required: true
+            },
+            price: {
+                type: Number,
+                required: true
+            },
+            billingCycle: {
+                type: Number, 
+            },
+            paymentMethod: {
+                type: String,
+            },
+            utrNo: {
+                type: String
+            },
+            status:{
+                type: String,
+                enum: ["Pending", "Approved", "Rejected"],
+                default: "Pending"
+            }
+        }
+    ]
+
 });
 
 module.exports = mongoose.model('ManuFactur', ManuFacturSchema);

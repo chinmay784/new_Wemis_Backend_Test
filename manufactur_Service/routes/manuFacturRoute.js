@@ -45,7 +45,9 @@ const {
     deleteAmapdevice,
     editAmapDevice,
     getAMapDeviceData,
-    CoustmerRenewalApi
+    CoustmerRenewalApi,
+    fetchManufactuerRenewalRequest,
+    manufacturConformTheRenewalRequest
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const router = express.Router();
@@ -256,7 +258,9 @@ router.post("/manuFacturSentRenewalPackageToDistributor_Oem",authMiddelWere,manu
 
 
 // coustmer can renewal the package
-router.post("/renewalApi",authMiddelWere,CoustmerRenewalApi)
+router.post("/renewalApi",authMiddelWere,CoustmerRenewalApi);
+router.get("/fetchManufactuerRenewalRequest",authMiddelWere,fetchManufactuerRenewalRequest);
+router.post("/manufacturConformTheRenewalRequest",authMiddelWere,manufacturConformTheRenewalRequest)
 
 
 

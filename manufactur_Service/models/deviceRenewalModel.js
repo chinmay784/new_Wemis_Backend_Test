@@ -25,11 +25,9 @@ const DeviceRenewal = new mongoose.Schema({
     // ✅ Changed from Number → Date
     startDate: {
         type: Date,
-        required: true,
     },
     expiryDate: {
         type: Date,
-        required: true,
     },
     billingCycle: {
         type: Number,
@@ -43,7 +41,13 @@ const DeviceRenewal = new mongoose.Schema({
     utrNo: {
         type: String,
         required: true,
-    }
+    },
+    // also add Status field to track the renewal status
+    status: {
+        type: String,
+        enum: ["Pending", "Completed", "Failed"],
+        default: "Pending",
+    },
 });
 
 module.exports = mongoose.model("DeviceRenewal", DeviceRenewal)

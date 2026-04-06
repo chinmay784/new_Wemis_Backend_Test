@@ -11662,6 +11662,45 @@ exports.CoustmerRenewalApi = async (req, res) => {
         }
 
 
+        // Here find in usercollections to get the coustmer details
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        // in coustmer collections find user.coustmerId
+        const coustmer = await CoustmerDevice.findById(user.coustmerId);
+        if (!coustmer) {
+            return res.status(200).json({
+                success: false,
+                message: "Coustmer Not Found"
+            })
+        }
+
+
+        const userManf = await User.findById(coustmer.manufacturId);
+        if (!userManf) {
+            return res.status(200).json({
+                success: false,
+                message: "userManf Not Found"
+            })
+        }
+
+        // realManfacturer
+        const realManf = await ManuFactur.findById(userManf.manufacturId);
+        if (!realManf) {
+            return res.status(200).json({
+                success: false,
+                message: "realManf Not Found"
+            })
+        }
+
+
+
+
 
         // Here for get 
 
@@ -11680,8 +11719,8 @@ exports.CoustmerRenewalApi = async (req, res) => {
             vechileType,
             packageName,
             price,
-            startDate:now,
-            expiryDate: endTime,
+            // startDate:now,
+            // expiryDate: endTime,
             billingCycle,
             paymentMethod,
             utrNo,
@@ -11689,16 +11728,34 @@ exports.CoustmerRenewalApi = async (req, res) => {
 
 
         // Then Update in deviceActivation
-        deviceActivation.startTime = now;
-        deviceActivation.endTime = endTime;
-        deviceActivation.activationStatus = "Active";
 
-        await deviceActivation.save();
+        // deviceActivation.startTime = now;
+        // deviceActivation.endTime = endTime;
+        // deviceActivation.activationStatus = "Active";
+
+        // await deviceActivation.save();
+
+
+
+
+
+        // also push in manufacturer collections in requestForRenewalWallets
+        realManf.requestForRenewalWallets.push({
+            vechileNo,
+            deviceActivationId: activationId,
+            packageName,
+            price,
+            billingCycle,
+            paymentMethod,
+            utrNo,
+        });
+
+        await realManf.save();
 
 
         return res.status(200).json({
             success: true,
-            deviceActivation,
+            message: "Your Renewal Request Has Been Sent To Manufacturer , Wait For Confirmation"
         })
 
     } catch (error) {
@@ -11711,12 +11768,160 @@ exports.CoustmerRenewalApi = async (req, res) => {
 }
 
 
+exports.fetchManufactuerRenewalRequest = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        // find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        // find manufacturer
+        const manufacturer = await ManuFactur.findById(user.manufacturId);
+        if (!manufacturer) {
+            return res.status(200).json({
+                success: false,
+                message: "Manufacturer Not Found"
+            })
+        }
+
+        const requests = manufacturer.requestForRenewalWallets;
+        if (requests.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No Renewal Requests Found",
+                requests: []
+            })
+
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Renewal Requests Fetched Successfully",
+            requests,
+        })
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: `Server Error in fetchManufactuerRenewalRequest Or ${error.message}`
+        })
+    }
+}
+
+
+exports.manufacturConformTheRenewalRequest = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide UserId"
+            })
+        }
+
+        const { requestId, activationId } = req.body;
+        if (!requestId || !activationId) {
+            return res.status(200).json({
+                success: false,
+                message: "Please Provide requestId or activationId"
+            })
+        }
+
+
+        // On the Basis Of activationId we Move Forward 
+        const deviceActivation = await DeviceActivation.findById(activationId);
+        if (!deviceActivation) {
+            return res.status(200).json({
+                success: false,
+                message: "Device Activations Not Found"
+            })
+        }
+        ////////
+
+        // Here Check deviceActivation.activationStatus is Ended then you move to next
+        if (deviceActivation.activationStatus === "Active") {
+            return res.status(200).json({
+                success: false,
+                message: " Activation Will not Expiry , Wait for Expiry Date"
+            })
+        }
+
+
+        // find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+
+        // find manufacturer
+        const manufacturer = await ManuFactur.findById(user.manufacturId);
+        if (!manufacturer) {
+            return res.status(200).json({
+                success: false,
+                message: "Manufacturer Not Found"
+            })
+        }
+
+        // find in manufacturer.requestForRenewalWallets by requestId
+        const request = manufacturer.requestForRenewalWallets.find(
+            r => r._id.toString() === requestId
+        );
+        if (!request) {
+            return res.status(200).json({
+                success: false,
+                message: "Request Not Found"
+            })
+        }
+
+        // also update request status to "Confirmed" or you can also remove from requestForRenewalWallets
+        request.status = "Approved";
+        await manufacturer.save();
 
 
 
+        // update deviceActivation
+        const now = new Date();
+        const endTime = new Date(
+            now.getTime() + request.billingCycle * 24 * 60 * 60 * 1000
+        );
+
+        deviceActivation.startTime = now;
+        deviceActivation.endTime = endTime;
+
+        deviceActivation.activationStatus = "Active";
+
+        await deviceActivation.save();
 
 
+        return res.status(200).json({
+            success:true,
+            message:"Renewal Complited SuccessFully"
+        })
 
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            success: false,
+            message: `Server Error in manufacturConformTheRenewalRequest Or ${error.message}`
+        })
+    }
+}
 
 
 
