@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
             });
         }
 
-        const token = jwt.sign({ userId: user._id }, "wemis", { expiresIn: "5d" })
+        const token = jwt.sign({ userId: user._id }, "wemis", { expiresIn: "1h" })
 
         res.status(200).json({
             message: 'Super admin logged in successfully',
