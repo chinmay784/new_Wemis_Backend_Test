@@ -1295,10 +1295,211 @@ exports.fetchAllTechnicien = async (req, res) => {
 
 
 
+// const XLSX = require("xlsx");
+// const fs = require("fs");
 
 
+// exports.ExelAddBarcode = async (req, res) => {
+//     try {
+//         const { baecodeCreationType } = req.body;
+
+//         if (!baecodeCreationType) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Please provide baecodeCreationType",
+//             });
+//         }
+
+//         if (baecodeCreationType !== "Automatic") {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "baecodeCreationType must be Automatic",
+//             });
+//         }
+
+//         // ✅ Check file
+//         if (!req.file) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Please upload an Excel file",
+//             });
+//         }
+
+//         // ✅ Read Excel file
+//         const filePath = req.file.path;
+//         const workbook = XLSX.readFile(filePath);
+
+//         const sheetName = workbook.SheetNames[0];
+//         const sheetData = XLSX.utils.sheet_to_json(
+//             workbook.Sheets[sheetName]
+//         );
+
+//         console.log("Excel Data:", sheetData);
+
+//         // 👉 Example: Add barcode logic
+//         const updatedData = sheetData.map((item, index) => ({
+//             ...item,
+//             barcode: `BARCODE_${Date.now()}_${index}`,
+//         }));
+
+//         // (Optional) Delete file after processing
+//         fs.unlinkSync(filePath);
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Excel processed successfully",
+//             data: updatedData,
+//         });
+
+//     } catch (error) {
+//         console.log(error, error.message);
+//         return res.status(500).json({
+//             success: false,
+//             message: `Server Error in ExelAddBarcode Or ${error.message}`,
+//         });
+//     }
+// };
 
 
+const XLSX = require("xlsx");
+const fs = require("fs");
+// const createBarCode = require("../models/createBarCode");
+
+exports.ExelAddBarcode = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        const { baecodeCreationType } = req.body;
+
+        // ✅ Basic validations
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please Provide UserId",
+            });
+        }
+
+        if (baecodeCreationType !== "Automatic") {
+            return res.status(400).json({
+                success: false,
+                message: "baecodeCreationType must be Automatic",
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "Please upload Excel file",
+            });
+        }
+
+        // ✅ File type validation
+        if (!req.file.originalname.match(/\.(xlsx|xls)$/)) {
+            return res.status(400).json({
+                success: false,
+                message: "Only Excel files allowed",
+            });
+        }
+
+        // ✅ Read Excel
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const excelData = XLSX.utils.sheet_to_json(
+            workbook.Sheets[sheetName]
+        );
+
+        if (excelData.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Excel file is empty",
+            });
+        }
+
+        // ✅ Required fields
+        const requiredFields = [
+            "elementName",
+            "elementType",
+            "elementModelNo",
+            "elementPartNo",
+            "elementTacNo",
+            "elementCopNo",
+            "copValid",
+            "voltage",
+            "batchNo",
+            "barCodeNo",
+            "is_Renew",
+            "deviceSerialNo",
+        ];
+
+        let validData = [];
+        let failedData = [];
+
+        // ✅ Validate rows
+        excelData.forEach((row, index) => {
+            try {
+                for (let field of requiredFields) {
+                    if (!row[field]) {
+                        throw new Error(`${field} is missing`);
+                    }
+                }
+
+                validData.push({
+                    manufacturId: userId,
+                    elementName: row.elementName,
+                    elementType: row.elementType,
+                    elementModelNo: row.elementModelNo,
+                    elementPartNo: row.elementPartNo,
+                    elementTacNo: row.elementTacNo,
+                    elementCopNo: row.elementCopNo,
+                    copValid: row.copValid,
+                    voltage: row.voltage,
+                    batchNo: row.batchNo,
+                    baecodeCreationType: "Automatic",
+                    barCodeNo: row.barCodeNo,
+                    is_Renew: row.is_Renew,
+                    deviceSerialNo: row.deviceSerialNo,
+                    simDetails: row.simDetails
+                        ? JSON.parse(row.simDetails)
+                        : [],
+                });
+
+            } catch (err) {
+                failedData.push({
+                    row: index + 1,
+                    error: err.message,
+                    data: row,
+                });
+            }
+        });
+
+        // ✅ Bulk Insert (FAST 🚀)
+        let insertedData = [];
+        if (validData.length > 0) {
+            insertedData = await createBarCode.insertMany(validData, {
+                ordered: false, // skip duplicates/errors
+            });
+        }
+
+        // ✅ Delete file after processing
+        fs.unlinkSync(req.file.path);
+
+        return res.status(200).json({
+            success: true,
+            message: "Excel processed successfully",
+            totalRows: excelData.length,
+            insertedCount: insertedData.length,
+            failedCount: failedData.length,
+            failedData,
+        });
+
+    } catch (error) {
+        console.log(error, error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error in ExelAddBarcode",
+        });
+    }
+};
 
 
 
@@ -11910,8 +12111,8 @@ exports.manufacturConformTheRenewalRequest = async (req, res) => {
 
 
         return res.status(200).json({
-            success:true,
-            message:"Renewal Complited SuccessFully"
+            success: true,
+            message: "Renewal Complited SuccessFully"
         })
 
     } catch (error) {
@@ -12540,3 +12741,64 @@ exports.device_renewal_certificate = async (req, res) => {
         })
     }
 }
+
+
+exports.coustmerSeewithout_live_vechile = async (req, res) => {
+    try {
+
+        const userId = req.user.userId;
+
+        if (!userId) {
+            return res.status(404).json({
+                success: false,
+                message: "User Not Found"
+            });
+        }
+
+        // Find user
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Real User Not Found"
+            });
+        }
+
+        // Find customer device
+        const coustmerDevice = await CoustmerDevice.findOne({
+            _id: user.coustmerId
+        });
+
+        if (!coustmerDevice) {
+            return res.status(404).json({
+                success: false,
+                message: "Customer Not Found"
+            });
+        }
+
+        // Map device data
+        const Vechiles = coustmerDevice.devicesOwened.map((d) => ({
+            imei: d.deviceNo,
+            vechileNo: d.vechileNo,
+            deviceType: d.deviceType,
+            vechileType: d.VehicleType,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched Successfully",
+            TotalVechiles: Vechiles.length,
+            Vechiles,
+        });
+
+    } catch (error) {
+
+        console.log(error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: `${error.message} or Server Error in coustmerSeewithout_live_vechile`
+        });
+    }
+};

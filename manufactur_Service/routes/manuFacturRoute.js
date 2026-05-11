@@ -47,9 +47,12 @@ const {
     getAMapDeviceData,
     CoustmerRenewalApi,
     fetchManufactuerRenewalRequest,
-    manufacturConformTheRenewalRequest
+    manufacturConformTheRenewalRequest,
+    ExelAddBarcode,
+    coustmerSeewithout_live_vechile
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
+const Upload = require('../middelwere/upload');
 const router = express.Router();
 
 router.post("/createDistributor", upload.none(), authMiddelWere, createDistributor);
@@ -278,5 +281,19 @@ router.post("/device_renewal_certificate",authMiddelWere,device_renewal_certific
 router.post("/deleteAmapdevice",deleteAmapdevice);
 router.post("/getAMapDeviceData",getAMapDeviceData)
 router.post("/editAmapDevice",editAmapDevice);
+
+
+
+
+
+router.post(
+  "/upload-barcode-excel",
+  Upload.single("file"),
+  ExelAddBarcode
+);
+
+
+
+router.get("/coustmerSeewithout_live_vechile",authMiddelWere,coustmerSeewithout_live_vechile)
 
 module.exports = router;
