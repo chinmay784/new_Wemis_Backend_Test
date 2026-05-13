@@ -289,6 +289,7 @@ router.post("/editAmapDevice",editAmapDevice);
 router.post(
   "/upload-barcode-excel",
   Upload.single("file"),
+  authMiddelWere,
   ExelAddBarcode
 );
 

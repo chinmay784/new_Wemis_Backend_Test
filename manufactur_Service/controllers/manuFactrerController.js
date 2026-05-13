@@ -1363,11 +1363,12 @@ exports.fetchAllTechnicien = async (req, res) => {
 
 const XLSX = require("xlsx");
 const fs = require("fs");
-// const createBarCode = require("../models/createBarCode");
+
 
 exports.ExelAddBarcode = async (req, res) => {
     try {
-        const userId = req.user?.userId;
+
+       const userId = req.user.userId;
         const { baecodeCreationType } = req.body;
 
         // ✅ Basic validations
@@ -1402,7 +1403,9 @@ exports.ExelAddBarcode = async (req, res) => {
 
         // ✅ Read Excel
         const workbook = XLSX.readFile(req.file.path);
+
         const sheetName = workbook.SheetNames[0];
+
         const excelData = XLSX.utils.sheet_to_json(
             workbook.Sheets[sheetName]
         );
@@ -1435,15 +1438,40 @@ exports.ExelAddBarcode = async (req, res) => {
 
         // ✅ Validate rows
         excelData.forEach((row, index) => {
+
             try {
+
+                // ✅ Required field validation
                 for (let field of requiredFields) {
+
                     if (!row[field]) {
+
                         throw new Error(`${field} is missing`);
                     }
                 }
 
+                // ✅ Dynamic SIM Details
+                const simDetails = [];
+
+                let simIndex = 1;
+
+                while (row[`simNo${simIndex}`]) {
+
+                    simDetails.push({
+                        simNo: row[`simNo${simIndex}`] || "",
+                        iccidNo: row[`iccidNo${simIndex}`] || "",
+                        validityDate: row[`validityDate${simIndex}`] || "",
+                        operator: row[`operator${simIndex}`] || "",
+                    });
+
+                    simIndex++;
+                }
+
+                // ✅ Push Valid Data
                 validData.push({
+
                     manufacturId: userId,
+
                     elementName: row.elementName,
                     elementType: row.elementType,
                     elementModelNo: row.elementModelNo,
@@ -1453,16 +1481,18 @@ exports.ExelAddBarcode = async (req, res) => {
                     copValid: row.copValid,
                     voltage: row.voltage,
                     batchNo: row.batchNo,
+
                     baecodeCreationType: "Automatic",
+
                     barCodeNo: row.barCodeNo,
                     is_Renew: row.is_Renew,
                     deviceSerialNo: row.deviceSerialNo,
-                    simDetails: row.simDetails
-                        ? JSON.parse(row.simDetails)
-                        : [],
+
+                    simDetails: simDetails,
                 });
 
             } catch (err) {
+
                 failedData.push({
                     row: index + 1,
                     error: err.message,
@@ -1471,27 +1501,34 @@ exports.ExelAddBarcode = async (req, res) => {
             }
         });
 
-        // ✅ Bulk Insert (FAST 🚀)
+        // ✅ Bulk Insert
         let insertedData = [];
+
         if (validData.length > 0) {
+
             insertedData = await createBarCode.insertMany(validData, {
-                ordered: false, // skip duplicates/errors
+                ordered: false,
             });
         }
 
-        // ✅ Delete file after processing
+        // ✅ Delete uploaded file
         fs.unlinkSync(req.file.path);
 
         return res.status(200).json({
             success: true,
             message: "Excel processed successfully",
+
             totalRows: excelData.length,
+
             insertedCount: insertedData.length,
+
             failedCount: failedData.length,
+
             failedData,
         });
 
     } catch (error) {
+
         console.log(error, error.message);
 
         return res.status(500).json({
@@ -1500,6 +1537,11 @@ exports.ExelAddBarcode = async (req, res) => {
         });
     }
 };
+
+
+
+
+
 
 
 
