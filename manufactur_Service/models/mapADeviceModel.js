@@ -9,7 +9,7 @@ const mapDeviceSchema = new mongoose.Schema({
     state: { type: String, trim: true },
     distributorName: { type: String, trim: true },
     delerName: { type: String, trim: true },
-
+    modelStatus: { type: String, default:"Mapped" },
 
 
     // 

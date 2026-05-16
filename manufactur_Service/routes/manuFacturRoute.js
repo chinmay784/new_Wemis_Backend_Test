@@ -49,7 +49,8 @@ const {
     fetchManufactuerRenewalRequest,
     manufacturConformTheRenewalRequest,
     ExelAddBarcode,
-    coustmerSeewithout_live_vechile
+    coustmerSeewithout_live_vechile,
+    fetchAllAllocatedDISTRIBUTOROrOEMBarcodeLists
 } = require('../controllers/manuFactrerController');
 const { upload } = require('../config/cloudinary');
 const Upload = require('../middelwere/upload');
@@ -82,7 +83,11 @@ router.post("/fetchAllBarCodeNumber", authMiddelWere, fetchAllBarCodesNumber);
 router.post("/findDistributorUnderManufactur", authMiddelWere, findDistributorUnderManufactur);
 router.post("/findOemUnderManufactur", authMiddelWere, findOemUnderManufactur);
 router.post("/fetchAllAllocatedBarcode", authMiddelWere, fetchAllAllocatedBarcode);
+
+router.post("/fetchAllAllocatedDISTRIBUTOROrOEMBarcodeLists",authMiddelWere,fetchAllAllocatedDISTRIBUTOROrOEMBarcodeLists)
 router.post("/rollBackAllocatedBarCode", authMiddelWere, rollBackAllocatedBarCode);
+
+
 router.post("/findDelerUnderDistributor", authMiddelWere, findDelerUnderDistributor);
 router.post("/findDelerUnderOem", authMiddelWere, findDelerUnderOem);
 // this for Subscription Api

@@ -1368,7 +1368,7 @@ const fs = require("fs");
 exports.ExelAddBarcode = async (req, res) => {
     try {
 
-       const userId = req.user.userId;
+        const userId = req.user.userId;
         const { baecodeCreationType } = req.body;
 
         // ✅ Basic validations
@@ -2391,9 +2391,271 @@ exports.fetchAllAllocatedBarcode = async (req, res) => {
 
 
 
-//in this code will give copilot (not write by me or)
+
+
+
+// Here I work on find all allocated barcode list on the basis of distributorId or find all allocated barcode list
+exports.fetchAllAllocatedDISTRIBUTOROrOEMBarcodeLists = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        const { state, element, distributorId, oemId } = req.body;
+
+        if (!state || !element) {
+            return res.status(200).json({
+                sucess: false,
+                message: "Please Provide State and Element"
+            })
+        }
+
+        if (!userId) {
+            return res.status(200).json({
+                sucess: false,
+                message: " Please Provide UserId"
+            })
+        }
+
+
+
+        // and also check its role
+        if (distributorId) {
+
+            const allocatedRecord = await AllocateBarCode.find({
+                state: state,
+                element: element,
+                allocatedDistributorId: distributorId,
+            })
+
+            if (!allocatedRecord || allocatedRecord.length === 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "No Data found in AllocateBarCode Collections on the basis of distributor"
+                })
+            }
+
+            const allBarCodeNos = [
+                ...new Set(
+                    allocatedRecord.flatMap(record =>
+                        record.allocatedBarCode.map(item => item.barCodeNo)
+                    )
+                )
+            ];
+
+            return res.status(200).json({
+                success: true,
+                message: "Data Found in AllocateBarCode Collections on the basis of distributor",
+                count: allBarCodeNos.length,
+                allBarCodeNos
+            })
+
+        } else {
+
+            const allocatedRecord = await AllocateBarCode.find({
+                state: state,
+                element: element,
+                allocatedOemId: oemId,
+            })
+
+            if (!allocatedRecord || allocatedRecord.length === 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "No Data found in AllocateBarCode Collections on the basis of oemId"
+                })
+            }
+
+            const allBarCodeNos = [
+                ...new Set(
+                    allocatedRecord.flatMap(record =>
+                        record.allocatedBarCode.map(item => item.barCodeNo)
+                    )
+                )
+            ];
+
+            return res.status(200).json({
+                success: true,
+                message: "Data Found in AllocateBarCode Collections on the basis of oemId",
+                count: allBarCodeNos.length,
+                allBarCodeNos
+            })
+        }
+
+
+    } catch (error) {
+        console.log(error, error.message);
+        return res.status(500).json({
+            sucess: false,
+            message: `Server Error in fetchAllAllocatedDistributorBarcodeLists Or ${error.message}`
+        })
+    }
+}
+
+
+
+
+// and this Api Is Not Working Properly Now i am Gone to Correct this Api And This API WORKS FINE
+// exports.rollBackAllocatedBarCode = async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+
+//         if (!userId) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide UserId"
+//             });
+//         }
+
+
+//         // -----------------------------------------------------------------
+//         // Here I write Correct Api Now
+//         const { state, distributorId, oemId, deler_distId, deler_oemId, barcodeList, barcodeType, elementName } = req.body;
+
+//         if (!state || !elementName || !barcodeType || !barcodeList || barcodeList.length === 0) {
+//             return res.status(200).json({
+//                 success: false,
+//                 message: "Please Provide state, elementName, barcodeType and barcodeList (non-empty array)"
+//             });
+//         }
+
+
+//         if (distributorId) {
+//             // roll back from distributor
+//             const allocatedDocs = await AllocateBarCode.find({
+//                 state: state,
+//                 element: elementName,
+//                 allocatedDistributorId: distributorId,
+//                 "allocatedBarCode.barCodeNo": { $in: barcodeList }
+//             });
+
+//             if (!allocatedDocs || allocatedDocs.length === 0) {
+//                 return res.status(200).json({
+//                     success: false,
+//                     message: "No matching allocated barcode found"
+//                 });
+//             }
+
+//             for (const doc of allocatedDocs) {
+
+//                 // Find matching barcode objects
+//                 const matchedBarcodes = doc.allocatedBarCode.filter(barcode =>
+//                     barcodeList.includes(barcode.barCodeNo)
+//                 );
+
+//                 // CASE 1:
+//                 // If document contains only one barcode
+//                 // and it matches -> delete whole document
+
+//                 if (
+//                     doc.allocatedBarCode.length === 1 &&
+//                     matchedBarcodes.length === 1
+//                 ) {
+
+//                     await AllocateBarCode.findByIdAndDelete(doc._id);
+
+//                     console.log(`Whole document deleted: ${doc._id}`);
+
+//                 } else {
+
+//                     // CASE 2:
+//                     // Remove only matched barcode object
+
+//                     await AllocateBarCode.updateOne(
+//                         { _id: doc._id },
+//                         {
+//                             $pull: {
+//                                 allocatedBarCode: {
+//                                     barCodeNo: { $in: barcodeList }
+//                                 }
+//                             }
+//                         }
+//                     );
+
+//                     console.log(`Matched barcode removed from: ${doc._id}`);
+//                 }
+//             }
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "SuccessFully Rollback From Distributor "
+//             })
+
+//         } else if (oemId) {
+//             // roll back from oem
+
+//             const allocatedDocs = await AllocateBarCode.find({
+//                 state: state,
+//                 element: elementName,
+//                 allocatedOemId: oemId,
+//                 "allocatedBarCode.barCodeNo": { $in: barcodeList }
+//             });
+
+//             if (!allocatedDocs || allocatedDocs.length === 0) {
+//                 return res.status(200).json({
+//                     success: false,
+//                     message: "No matching allocated barcode found"
+//                 });
+//             }
+
+//             for (const doc of allocatedDocs) {
+
+//                 // Find matching barcode objects
+//                 const matchedBarcodes = doc.allocatedBarCode.filter(barcode =>
+//                     barcodeList.includes(barcode.barCodeNo)
+//                 );
+
+//                 // CASE 1:
+//                 // If document contains only one barcode
+//                 // and it matches -> delete whole document
+
+//                 if (
+//                     doc.allocatedBarCode.length === 1 &&
+//                     matchedBarcodes.length === 1
+//                 ) {
+
+//                     await AllocateBarCode.findByIdAndDelete(doc._id);
+
+//                     console.log(`Whole document deleted: ${doc._id}`);
+
+//                 } else {
+
+//                     // CASE 2:
+//                     // Remove only matched barcode object
+
+//                     await AllocateBarCode.updateOne(
+//                         { _id: doc._id },
+//                         {
+//                             $pull: {
+//                                 allocatedBarCode: {
+//                                     barCodeNo: { $in: barcodeList }
+//                                 }
+//                             }
+//                         }
+//                     );
+
+//                     console.log(`Matched barcode removed from: ${doc._id}`);
+//                 }
+//             }
+
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "SuccessFully Rollback From OEM "
+//             })
+
+//         }
+
+//     } catch (error) {
+//         console.error("Error in rollBackAllocatedBarCode:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error in rollBackAllocatedBarCode"
+//         });
+//     }
+// };
+
+
+
 exports.rollBackAllocatedBarCode = async (req, res) => {
     try {
+
         const userId = req.user.userId;
 
         if (!userId) {
@@ -2403,70 +2665,244 @@ exports.rollBackAllocatedBarCode = async (req, res) => {
             });
         }
 
-        const { state, distributor, element, barCode_Type } = req.body;
-
-        // 🔸 Validation
-        if (!state || !distributor || !element || !barCode_Type) {
-            return res.status(200).json({
-                success: false,
-                message: "Please Provide State, Distributor, Element and barCode_Type"
-            });
-        }
-
-        // 🔸 Find Distributor
-        const dist = await Distributor.findById(distributor);
-        if (!dist) {
-            return res.status(200).json({
-                success: false,
-                message: "No Data Found in Distributor Collection"
-            });
-        }
-
-        // 🔸 Find allocated barcodes in AllocateBarCode collection
-        const allocatedRecords = await AllocateBarCode.find({
-            allocatedDistributorId: distributor,
+        const {
             state,
-            element,
-            // type: barCode_Type
-        });
+            distributorId,
+            oemId,
+            deler_distId,
+            deler_oemId,
+            barcodeList,
+            barcodeType,
+            elementName
+        } = req.body;
 
-        if (!allocatedRecords || allocatedRecords.length === 0) {
+        if (
+            !state ||
+            !elementName ||
+            !barcodeType ||
+            !barcodeList ||
+            !Array.isArray(barcodeList) ||
+            barcodeList.length === 0
+        ) {
             return res.status(200).json({
                 success: false,
-                message: "No allocated barcodes found for this distributor and element"
+                message: "Please Provide state, elementName, barcodeType and barcodeList (non-empty array)"
             });
         }
 
-        // 🔸 Collect all barcodes to rollback
-        const barcodesToRemove = allocatedRecords.flatMap(rec => rec.barcodes);
+        // ---------------------------------------------------------
+        // CHECK MAPPED BARCODE FROM MapDevice COLLECTION
+        // ---------------------------------------------------------
 
-        // 🔸 Remove barcodes from distributor.allocateBarcodes
-        dist.allocateBarcodes = dist.allocateBarcodes.filter(b => !barcodesToRemove.includes(b));
-        await dist.save();
+        const mappedDevices = await MapDevice.find({
+            barCodeNo: { $in: barcodeList },
+            modelStatus: "Mapped"
+        }).lean();
 
-        // 🔸 Delete those allocations from AllocateBarCode collection
-        await AllocateBarCode.deleteMany({
-            allocatedDistributorId: distributor,
-            state,
-            element,
-            type: barCode_Type
-        });
+        // Get mapped barcode numbers
+        const mappedBarcodeNos = mappedDevices.map(
+            item => item.barCodeNo
+        );
 
-        return res.status(200).json({
-            success: true,
-            message: "Rolled back all allocated barcodes for this distributor successfully",
-            removedBarcodes: barcodesToRemove,
-            updatedDistributor: dist
-        });
+        // Only allow unmapped barcodes for rollback
+        const rollbackBarcodeList = barcodeList.filter(
+            barcode => !mappedBarcodeNos.includes(barcode)
+        );
+
+        // If all barcodes are mapped
+        if (rollbackBarcodeList.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: "All provided barcodes are already mapped. Rollback not allowed."
+            });
+        }
+
+        // =========================================================
+        // DISTRIBUTOR ROLLBACK
+        // =========================================================
+
+        if (distributorId) {
+
+            const allocatedDocs = await AllocateBarCode.find({
+                state: state,
+                element: elementName,
+                allocatedDistributorId: distributorId,
+                "allocatedBarCode.barCodeNo": {
+                    $in: rollbackBarcodeList
+                }
+            }).lean();
+
+            if (!allocatedDocs || allocatedDocs.length === 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "No matching allocated barcode found"
+                });
+            }
+
+            for (const doc of allocatedDocs) {
+
+                // Find matching barcode objects
+                const matchedBarcodes = doc.allocatedBarCode.filter(
+                    barcode =>
+                        rollbackBarcodeList.includes(
+                            barcode.barCodeNo
+                        )
+                );
+
+                // CASE 1:
+                // If document contains only one barcode
+                // and it matches -> delete whole document
+
+                if (
+                    doc.allocatedBarCode.length === 1 &&
+                    matchedBarcodes.length === 1
+                ) {
+
+                    await AllocateBarCode.findByIdAndDelete(doc._id);
+
+                    console.log(
+                        `Whole document deleted: ${doc._id}`
+                    );
+
+                } else {
+
+                    // CASE 2:
+                    // Remove only matched barcode object
+
+                    await AllocateBarCode.updateOne(
+                        { _id: doc._id },
+                        {
+                            $pull: {
+                                allocatedBarCode: {
+                                    barCodeNo: {
+                                        $in: rollbackBarcodeList
+                                    }
+                                }
+                            }
+                        }
+                    );
+
+                    console.log(
+                        `Matched barcode removed from: ${doc._id}`
+                    );
+                }
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Successfully Rollback From Distributor",
+                skippedMappedBarcodes: mappedBarcodeNos
+            });
+
+        }
+
+        // =========================================================
+        // OEM ROLLBACK
+        // =========================================================
+
+        else if (oemId) {
+
+            const allocatedDocs = await AllocateBarCode.find({
+                state: state,
+                element: elementName,
+                allocatedOemId: oemId,
+                "allocatedBarCode.barCodeNo": {
+                    $in: rollbackBarcodeList
+                }
+            }).lean();
+
+            if (!allocatedDocs || allocatedDocs.length === 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "No matching allocated barcode found"
+                });
+            }
+
+            for (const doc of allocatedDocs) {
+
+                // Find matching barcode objects
+                const matchedBarcodes = doc.allocatedBarCode.filter(
+                    barcode =>
+                        rollbackBarcodeList.includes(
+                            barcode.barCodeNo
+                        )
+                );
+
+                // CASE 1:
+                // If document contains only one barcode
+                // and it matches -> delete whole document
+
+                if (
+                    doc.allocatedBarCode.length === 1 &&
+                    matchedBarcodes.length === 1
+                ) {
+
+                    await AllocateBarCode.findByIdAndDelete(doc._id);
+
+                    console.log(
+                        `Whole document deleted: ${doc._id}`
+                    );
+
+                } else {
+
+                    // CASE 2:
+                    // Remove only matched barcode object
+
+                    await AllocateBarCode.updateOne(
+                        { _id: doc._id },
+                        {
+                            $pull: {
+                                allocatedBarCode: {
+                                    barCodeNo: {
+                                        $in: rollbackBarcodeList
+                                    }
+                                }
+                            }
+                        }
+                    );
+
+                    console.log(
+                        `Matched barcode removed from: ${doc._id}`
+                    );
+                }
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Successfully Rollback From OEM",
+                skippedMappedBarcodes: mappedBarcodeNos
+            });
+
+        }
+
+        // =========================================================
+        // NO VALID ID PROVIDED
+        // =========================================================
+
+        else {
+
+            return res.status(200).json({
+                success: false,
+                message: "Please provide distributorId or oemId"
+            });
+
+        }
 
     } catch (error) {
-        console.error("Error in rollBackAllocatedBarCode:", error);
+
+        console.error(
+            "Error in rollBackAllocatedBarCode:",
+            error
+        );
+
         return res.status(500).json({
             success: false,
             message: "Server Error in rollBackAllocatedBarCode"
         });
+
     }
 };
+
 
 
 
@@ -2484,7 +2920,7 @@ exports.fetchAllRealloCatedBarCode = async (req, res) => {
 
         let ReallocateBarCode;
 
-        const reallocated = await ReallocateBarCode.find({ manufacturReallocateId: userId });
+        const reallocated = await ReallocateBarCode.find({ manufacturReallocateId: userId }).lean();
 
         if (!reallocated) {
             return res.status(200).json({
@@ -3930,16 +4366,31 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
                 // find in user collections
                 const userDist = await User.findOne({ distributorId: distributorId });
                 // also do in requestForActivationWallet collections update requestStatus to "completed"
-                const requestWallet = await requestForActivationWallet.findOne({
-                    activationPlanId: activationPlanId,
-                    distributorId: userDist?._id
-                });
-                console.log(requestWallet)
 
-                if (requestWallet) {
-                    requestWallet.requestStatus = "completed";
-                    await requestWallet.save();
-                }
+                // const requestWallet = await requestForActivationWallet.findOne({
+                //     activationPlanId: activationPlanId,
+                //     distributorId: userDist?._id
+                // });
+                // console.log(requestWallet)
+
+                // if (requestWallet) {
+                //     requestWallet.requestStatus = "completed";
+                //     await requestWallet.save();
+                // }
+
+                // new code 
+
+                await requestForActivationWallet.updateMany(
+                    {
+                        activationPlanId: activationPlanId,
+                        distributorId: userDist?._id
+                    },
+                    {
+                        $set: {
+                            requestStatus: "completed"
+                        }
+                    }
+                );
             }
         }
 
@@ -3966,16 +4417,20 @@ exports.sendActivationWalletToDistributorOrOem = async (req, res) => {
                 const userOem = await User.findOne({ oemId: oemId });
 
                 // also do in requestForActivationWallet collections update requestStatus to "completed"
-                const requestWallet = await requestForActivationWallet.findOne({
+                await requestForActivationWallet.updateMany({
                     activationPlanId: activationPlanId,
                     oemId: userOem?._id
+                }, {
+                    $set: {
+                        requestStatus: "completed"
+                    }
                 });
-                console.log(requestWallet)
+                // console.log(requestWallet)
 
-                if (requestWallet) {
-                    requestWallet.requestStatus = "completed";
-                    await requestWallet.save();
-                }
+                // if (requestWallet) {
+                //     requestWallet.requestStatus = "completed";
+                //     await requestWallet.save();
+                // }
             }
         }
 
